@@ -35,9 +35,16 @@ pub trait Signal<A>: Parent<A> {
         let (meta_tx, meta_rx) = channel();
         meta_tx.send(data_rx);
 
+        // This is also sorta crazy
+        //
+        // Similar problem - self needs to be shared, but we need to be able to
+        // add downstream signals.  The solution here is to use a channel like
+        // a vector, pushing downstream signals into output_tx, and then reading
+        // them out of output_rx when we spawn the runner
+        //
         let (output_tx, output_rx) = channel();
         let signal: Rc<LiftSignal<F, A, B>> = Rc::new(
-            LiftSignal {f: f, meta_data_rx: meta_rx, output_tx: output_tx, output_rx: output_rx, marker: PhantomData}
+            LiftSignal {f: f, meta_data_rx: meta_rx, output_tx: output_tx, output_rx: output_rx}
         );
         let sigbox: Box<Child> = Box::new(signal.clone());
         self.add_output(data_tx, sigbox);
@@ -92,7 +99,6 @@ where F: Fn(&A) -> B
     meta_data_rx: Receiver<Receiver<Event<A>>>,
     output_tx: Sender<(Sender<Event<B>>, Box<Child>)>,
     output_rx: Receiver<(Sender<Event<B>>, Box<Child>)>,
-    marker: PhantomData<A>,
 }
 
 impl<F, A, B> Parent<B> for LiftSignal<F, A, B>
@@ -131,25 +137,22 @@ where F: 'static + Fn(&A) -> B + Clone + Send,
     }
 }
 
-/*
 
 pub struct Lift2Signal<F, A, B, C> 
 where F: Fn(&A, &B) -> C
 {
     f: F,
-    rx_l: Receiver<Event<A>>,
-    rx_r: Receiver<Event<B>>,
-    outputs: Vec<(Sender<Event<C>>, &'static Child)>,
-    marker_a: PhantomData<A>,
-    marker_b: PhantomData<B>,
-    marker_c: PhantomData<C>,
+    meta_data_rx_l: Receiver<Receiver<Event<A>>>,
+    meta_data_rx_r: Receiver<Receiver<Event<B>>>,
+    output_tx: Sender<(Sender<Event<C>>, Box<Child>)>,
+    output_rx: Receiver<(Sender<Event<C>>, Box<Child>)>,
 }
 
 impl<F, A, B, C> Parent<C> for Lift2Signal<F, A, B, C>
 where F: Fn(&A, &B) -> C
 {
-    fn add_output(&mut self, tx: Sender<Event<C>>, child: &'static Child) {
-        self.outputs.push((tx, child));
+    fn add_output(&self, tx: Sender<Event<C>>, child: Box<Child>) {
+        self.output_tx.send((tx, child));
     }
 }
 
@@ -162,16 +165,23 @@ where F: 'static + Fn(&A, &B) -> C + Clone + Send,
     C: 'static + Send + Clone + Eq,
 {
     fn start(&self) {
-        for &(_, output) in self.outputs.iter() {
-            output.start();
+        let outputs: Vec<(Sender<Event<C>>, Box<Child>)> = self.output_rx.iter().map(|i| i).collect();
+        for &(_, ref child) in outputs.iter() {
+            child.start();
         }
 
         let f = self.f.clone();
-        let outputs = self.outputs.iter().map(|&(ref tx, _)| tx.clone()).collect();
-        thread::spawn(move || {
-            let runner = Lift2Runner::new(f, outputs);
-            // runner.run(self.rx_l, self.rx_r);
-        });
+        let children = outputs.iter().map(|&(ref tx, _)| tx.clone()).collect();
+        match (self.meta_data_rx_l.recv(), self.meta_data_rx_r.recv()) {
+            (Ok(data_rx_l), Ok(data_rx_r)) => {
+                thread::spawn(move || {
+                    let mut runner = Lift2Runner::new(f, children);
+                    runner.run(data_rx_l, data_rx_r);
+                });
+            },
+            _ => { panic!("Unable to fetch incoming data channel - did you try to run this more than once?") },
+        }
+
     }
 }
 
@@ -182,17 +192,16 @@ where F: Fn(&B, &A) -> B
 {
     f: F,
     state: B,
-    rx: Receiver<Event<A>>,
-    outputs: Vec<(Sender<Event<B>>, &'static Child)>,
-    marker_a: PhantomData<A>,
-    marker_b: PhantomData<B>,
+    meta_data_rx: Receiver<Receiver<Event<A>>>,
+    output_tx: Sender<(Sender<Event<B>>, Box<Child>)>,
+    output_rx: Receiver<(Sender<Event<B>>, Box<Child>)>,
 }
 
 impl<F, A, B> Parent<B> for FoldSignal<F, A, B>
 where F: Fn(&B, &A) -> B
 {
-    fn add_output(&mut self, tx: Sender<Event<B>>, child: &'static Child) {
-        self.outputs.push((tx, child));
+    fn add_output(&self, tx: Sender<Event<B>>, child: Box<Child>) {
+        self.output_tx.send((tx, child));
     }
 }
 
@@ -204,20 +213,27 @@ where F: 'static + Fn(&B, &A) -> B + Clone + Send,
     B: 'static + Send + Clone + Eq,
 {
     fn start(&self) {
-        for &(_, output) in self.outputs.iter() {
-            output.start();
+        let outputs: Vec<(Sender<Event<B>>, Box<Child>)> = self.output_rx.iter().map(|i| i).collect();
+        for &(_, ref child) in outputs.iter() {
+            child.start();
         }
 
         let f = self.f.clone();
         let initial = self.state.clone();
-        let outputs = self.outputs.iter().map(|&(ref tx, _)| tx.clone()).collect();
-        thread::spawn(move || {
-            let runner = FoldRunner::new(f, initial, outputs);
-            // runner.run(self.rx);
-        });
+        let children = outputs.iter().map(|&(ref tx, _)| tx.clone()).collect();
+        match self.meta_data_rx.recv() {
+            Ok(data_rx) => {
+                thread::spawn(move || {
+                    let mut runner = FoldRunner::new(f, initial, children);
+                    runner.run(data_rx);
+                });
+            },
+            _ => { panic!("Unable to fetch incoming data channel - did you try to run this more than once?") },
+        }
     }
 }
 
+/*
 pub struct Reactor;
 
 impl Reactor {
