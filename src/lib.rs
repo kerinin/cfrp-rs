@@ -1,220 +1,195 @@
+mod intermediate;
+mod runner;
+
+/*
+use std::thread;
+use std::sync::*;
 use std::clone::*;
 use std::sync::mpsc::*;
 
-// ???
-pub trait Channel<A> {
+pub enum SetupEvent<T> {
+    Subscribe(Sender<DataEvent<T>>),
+    SetupComplete,
 }
 
-pub trait Signal<A> {
-    fn lift<F, B>(&mut self, f: F) -> LiftedSignal<F, A, B> where F: Fn(&A) -> B;
-    fn foldp<F, B>(&mut self, f: F, b: B) -> FoldedSignal<F, A, B> where F: Fn(&A, B) -> B;
+pub enum DataEvent<T> {
+    Changed(T),
+    Same,
 }
 
-enum Memoized<A> {
-    Changed(usize, A),
-    Unchanged(usize),
-}
+pub trait Signal<A, B> {
 
-pub struct LiftedSignal<F, A, B>
-{
-    f: F,
-    memo: Option<A>,
-    source: Receiver<Memoized<A>>,
-    sinks: Vec<Sender<Memoized<B>>>,
-}
+    fn subscribe(&mut self, Sender<Event<A, B>>);
 
-pub struct FoldedSignal<F, A, B>
-{
-    f: F,
-    memo: Option<A>,
-    state: B,
-    source: Receiver<Memoized<A>>,
-    sinks: Vec<Sender<Memoized<B>>>,
-}
-
-impl<F, A, B> Signal<B> for LiftedSignal<F, A, B> 
-{
-    fn lift<G, C>(&mut self, g: G) -> LiftedSignal<G, B, C> where G: Fn(&B) -> C
+    fn lift<F>(&mut self, f: F) -> SignalHandle<B>
+    where F: 'static + Fn(&A) -> B + Send,
+        A: 'static + Send,
+        B: 'static + Send,
     {
-        let rx = self.subscribe();
-        LiftedSignal {f: g, memo: None, source: rx, sinks: Vec::new()}
+        let (setup_tx, data_tx) = LiftHandler::spawn(f);
+
+        self.subscribe(setup_tx, data_tx);
+
+        SignalHandle {subscriptions: setup_tx }
     }
 
-    fn foldp<G, C>(&mut self, g: G, c: C) -> FoldedSignal<G, B, C> where G: Fn(&B, C) -> C
+    /*
+    fn lift2<F, SB, B, C>(&mut self, b: &mut SB, f: F) -> SignalHandle<C>
+    where F: 'static + Fn(&A, &B) -> C + Send,
+        A: 'static + Send,
+        B: 'static + Send,
+        SB: Signal<B>,
+        C: 'static + Send,
     {
-        let rx = self.subscribe();
-        FoldedSignal {f: g, memo: None, state: c, source: rx, sinks: Vec::new()}
-    }
-}
+        let (l_tx, l_rx) = channel();
+        let (r_tx, r_rx) = channel();
 
-impl<F, A, B> Signal<B> for FoldedSignal<F, A, B> 
-{
-    fn lift<G, C>(&mut self, g: G) -> LiftedSignal<G, B, C> where G: Fn(&B) -> C
+        self.subscribe(l_tx.clone());
+        b.subscribe(r_tx.clone());
+
+        Lift2Handler::spawn(l_rx, r_rx, f);
+        SignalHandle {subscriptions: l_tx }
+    }
+
+    fn foldp<F, B>(&mut self, f: F, initial: B) -> SignalHandle<B>
+    where F: 'static + Fn(&A, B) -> B + Send,
+        A: 'static + Send,
+        B: 'static + Send,
     {
-        let rx = self.subscribe();
-        LiftedSignal {f: g, memo: None, source: rx, sinks: Vec::new()}
-    }
-
-    fn foldp<G, C>(&mut self, g: G, c: C) -> FoldedSignal<G, B, C> where G: Fn(&B, C) -> C
-    {
-        let rx = self.subscribe();
-        FoldedSignal {f: g, memo: None, state: c, source: rx, sinks: Vec::new()}
-    }
-}
-
-impl<F, A, B> LiftedSignal<F, A, B> 
-{
-    fn subscribe(&mut self) -> Receiver<Memoized<B>> {
         let (tx, rx) = channel();
-        self.sinks.push(tx);
-        return rx;
+        self.subscribe(tx.clone());
+
+        FoldHandler::spawn(rx, f, initial);
+        SignalHandle {subscriptions: tx}
     }
-
-    fn push_unchanged(&self, id: usize) {
-        for sink in self.sinks.iter() {
-            sink.send(Memoized::Unchanged(id.clone()));
-        }
-    }
-}
-
-impl<F, A, B> FoldedSignal<F, A, B> 
-{
-    fn subscribe(&mut self) -> Receiver<Memoized<B>> {
-        let (tx, rx) = channel();
-        self.sinks.push(tx);
-        return rx;
-    }
-
-    fn push_unchanged(&self, id: usize) {
-        for sink in self.sinks.iter() {
-            sink.send(Memoized::Unchanged(id.clone()));
-        }
-    }
-}
-
-impl<F, A, B> LiftedSignal<F, A, B> 
-where A: Clone + Eq, B: Clone, F: Fn(&A) -> B
-{
-    fn push_changed(&mut self, id: usize, a: &A) {
-        self.memo = Some(a.clone());
-        let b = (self.f)(a);
-
-        for sink in self.sinks.iter() {
-            sink.send(Memoized::Changed(id.clone(), b.clone()));
-        }
-    }
-
-    fn run(&mut self) {
-        loop {
-            let r = self.source.recv();
-            let memo = self.memo.clone(); // Workaround becasue need to borrow &self mutably
-
-            match r {
-                Ok(msg) => {
-                    match (msg, memo) {
-                        (Memoized::Changed(id, ref a), None) => self.push_changed(id, a),
-                        (Memoized::Changed(id, ref a), Some(ref old_a)) if a != old_a => self.push_changed(id, a),
-                        (Memoized::Changed(id, _), _) | (Memoized::Unchanged(id), _) => self.push_unchanged(id),
-                    }
-                },
-                Err(_) => {},
-            }
-        }
-    }
-}
-
-impl<F, A, B> FoldedSignal<F, A, B> 
-where A: Clone + Eq, B: Clone, F: Fn(&A, B) -> B
-{
-    fn push_changed(&mut self, id: usize, a: &A) {
-        self.memo = Some(a.clone());
-        self.state = (self.f)(a, self.state.clone());
-
-        for sink in self.sinks.iter() {
-            sink.send(Memoized::Changed(id.clone(), self.state.clone()));
-        }
-    }
-
-    fn run(&mut self) {
-        loop {
-            let r = self.source.recv();
-            let memo = self.memo.clone(); // Workaround becasue need to borrow &self mutably
-
-            match r {
-                Ok(msg) => {
-                    match (msg, memo) {
-                        (Memoized::Changed(id, ref a), None) => self.push_changed(id, a),
-                        (Memoized::Changed(id, ref a), Some(ref old_a)) if a != old_a => self.push_changed(id, a),
-                        (Memoized::Changed(id, _), _) | (Memoized::Unchanged(id), _) => self.push_unchanged(id),
-                    }
-                },
-                Err(_) => {},
-            }
-        }
-    }
+    */
 }
 
 /*
-impl<A, B, F> Signal<A, B, F> for LiftedSignal<A, B, F> 
-where A: Clone + Eq, B: Clone, F: Fn(A) -> B
-{
-    fn lift<C>(&mut self, f: F) -> LiftedSignal<B, C> {
-        let rx = self.subscribe();
-
-        LiftedSignal {f: f, memo: None, source: rx, sinks: Vec::new()}
-    }
+pub struct Channel<A> {
+    clock: usize,
+    subscriptions: Vec<Sender<Event<A>>>,
 }
 
-impl<A, B, F> Channel<A> 
-where A: Clone + Eq, F: Fn(A) -> B
-{
-    pub fn send(&mut self, a: &A) {
-        self.id += 1;
+impl<A> Channel<A> {
+    pub fn new() -> Channel<A> {
+        Channel {clock: 0, subscriptions: Vec::new()}
+    }
 
-        match self.memo {
-            Some(ref old_a) => {
-                if old_a == a {
-                    for sink in self.sinks.iter() {
-                        sink.send(Memoized::Unchanged(self.id.clone()));
-                    }
-                } else {
-                    for sink in self.sinks.iter() {
-                        sink.send(Memoized::Changed(self.id.clone(), a.clone()));
-                    }
-                }
-            },
-            _ => {
-                for sink in self.sinks.iter() {
-                    sink.send(Memoized::Changed(self.id.clone(), a.clone()));
-                }
-            }
+    pub fn emit(&mut self, a: A) where A: Clone {
+        for subscriber in self.subscriptions.iter() {
+            subscriber.send(Event::Value(self.clock.clone(), a.clone()));
         }
-    }
-
-    pub fn lift<B>(&mut self, f: F) -> LiftedSignal<A, B> {
-        let rx = self.subscribe();
-
-        LiftedSignal {f: f, memo: None, source: rx, sinks: Vec::new()}
-    }
-
-    fn subscribe(&mut self) -> Receiver<Memoized<A>> {
-        let (tx, rx) = channel();
-        self.sinks.push(tx);
-        return rx;
+        self.clock += 1;
     }
 }
+
+impl<A> Signal<A> for Channel<A> {
+    fn subscribe(&mut self, tx: Sender<Event<A>>) {
+        self.subscriptions.push(tx);
+    }
+}
+*/
+
+pub struct SignalHandle<A> {
+    subscriptions: Sender<Setup<A>>,
+}
+
+impl<A> Signal<A> for SignalHandle<A> {
+    fn subscribe(&mut self, event_tx: Sender<Event<A>>) {
+        self.subscriptions.send(Setup::Subscribe(tx));
+    }
+}
+
+struct LiftHandler<F, A, B>
+{
+    f: F,
+    event_rx: Receiver<Event<A>>,
+    subscriptions: Vec<(Sender<SetupEvent<B>>, Sender<DataEvent<B>)>>,
+}
+
+impl<F, A, B> LiftHandler<F, A, B> {
+    fn spawn(f: F) -> (Sender<SetupEvent<B>>, Sender<DataEvent<B>>)
+        where F: 'static + Fn(&A) -> B + Send,
+            A: 'static + Send,
+            B: 'static + Send,
+    {
+        let (setup_tx, setup_rx) = channel();
+        let (data_tx, data_rx) = channel();
+
+        thread::spawn(move || {
+            let signal = LiftHandler {
+                f: f, 
+                setup_rx: setup_rx,
+                data_rx: data_rx,
+                subscriptions: Vec::new(),
+            };
+        });
+
+        (setup_tx, setup_rx)
+    }
+
+    fn run(&mut self) where A: 'static + Send, B: 'static + Send
+    {
+    }
+}
+/*
+struct FoldHandler<F, A, B>
+{
+    f: F,
+    state: B,
+    rx: Receiver<Event<A>>,
+    subscriptions: Vec<Sender<Event<B>>>,
+}
+
+impl<F, A, B> FoldHandler<F, A, B> {
+    fn spawn(rx: Receiver<Event<A>>, f: F, initial: B)
+        where F: 'static + Fn(&A, B) -> B + Send,
+            A: 'static + Send,
+            B: 'static + Send,
+    {
+        thread::spawn(move || {
+            let signal = FoldHandler {
+                f: f, 
+                state: initial,
+                rx: rx.clone(), 
+                subscriptions: Vec::new(),
+            };
+        });
+    }
+}
+
+struct Lift2Handler<F, A, B, C>
+{
+    f: F,
+    l_data_rx: Receiver<Event<A>>,
+    r_data_rx: Receiver<Event<B>>,
+    subscriptions: Vec<Sender<Event<C>>>,
+}
+
+impl<F, A, B, C> Lift2Handler<F, A, B, C> {
+    fn spawn(l_rx: Receiver<Event<A>>, r_rx: Receiver<Event<B>>, f: F)
+        where F: 'static + Fn(&A, &B) -> C + Send,
+            A: 'static + Send,
+            B: 'static + Send,
+            C: 'static + Send,
+    {
+        thread::spawn(move || {
+            let signal = Lift2Handler {
+                f: f, 
+                l_rx: l_rx.clone(), 
+                r_rx: r_rx, 
+                subscriptions: Vec::new(),
+            };
+        });
+    }
+}
+*/
 
 #[test]
 fn it_works() {
-    let mut r: Reactor = Default::default();
-
-    let (input_channel, input_signal) = r.channel::<isize>();
-    let negated = r.lift(|i| { -i }, input_signal);
-    let accumulated = r.foldp(|a, i| { a + i }, 0, negated);
-    let printed = r.lift(|i| { println!("{}", i); }, accumulated);
-
-    input_channel.send(0);
-    input_channel.send(1);
-    input_channel.send(-1);
+    let mut ch = signal::Channel::new();
+    ch.lift(|i| { -i });
+    ch.emit(1);
 }
 */
