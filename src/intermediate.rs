@@ -13,7 +13,7 @@ pub enum Event<T> {
 
 
 pub trait Signal<A>: Parent<A> {
-    fn lift<'a, F, B>(&self, f: F) -> Rc<LiftSignal<F, A, B>>
+    fn lift<F, B>(&self, f: F) -> Rc<LiftSignal<F, A, B>>
     where F: 'static + Fn(&A) -> B + Clone + Send,
         A: 'static + Send,
         B: 'static + Send + Clone + Eq,
@@ -51,22 +51,32 @@ pub trait Signal<A>: Parent<A> {
         signal
     }
 
-    /*
-    fn lift2<F, SB, B, C>(&mut self, b: &mut SB, f: F) -> Lift2Signal<F, A, B, C>
+    fn lift2<F, SB, B, C>(&self, b: &SB, f: F) -> Rc<Lift2Signal<F, A, B, C>>
     where F: 'static + Fn(&A, &B) -> C + Clone + Send,
         A: 'static + Send,
         B: 'static + Send,
-        SB: Parent<B>,
         C: 'static + Send + Clone + Eq,
+        SB: Parent<B>,
     {
-        let (tx_l, rx_l) = channel();
-        let (tx_r, rx_r) = channel();
-        let signal = Lift2Signal {f: f, rx_r: rx_r, rx_l: rx_l, outputs: Vec::new(), marker_a: PhantomData, marker_b: PhantomData, marker_c: PhantomData};
-        // self.add_output(tx_l, &signal);
-        // b.add_output(tx_r, &signal);
+        let (data_tx_l, data_rx_l) = channel();
+        let (meta_tx_l, meta_rx_l) = channel();
+        let (data_tx_r, data_rx_r) = channel();
+        let (meta_tx_r, meta_rx_r) = channel();
+        meta_tx_l.send(data_rx_l);
+        meta_tx_r.send(data_rx_r);
+
+        let (output_tx, output_rx) = channel();
+        let signal = Rc::new(
+            Lift2Signal {f: f, meta_data_rx_l: meta_rx_l, meta_data_rx_r: meta_rx_r, output_tx: output_tx, output_rx: output_rx}
+        );
+        let sigbox_l: Box<Child> = Box::new(signal.clone());
+        let sigbox_r: Box<Child> = Box::new(signal.clone());
+        self.add_output(data_tx_l, sigbox_l);
+        b.add_output(data_tx_r, sigbox_r);
         signal
     }
 
+    /*
     fn foldp<F, B>(&mut self, f: F, initial: B) -> FoldSignal<F, A, B>
     where F: 'static + Fn(&B, &A) -> B + Clone + Send,
         A: 'static + Send,
@@ -158,7 +168,7 @@ where F: Fn(&A, &B) -> C
 
 impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where F: Fn(&A, &B) -> C {}
 
-impl<F, A, B, C> Child for Lift2Signal<F, A, B, C>
+impl<F, A, B, C> Child for Rc<Lift2Signal<F, A, B, C>>
 where F: 'static + Fn(&A, &B) -> C + Clone + Send,
     A: 'static + Send,
     B: 'static + Send,
@@ -207,7 +217,7 @@ where F: Fn(&B, &A) -> B
 
 impl<F, A, B> Signal<B> for FoldSignal<F, A, B> where F: Fn(&B, &A) -> B {}
 
-impl<F, A, B> Child for FoldSignal<F, A, B>
+impl<F, A, B> Child for Rc<FoldSignal<F, A, B>>
 where F: 'static + Fn(&B, &A) -> B + Clone + Send,
     A: 'static + Send,
     B: 'static + Send + Clone + Eq,
