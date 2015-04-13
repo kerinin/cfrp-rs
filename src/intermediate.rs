@@ -37,7 +37,7 @@ pub trait Signal<A>: Parent<A> {
 
         let (output_tx, output_rx) = channel();
         let signal: Rc<LiftSignal<F, A, B>> = Rc::new(
-            LiftSignal {f: f, data_rx: meta_rx, output_tx: output_tx, output_rx: output_rx, marker: PhantomData}
+            LiftSignal {f: f, meta_data_rx: meta_rx, output_tx: output_tx, output_rx: output_rx, marker: PhantomData}
         );
         let sigbox: Box<Child> = Box::new(signal.clone());
         self.add_output(data_tx, sigbox);
@@ -89,7 +89,7 @@ pub struct LiftSignal<F, A, B>
 where F: Fn(&A) -> B
 {
     f: F,
-    data_rx: Receiver<Receiver<Event<A>>>,
+    meta_data_rx: Receiver<Receiver<Event<A>>>,
     output_tx: Sender<(Sender<Event<B>>, Box<Child>)>,
     output_rx: Receiver<(Sender<Event<B>>, Box<Child>)>,
     marker: PhantomData<A>,
@@ -119,11 +119,11 @@ where F: 'static + Fn(&A) -> B + Clone + Send,
 
         let f = self.f.clone();
         let children = outputs.iter().map(|&(ref tx, _)| tx.clone()).collect();
-        match self.data_rx.recv() {
-            Ok(rx) => {
+        match self.meta_data_rx.recv() {
+            Ok(data_rx) => {
                 thread::spawn(move || {
                     let mut runner = LiftRunner::new(f, children);
-                    runner.run(rx);
+                    runner.run(data_rx);
                 });
             },
             _ => { panic!("Unable to fetch incoming data channel - did you try to run this more than once?") },
