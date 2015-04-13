@@ -18,10 +18,26 @@ pub trait Signal<A>: Parent<A> {
         A: 'static + Send,
         B: 'static + Send + Clone + Eq,
     {
+        // This is a bit janky
+        //
+        // We need a channel to send data from upstream to signals to this signal's
+        // runner (data_tx, data_rx).  The problem is if we just assign data_rx
+        // to self, we can't move it into the spawned thread without taking self
+        // along with it.  To make things worse, we need to be able to share self
+        // across self's 'parents' (so they can send it data) and the user (so they
+        // can define donwstream processes).
+        //
+        // The solution here is to use an enclosing channel to let us send the 
+        // actual data channel to the version of self that's used to spawn the
+        // runner.
+        //
         let (data_tx, data_rx) = channel();
+        let (meta_tx, meta_rx) = channel();
+        meta_tx.send(data_rx);
+
         let (output_tx, output_rx) = channel();
         let signal: Rc<LiftSignal<F, A, B>> = Rc::new(
-            LiftSignal {f: f, rx: data_rx, output_tx: output_tx, output_rx: output_rx, marker: PhantomData}
+            LiftSignal {f: f, data_rx: meta_rx, output_tx: output_tx, output_rx: output_rx, marker: PhantomData}
         );
         let sigbox: Box<Child> = Box::new(signal.clone());
         self.add_output(data_tx, sigbox);
@@ -73,7 +89,7 @@ pub struct LiftSignal<F, A, B>
 where F: Fn(&A) -> B
 {
     f: F,
-    rx: Receiver<Event<A>>,
+    data_rx: Receiver<Receiver<Event<A>>>,
     output_tx: Sender<(Sender<Event<B>>, Box<Child>)>,
     output_rx: Receiver<(Sender<Event<B>>, Box<Child>)>,
     marker: PhantomData<A>,
@@ -103,10 +119,15 @@ where F: 'static + Fn(&A) -> B + Clone + Send,
 
         let f = self.f.clone();
         let children = outputs.iter().map(|&(ref tx, _)| tx.clone()).collect();
-        thread::spawn(move || {
-            let runner = LiftRunner::new(f, children);
-            // runner.run(self.rx);
-        });
+        match self.data_rx.recv() {
+            Ok(rx) => {
+                thread::spawn(move || {
+                    let mut runner = LiftRunner::new(f, children);
+                    runner.run(rx);
+                });
+            },
+            _ => { panic!("Unable to fetch incoming data channel - did you try to run this more than once?") },
+        }
     }
 }
 
