@@ -18,12 +18,13 @@ pub trait Signal<A>: Parent<A> {
         A: 'static + Send,
         B: 'static + Send + Clone + Eq,
     {
-        let (tx, rx) = channel();
+        let (data_tx, data_rx) = channel();
+        let (output_tx, output_rx) = channel();
         let signal: Rc<LiftSignal<F, A, B>> = Rc::new(
-            LiftSignal {f: f, rx: rx, outputs: Vec::new(), marker: PhantomData}
+            LiftSignal {f: f, rx: data_rx, output_tx: output_tx, output_rx: output_rx, marker: PhantomData}
         );
         let sigbox: Box<Child> = Box::new(signal.clone());
-        self.add_output(tx, sigbox);
+        self.add_output(data_tx, sigbox);
         signal
     }
 
@@ -56,6 +57,9 @@ pub trait Signal<A>: Parent<A> {
     */
 }
 
+// NOTE: Might need custom impls here...
+impl<A,T> Signal<A> for Rc<T> where T: Signal<A>, Rc<T>: Parent<A> {}
+
 trait Parent<A> {
     fn add_output(&self, Sender<Event<A>>, Box<Child>);
 }
@@ -70,51 +74,43 @@ where F: Fn(&A) -> B
 {
     f: F,
     rx: Receiver<Event<A>>,
-    outputs: Vec<(Sender<Event<B>>, &'static Child)>,
+    output_tx: Sender<(Sender<Event<B>>, Box<Child>)>,
+    output_rx: Receiver<(Sender<Event<B>>, Box<Child>)>,
     marker: PhantomData<A>,
 }
 
 impl<F, A, B> Parent<B> for LiftSignal<F, A, B>
 where F: Fn(&A) -> B
 {
-    fn add_output(&self, tx: Sender<Event<B>>, child: Box<Child>) {}
-}
-
-impl<F, A, B> Child for Rc<LiftSignal<F, A, B>>
-where F: Fn(&A) -> B
-{
-    fn start(&self) {}
-}
-/*
-impl<F, A, B> Parent<B> for LiftSignal<F, A, B>
-where F: Fn(&A) -> B
-{
-    fn add_output(&mut self, tx: Sender<Event<B>>, child: &'static Child) {
-        self.outputs.push((tx, child));
+    fn add_output(&self, tx: Sender<Event<B>>, child: Box<Child>) {
+        self.output_tx.send((tx, child));
     }
 }
 
+
 impl<F, A, B> Signal<B> for LiftSignal<F, A, B> where F: Fn(&A) -> B {}
 
-impl<F, A, B> Child for LiftSignal<F, A, B> 
+impl<F, A, B> Child for Rc<LiftSignal<F, A, B>>
 where F: 'static + Fn(&A) -> B + Clone + Send,
     A: 'static + Send,
     B: 'static + Send + Clone + Eq,
 {
     fn start(&self) {
-        for &(_, child) in self.outputs.iter() {
-            // child.start();
+        let outputs: Vec<(Sender<Event<B>>, Box<Child>)> = self.output_rx.iter().map(|i| i).collect();
+        for &(_, ref child) in outputs.iter() {
+            child.start();
         }
 
         let f = self.f.clone();
-        let outputs = self.outputs.iter().map(|&(ref tx, _)| tx.clone()).collect();
+        let children = outputs.iter().map(|&(ref tx, _)| tx.clone()).collect();
         thread::spawn(move || {
-            let runner = LiftRunner::new(f, outputs);
+            let runner = LiftRunner::new(f, children);
             // runner.run(self.rx);
         });
     }
 }
 
+/*
 
 pub struct Lift2Signal<F, A, B, C> 
 where F: Fn(&A, &B) -> C
