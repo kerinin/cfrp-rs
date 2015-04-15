@@ -9,7 +9,7 @@ use std::cell::*;
 use std::rc::*;
 use std::sync::mpsc::*;
 
-use super::signal::*;
+use super::signal::{Signal};
 
 /// Multiplex data and incoming channels
 ///

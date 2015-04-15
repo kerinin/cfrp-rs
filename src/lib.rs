@@ -221,3 +221,33 @@ fn foldp<F, A, B>(f: F, initial: B, signal: &Signal<A>) -> Signal<B> where
 
     Signal::new(signal_rx)
 }
+
+/*
+fn async<A>(signal: &Signal<A>) -> Signal<A> where
+    A: 'static + Send + Clone,
+{
+    let (in_tx, in_rx) = channel();
+    match signal.send_to(in_tx) {
+        Err(_) => { panic!("WTF?") }
+        _ => {}
+    }
+
+    let (channel_tx, signal) = signal.coordintor().channel();
+    thread::spawn(move || {
+        loop {
+            match in_rx.recv() {
+                Ok(Some(ref a)) => {
+                    channel_tx.send(Some(a.clone()));
+                }
+
+                Ok(None) => {}
+
+                _ => { break }
+            }
+        }
+    });
+
+    signal
+}
+*/
+

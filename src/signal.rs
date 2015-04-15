@@ -2,6 +2,9 @@ use std::thread;
 use std::sync::mpsc::*;
 
 pub struct Signal<T> {
+    // NOTE: There be dragons - as it's setup we need a mutable handle on this
+    // from _every_ signal.  Need to make `channel()` immutable
+    // coordinator: &Coordinator,
     sender: Sender<Sender<Option<T>>>,
 }
 
@@ -76,5 +79,9 @@ impl<T: 'static + Clone + Send> Signal<T> {
     pub fn send_to(&self, chan: Sender<Option<T>>) -> Result<(), SendError<Sender<Option<T>>>> {
         self.sender.send(chan)
     }
+
+    // pub fn coordinator(&self) -> Coordinator {
+    //     self.coordinator
+    // }
 }
 
