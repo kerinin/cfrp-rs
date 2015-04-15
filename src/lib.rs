@@ -32,23 +32,17 @@
 ///
 
 mod signal;
+mod coordinator;
 
 use std::thread;
 use std::sync::mpsc::*;
 
 use signal::*;
 
-struct Coordinator;
-
-impl Coordinator {
-    // fn channel<A>(&self) -> Channel<A>;
-    // fn receiver<A>(&self) -> Receiver<A>;
-}
-
 fn lift<F, A, B>(f: F, signal: &Signal<A>) -> Signal<B> where 
     F: 'static + Send + Clone + Fn(&A) -> B,
     A: 'static + Send + Clone,
-    B: 'static + Send + Clone,
+    B: 'static + Send + Clone + Eq,
 {
     let (in_tx, in_rx) = channel();
     match signal.send_to(in_tx) {
@@ -58,15 +52,39 @@ fn lift<F, A, B>(f: F, signal: &Signal<A>) -> Signal<B> where
 
     let (signal_tx, signal_rx) = channel();
     thread::spawn(move || {
+        let mut last_b = None;
+        let mut send_if_changed = |a: &A| -> bool {
+            let b = Some(f(a));
+
+            let value = if last_b == b {
+                None
+            } else {
+                last_b = b.clone();
+                b
+            };
+
+            match signal_tx.send(value) {
+                Err(_) => { true }
+                _ => { false }
+            }
+        };
+
         loop {
             match in_rx.recv() {
-                Ok(ref a) => {
-                    let b = f(a);
-                    match signal_tx.send(b) {
+                // Signal value changed
+                Ok(Some(ref a)) => {
+                    if send_if_changed(a) { break }
+                }
+                
+                // No change from previous - send it along!
+                Ok(None) => {
+                    match signal_tx.send(None) {
                         Err(_) => { break }
                         _ => {}
                     }
-                },
+                }
+
+                // Receiver closed, time to pack up & go home
                 _ => { break; }
             }
         }
@@ -79,7 +97,7 @@ fn lift2<F, A, B, C>(f: F, left: &Signal<A>, right: &Signal<B>) -> Signal<C> whe
     F: 'static + Send + Clone + Fn(&A, &B) -> C,
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
-    C: 'static + Send + Clone,
+    C: 'static + Send + Clone + Eq,
 {
     let (left_tx, left_rx) = channel();
     match left.send_to(left_tx) {
@@ -95,15 +113,54 @@ fn lift2<F, A, B, C>(f: F, left: &Signal<A>, right: &Signal<B>) -> Signal<C> whe
 
     let (signal_tx, signal_rx) = channel();
     thread::spawn(move || {
+        let mut last_a = None;
+        let mut last_b = None;
+        let mut last_c = None;
+        let mut send_if_changed = |a: &A, b: &B| -> bool {
+            let c = Some(f(a, b));
+
+            let value = if last_c == c {
+                None
+            } else {
+                last_c = c.clone();
+                c
+            };
+
+            match signal_tx.send(value) {
+                Err(_) => { true }
+                _ => { false }
+            }
+        };
+
         loop {
             match (left_rx.recv(), right_rx.recv()) {
-                (Ok(ref a), Ok(ref b)) => {
-                    let c = f(a, b);
-                    match signal_tx.send(c) {
+                (Ok(Some(ref a)), Ok(Some(ref b))) => {
+                    if send_if_changed(a, b) { break };
+                }
+
+                (Ok(None), Ok(Some(ref b))) => {
+                    let a = match last_a.clone() {
+                        Some(a) => { a }
+                        None => { panic!("Channel reports no change, but nothing was cached") }
+                    };
+                    if send_if_changed(a, b) { break };
+                }
+
+                (Ok(Some(ref a)), Ok(None)) => {
+                    let b = match last_b.clone() {
+                        Some(b) => { b }
+                        None => { panic!("Channel reports no change, but nothing was cached") }
+                    };
+                    if send_if_changed(a, b) { break };
+                }
+
+                (Ok(None), Ok(None)) => {
+                    match signal_tx.send(None) {
                         Err(_) => { break }
                         _ => {}
                     }
-                },
+                }
+
                 _ => { break; }
             }
         }
@@ -115,7 +172,7 @@ fn lift2<F, A, B, C>(f: F, left: &Signal<A>, right: &Signal<B>) -> Signal<C> whe
 fn foldp<F, A, B>(f: F, initial: B, signal: &Signal<A>) -> Signal<B> where 
     F: 'static + Send + Clone + Fn(&B, &A) -> B,
     A: 'static + Send + Clone,
-    B: 'static + Send + Clone,
+    B: 'static + Send + Clone + Eq,
 {
     let (in_tx, in_rx) = channel();
     match signal.send_to(in_tx) {
@@ -126,15 +183,37 @@ fn foldp<F, A, B>(f: F, initial: B, signal: &Signal<A>) -> Signal<B> where
     let (signal_tx, signal_rx) = channel();
     thread::spawn(move || {
         let mut state = initial;
+        let mut last_b = None;
+
+        let mut send_if_changed = |a: &A| -> bool {
+            let b = Some(f(&state, a));
+
+            let value = if last_b == b {
+                None
+            } else {
+                last_b = b.clone();
+                b
+            };
+
+            match signal_tx.send(value) {
+                Err(_) => { true }
+                _ => { false }
+            }
+        };
+
         loop {
             match in_rx.recv() {
-                Ok(ref a) => {
-                    state = f(&state, a);
-                    match signal_tx.send(state.clone()) {
+                Ok(Some(ref a)) => {
+                    if send_if_changed(a) { break }
+                }
+
+                Ok(None) => {
+                    match signal_tx.send(None) {
                         Err(_) => { break }
                         _ => {}
                     }
-                },
+                }
+
                 _ => { break; }
             }
         }

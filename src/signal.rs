@@ -2,16 +2,16 @@ use std::thread;
 use std::sync::mpsc::*;
 
 pub struct Signal<T> {
-    sender: Sender<Sender<T>>,
+    sender: Sender<Sender<Option<T>>>,
 }
 
 enum Either<L,R> {
-    Left(L),
-    Right(R),
+    Data(L),
+    Channel(R),
 }
 
 impl<T: 'static + Clone + Send> Signal<T> {
-    pub fn new(port: Receiver<T>) -> Signal<T> {
+    pub fn new(port: Receiver<Option<T>>) -> Signal<T> {
         let (chanchan, chanport) = channel();
         let (xchan, xport) = channel();
 
@@ -20,7 +20,7 @@ impl<T: 'static + Clone + Send> Signal<T> {
             loop {
                 match port.recv() {
                     Ok(x) => {
-                        match xchan1.send(Either::Left(x)) {
+                        match xchan1.send(Either::Data(x)) {
                             Ok(_) => {},
                             Err(_) => { break; },
                         }
@@ -34,8 +34,8 @@ impl<T: 'static + Clone + Send> Signal<T> {
         thread::spawn(move || {
             loop {
                 match chanport.recv() {
-                    Ok(x) => {
-                        match xchan2.send(Either::Right(x)) {
+                    Ok(rx) => {
+                        match xchan2.send(Either::Channel(rx)) {
                             Ok(_) => {},
                             Err(_) => { break; },
                         }
@@ -46,10 +46,12 @@ impl<T: 'static + Clone + Send> Signal<T> {
         });
 
         thread::spawn(move || {
-            let mut chans: Vec<Sender<T>> = Vec::new();
+            let mut chans: Vec<Sender<Option<T>>> = Vec::new();
+            let mut fuse = false;
             loop {
                 match xport.recv() {
-                    Ok(Either::Left(x)) => {
+                    Ok(Either::Data(x)) => {
+                        fuse = true;
                         for c in chans.iter() {
                             match c.send(x.clone()) {
                                 Ok(_) => {},
@@ -57,7 +59,12 @@ impl<T: 'static + Clone + Send> Signal<T> {
                             }
                         }
                     }
-                    Ok(Either::Right(x)) => { chans.push(x); }
+                    Ok(Either::Channel(rx)) => {
+                        if fuse {
+                            panic!("Cannot subscribe to a signal that has begun data processing");
+                        }
+                        chans.push(rx);
+                    }
                     Err(_) => { break; }
                 }
             }
@@ -66,7 +73,7 @@ impl<T: 'static + Clone + Send> Signal<T> {
         Signal { sender: chanchan }
     }
 
-    pub fn send_to(&self, chan: Sender<T>) -> Result<(), SendError<Sender<T>>> {
+    pub fn send_to(&self, chan: Sender<Option<T>>) -> Result<(), SendError<Sender<Option<T>>>> {
         self.sender.send(chan)
     }
 }
