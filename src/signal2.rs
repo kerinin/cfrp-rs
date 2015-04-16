@@ -2,21 +2,17 @@ use std::thread;
 use std::cell::*;
 use std::sync::mpsc::*;
 
-// use super::coordinator2::{Coordinator};
+use super::coordinator2::{Coordinator};
 
-// pub struct Signal<'a, T> {
-pub struct Signal<T> {
-    // coordinator: &'a Coordinator,
+pub struct Signal<'a, T> {
+    coordinator: &'a Coordinator,
     rx: Receiver<Option<T>>,
     txs: RefCell<Vec<Sender<Option<T>>>>,
 }
 
-// impl<'a, T: 'static + Clone + Send> Signal<'a, T> {
-impl<'a, T: 'static + Clone + Send> Signal<T> {
-    // pub fn publish(channel: &Channel, rx: Receiver<Option<T>>) -> Signal<'a, T> {
-    pub fn publish(rx: Receiver<Option<T>>) -> Signal<T> {
-        // Signal { coordinator: coordinator, rx: rx, txs: RefCell::new(Vec::new()) }
-        Signal { rx: rx, txs: RefCell::new(Vec::new()) }
+impl<'a, T: 'static + Clone + Send> Signal<'a, T> {
+    pub fn publish(coordinator: &'a Coordinator, rx: Receiver<Option<T>>) -> Signal<'a, T> {
+        Signal { coordinator: coordinator, rx: rx, txs: RefCell::new(Vec::new()) }
     }
     
     pub fn subscribe(&self, tx: Sender<Option<T>>) {

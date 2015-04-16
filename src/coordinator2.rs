@@ -13,7 +13,7 @@ use std::marker::MarkerTrait;
 
 
 
-use super::signal::{Signal};
+use super::signal2::{Signal};
 
 trait NoOp: Send {
     fn no_op(&self);
@@ -72,7 +72,7 @@ pub struct Coordinator {
 }
 
 impl Coordinator {
-    pub fn channel<A>(&self) -> (Sender<A>, Signal<A>) 
+    pub fn channel<'a, A>(&'a self) -> (Sender<A>, Signal<'a, A>) 
     where A: 'static + Send + Clone,
     {
         // For data coming in
@@ -80,7 +80,7 @@ impl Coordinator {
 
         // For data going out, type Option<A>
         let (signal_tx, signal_rx): (Sender<Option<A>>, Receiver<Option<A>>) = channel();
-        let signal = Signal::new(signal_rx);
+        let signal = Signal::publish(self, signal_rx);
 
         {
             let ref mut no_ops = &mut *self.no_ops.lock().unwrap();

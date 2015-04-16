@@ -34,7 +34,7 @@
 // mod signal;
 mod signal2;
 // mod coordinator;
-// mod coordinator2;
+mod coordinator2;
 
 /*
 use std::thread;
