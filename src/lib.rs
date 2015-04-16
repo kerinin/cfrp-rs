@@ -32,14 +32,16 @@
 ///
 
 mod signal;
-mod coordinator;
+// mod coordinator;
+mod coordinator2;
 
+/*
 use std::thread;
 use std::sync::mpsc::*;
 
 use signal::*;
 
-fn lift<F, A, B>(f: F, signal: &Signal<A>) -> Signal<B> where 
+fn lift<'a, F, A, B>(f: F, signal: &Signal<'a, A>) -> Signal<'a, B> where 
     F: 'static + Send + Clone + Fn(&A) -> B,
     A: 'static + Send + Clone,
     B: 'static + Send + Clone + Eq,
@@ -90,10 +92,10 @@ fn lift<F, A, B>(f: F, signal: &Signal<A>) -> Signal<B> where
         }
     });
 
-    Signal::new(signal_rx)
+    Signal::new(&signal.coordinator, signal_rx)
 }
 
-fn lift2<F, A, B, C>(f: F, left: &Signal<A>, right: &Signal<B>) -> Signal<C> where 
+fn lift2<'a, F, A, B, C>(f: F, left: &Signal<'a, A>, right: &Signal<'a, B>) -> Signal<'a, C> where 
     F: 'static + Send + Clone + Fn(&A, &B) -> C,
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
@@ -166,10 +168,10 @@ fn lift2<F, A, B, C>(f: F, left: &Signal<A>, right: &Signal<B>) -> Signal<C> whe
         }
     });
 
-    Signal::new(signal_rx)
+    Signal::new(&left.coordinator, signal_rx)
 }
 
-fn foldp<F, A, B>(f: F, initial: B, signal: &Signal<A>) -> Signal<B> where 
+fn foldp<'a, F, A, B>(f: F, initial: B, signal: &Signal<'a, A>) -> Signal<'a, B> where 
     F: 'static + Send + Clone + Fn(&B, &A) -> B,
     A: 'static + Send + Clone,
     B: 'static + Send + Clone + Eq,
@@ -219,11 +221,10 @@ fn foldp<F, A, B>(f: F, initial: B, signal: &Signal<A>) -> Signal<B> where
         }
     });
 
-    Signal::new(signal_rx)
+    Signal::new(&signal.coordinator, signal_rx)
 }
 
-/*
-fn async<A>(signal: &Signal<A>) -> Signal<A> where
+fn async<'a, A>(signal: &Signal<'a, A>) -> Signal<'a, A> where
     A: 'static + Send + Clone,
 {
     let (in_tx, in_rx) = channel();
@@ -232,12 +233,12 @@ fn async<A>(signal: &Signal<A>) -> Signal<A> where
         _ => {}
     }
 
-    let (channel_tx, signal) = signal.coordintor().channel();
+    let (channel_tx, signal) = signal.coordinator.channel();
     thread::spawn(move || {
         loop {
             match in_rx.recv() {
                 Ok(Some(ref a)) => {
-                    channel_tx.send(Some(a.clone()));
+                    channel_tx.send(a.clone());
                 }
 
                 Ok(None) => {}
@@ -250,4 +251,3 @@ fn async<A>(signal: &Signal<A>) -> Signal<A> where
     signal
 }
 */
-

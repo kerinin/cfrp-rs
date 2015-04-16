@@ -80,17 +80,26 @@ impl<T> NoOpTx for Sender<Either<T>> {
 /// tx.send(10);
 /// ```
 ///
-pub struct Coordinator {
+pub struct Coordinator<'a> {
+    channels: Mutex<Vec<&'a NoOp>>,
+
+
     no_ops: Vec<Box<NoOp>>,
     no_op_txs: Vec<Box<NoOpTx>>,
 }
 
 impl Coordinator {
     pub fn new() -> Coordinator {
-        Coordinator {no_ops: Vec::new(), no_op_txs: Vec::new()}
+        let (tx, rx) = channel();
+        Coordinator {
+            exec_tx: tx,
+            exec_rx: rx,
+            no_ops: Vec::new(),
+            no_op_txs: Vec::new()
+        }
     }
 
-    pub fn channel<A>(&mut self) -> (Sender<A>, Signal<A>) 
+    pub fn channel<A>(&self) -> (Sender<A>, Signal<A>) 
     where A: 'static + Send + Clone,
     {
         // For data coming in
@@ -98,12 +107,13 @@ impl Coordinator {
 
         // For data going out, type Option<A>
         let (signal_tx, signal_rx): (Sender<Option<A>>, Receiver<Option<A>>) = channel();
-        let signal = Signal::new(signal_rx);
+        let signal = Signal::new(&self, signal_rx);
 
         // Multiplexing channel for both data and new channels
         // type Either<A>
         let (either_tx, either_rx): (Sender<Either<A>>, Receiver<Either<A>>) = channel();
 
+        /*
         // Notify existing channels of me
         for no_op_tx in self.no_op_txs.iter() {
             no_op_tx.send(Box::new(signal_tx.clone()));
@@ -140,6 +150,7 @@ impl Coordinator {
 
         // Allow future channels to notify me of them so I can push no-ops to them
         self.no_op_txs.push(Box::new(either_tx.clone()));
+        */
 
         return (data_tx, signal);
     }
