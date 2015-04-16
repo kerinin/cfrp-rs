@@ -20,8 +20,8 @@ trait NoOp: Send {
     fn boxed_clone(&self) -> Box<NoOp>;
 }
 
-trait Channel {
-    fn spawn(self: Box<Self>, Vec<Box<NoOp>>);
+trait Channel: Send {
+    fn run(self: Box<Self>, Vec<Box<NoOp>>);
 }
 
 impl<A> NoOp for Sender<Option<A>> 
@@ -44,23 +44,21 @@ struct ChannelData<A> {
 impl<A> Channel for ChannelData<A> 
 where A: 'static + Send + Clone,
 {
-    fn spawn(self: Box<Self>, no_ops: Vec<Box<NoOp>>) {
-        thread::spawn(move || {
-            loop {
-                match self.data_rx.recv() {
-                    Ok(ref a) => {
-                        for (i, no_op) in no_ops.iter().enumerate() {
-                            if i == self.idx {
-                                self.signal_tx.send(Some(a.clone()));
-                            } else {
-                                no_op.no_op();
-                            }
+    fn run(self: Box<Self>, no_ops: Vec<Box<NoOp>>) {
+        loop {
+            match self.data_rx.recv() {
+                Ok(ref a) => {
+                    for (i, no_op) in no_ops.iter().enumerate() {
+                        if i == self.idx {
+                            self.signal_tx.send(Some(a.clone()));
+                        } else {
+                            no_op.no_op();
                         }
                     }
-                    _ => { return }
                 }
+                _ => { return }
             }
-        });
+        }
     }
 }
 
@@ -100,16 +98,18 @@ impl Coordinator {
         return (data_tx, signal);
     }
 
-    pub fn spawn(self) {
-        // Clone it up so we don't have to keep a pointer to no_ops
-        let cloned_no_ops: Vec<Box<NoOp>> = self.no_ops.lock().unwrap()
-            .iter().map(|i| i.boxed_clone()).collect();
+    pub fn run(self) {
+        // NOTE: Need to run signals
 
         // Consume self and spawn some stuff
         for channel in self.channels.into_inner().into_iter() {
-            channel.spawn(cloned_no_ops.iter().map(|i| i.boxed_clone()).collect());
-        }
+            let no_ops = self.no_ops.lock().unwrap()
+                .iter().map(|i| i.boxed_clone()).collect();
 
+            thread::spawn(move || {
+                channel.run(no_ops);
+            });
+        }
 
         // NOTE: Return a control channel or something?
     }
