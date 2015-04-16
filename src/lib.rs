@@ -31,9 +31,10 @@
 /// Question: Can we ensure that the mutability requirements aren't a problem?
 ///
 
-mod signal;
+// mod signal;
+mod signal2;
 // mod coordinator;
-mod coordinator2;
+// mod coordinator2;
 
 /*
 use std::thread;
