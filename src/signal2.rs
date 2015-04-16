@@ -5,17 +5,17 @@ use std::sync::mpsc::*;
 use super::coordinator2::{Coordinator};
 
 pub struct Signal<'a, T> {
-    coordinator: &'a Coordinator,
+    pub coordinator: &'a Coordinator,
     rx: Receiver<Option<T>>,
     txs: RefCell<Vec<Sender<Option<T>>>>,
 }
 
 impl<'a, T: 'static + Clone + Send> Signal<'a, T> {
-    pub fn publish(coordinator: &'a Coordinator, rx: Receiver<Option<T>>) -> Signal<'a, T> {
+    pub fn new(coordinator: &'a Coordinator, rx: Receiver<Option<T>>) -> Signal<'a, T> {
         Signal { coordinator: coordinator, rx: rx, txs: RefCell::new(Vec::new()) }
     }
     
-    pub fn subscribe(&self, tx: Sender<Option<T>>) {
+    pub fn publish_to(&self, tx: Sender<Option<T>>) {
         self.txs.borrow_mut().push(tx);
     }
 

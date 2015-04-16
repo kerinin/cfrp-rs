@@ -80,7 +80,7 @@ impl Coordinator {
 
         // For data going out, type Option<A>
         let (signal_tx, signal_rx): (Sender<Option<A>>, Receiver<Option<A>>) = channel();
-        let signal = Signal::publish(self, signal_rx);
+        let signal = Signal::new(self, signal_rx);
 
         {
             let ref mut no_ops = &mut *self.no_ops.lock().unwrap();
