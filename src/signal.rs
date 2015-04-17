@@ -1,83 +1,100 @@
-use std::thread;
+use std::cell::*;
 use std::sync::mpsc::*;
 
-// use super::coordinator2::{Coordinator};
+use super::coordinator::{Coordinator};
 
-pub struct Signal<T> {
-    // pub coordinator: &'a Coordinator,
-    sender: Sender<Sender<Option<T>>>,
+pub trait Run {
+    fn run(self);
 }
 
-enum Either<L,R> {
-    Data(L),
-    Channel(R),
+
+pub trait Signal<A> {
+    fn publish_to(&self, Sender<Option<A>>);
 }
 
-impl<'a, T: 'static + Clone + Send> Signal<T> {
-    pub fn new(port: Receiver<Option<T>>) -> Signal<T> {
-        let (chanchan, chanport) = channel();
-        let (xchan, xport) = channel();
 
-        let xchan1 = xchan.clone();
-        thread::spawn(move || {
-            loop {
-                match port.recv() {
-                    Ok(x) => {
-                        match xchan1.send(Either::Data(x)) {
-                            Ok(_) => {},
-                            Err(_) => { break; },
-                        }
-                    }
-                    Err(_) => { break; }
-                }
-            }
-        });
+pub struct Lift<'a, F, A, B> {
+    coordinator: &'a Coordinator,
+    f: F,
+    source_rx: Receiver<Option<A>>,
+    sink_txs: RefCell<Vec<Sender<Option<B>>>>,
+}
 
-        let xchan2 = xchan.clone();
-        thread::spawn(move || {
-            loop {
-                match chanport.recv() {
-                    Ok(rx) => {
-                        match xchan2.send(Either::Channel(rx)) {
-                            Ok(_) => {},
-                            Err(_) => { break; },
-                        }
-                    }
-                    Err(_) => { break; }
-                }
-            }
-        });
-
-        thread::spawn(move || {
-            let mut chans: Vec<Sender<Option<T>>> = Vec::new();
-            let mut fuse = false;
-            loop {
-                match xport.recv() {
-                    Ok(Either::Data(x)) => {
-                        fuse = true;
-                        for c in chans.iter() {
-                            match c.send(x.clone()) {
-                                Ok(_) => {},
-                                Err(_) => { break; },
-                            }
-                        }
-                    }
-                    Ok(Either::Channel(rx)) => {
-                        if fuse {
-                            panic!("Cannot subscribe to a signal that has begun data processing");
-                        }
-                        chans.push(rx);
-                    }
-                    Err(_) => { break; }
-                }
-            }
-        });
-
-        Signal { sender: chanchan }
-    }
-
-    pub fn send_to(&self, chan: Sender<Option<T>>) -> Result<(), SendError<Sender<Option<T>>>> {
-        self.sender.send(chan)
+impl<'a, F, A, B> Signal<B> for Lift<'a, F, A, B> {
+    fn publish_to(&self, tx: Sender<Option<B>>) {
+        self.sink_txs.borrow_mut().push(tx);
     }
 }
 
+impl<'a, F, A, B> Run for Lift<'a, F, A, B> where
+    F: Send + Fn(&A) -> B,
+    A: Send,
+    B: Send + Eq + Clone,
+{
+    fn run(self) {
+        let mut runner = LiftRunner {
+            f: self.f,
+            source_rx: self.source_rx,
+            sink_txs: self.sink_txs,
+            last_b: None,
+        };
+        runner.run()
+    }
+}
+
+pub struct LiftRunner<F, A, B> {
+    f: F,
+    source_rx: Receiver<Option<A>>,
+    sink_txs: RefCell<Vec<Sender<Option<B>>>>,
+    last_b: Option<B>,
+}
+
+impl<F, A, B> LiftRunner<F, A, B> where
+    F: Send + Fn(&A) -> B,
+    A: Send,
+    B: Send + Eq + Clone,
+{
+    pub fn run(mut self) {
+        loop {
+            match self.source_rx.recv() {
+                // Signal value changed
+                Ok(Some(ref a)) => {
+                    if self.send_if_changed(a) { break }
+                }
+
+                // No change from previous - send it along!
+                Ok(None) => {
+                    for sink_tx in self.sink_txs.borrow().iter() {
+                        match sink_tx.send(None) {
+                            Err(_) => { break }
+                            _ => {}
+                        }
+                    }
+                }
+
+                // Receiver closed, time to pack up & go home
+                _ => { break; }
+            }
+        }
+    }
+
+    fn send_if_changed(&mut self, a: &A) -> bool {
+        let b = Some((self.f)(a));
+
+        let value = if self.last_b == b {
+            None
+        } else {
+            self.last_b = b.clone();
+            b
+        };
+
+        for sink_tx in self.sink_txs.borrow().iter() {
+            match sink_tx.send(value.clone()) {
+                Err(_) => { return true }
+                _ => {}
+            }
+        }
+
+        false
+    }
+}

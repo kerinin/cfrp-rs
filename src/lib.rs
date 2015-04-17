@@ -1,12 +1,44 @@
-// mod signal;
-mod signal2;
-// mod coordinator;
-mod coordinator2;
+/// 
+/// Facts:
+/// 1) Pointers to owned trait objects can ONLY be of the trait object type - ie
+/// they cannot be link to the base object type, even if reference was created
+/// before conversion to trait object.
+///
+/// 2) Circular references aren't possible
+///
+/// Assumptions:
+/// 1) Signals should be available with types
+/// 2) Signals should be fully constructed (arbitrary subscribers) and then run
+///
+/// Conclusions:
+/// 1) Signals cannot be owned by Coordinators
+/// 2) If Coordinator has references to signals, signals cannot have references 
+/// to coordinator
+///
+///
+/// Builder?  Keeps references to coordinator & all signals, signals keep 
+/// references to coordinator.  Responsible for running everything
+/// Builder -> Signal -> Coordinator
+///         -> Coordinator
+///
+/// Macro?  Raw usage returns signals owned by the scope, then a builder must
+/// be constructed with references to all of them.  Macro handles ensuring
+/// that anything defined gets added to the returned builder. Builder owns everything
+/// as trait objects, but because its build after the topology is defined, that's
+/// ok.
+///
 
+
+mod signal;
+// mod signal2;
+mod coordinator;
+// mod coordinator2;
+// mod transform;
+mod topology;
+
+/*
 use std::thread;
 use std::sync::mpsc::*;
-
-use signal2::*;
 
 fn lift<'a, F, A, B>(f: F, signal: &Signal<'a, A>) -> Signal<'a, B> where 
     F: 'static + Send + Clone + Fn(&A) -> B,
@@ -60,13 +92,13 @@ fn lift<'a, F, A, B>(f: F, signal: &Signal<'a, A>) -> Signal<'a, B> where
     Signal::new(&signal.coordinator, signal_rx)
 }
 
-/*
 fn lift2<'a, F, A, B, C>(f: F, left: &Signal<'a, A>, right: &Signal<'a, B>) -> Signal<'a, C> where 
     F: 'static + Send + Clone + Fn(&A, &B) -> C,
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
     C: 'static + Send + Clone + Eq,
 {
+    // NOTE: Check for coordinator match
     let (left_tx, left_rx) = channel();
     left.publish_to(left_tx);
 

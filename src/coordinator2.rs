@@ -14,6 +14,7 @@ use std::marker::MarkerTrait;
 
 
 use super::signal2::{Signal};
+use super::transform::{Lift, Transform};
 
 trait NoOp: Send {
     fn no_op(&self);
@@ -67,9 +68,14 @@ pub struct Coordinator {
     // Channels on spawn
     no_ops: Mutex<Vec<Box<NoOp>>>,
     channels: RefCell<Vec<Box<Channel>>>,
+    pub transforms: RefCell<Vec<Box<Transform>>>,
 }
 
 impl Coordinator {
+
+    pub fn foo(&'a self) -> Signal<'a, A> {
+    }
+
     pub fn channel<'a, A>(&'a self) -> (Sender<A>, Signal<'a, A>) 
     where A: 'static + Send + Clone,
     {
