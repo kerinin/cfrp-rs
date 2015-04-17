@@ -60,6 +60,7 @@ fn lift<'a, F, A, B>(f: F, signal: &Signal<'a, A>) -> Signal<'a, B> where
     Signal::new(&signal.coordinator, signal_rx)
 }
 
+/*
 fn lift2<'a, F, A, B, C>(f: F, left: &Signal<'a, A>, right: &Signal<'a, B>) -> Signal<'a, C> where 
     F: 'static + Send + Clone + Fn(&A, &B) -> C,
     A: 'static + Send + Clone,
@@ -203,3 +204,4 @@ fn async<'a, A>(signal: &Signal<'a, A>) -> Signal<'a, A> where
 
     signal
 }
+*/

@@ -10,7 +10,9 @@ pub struct Signal<'a, T> {
     txs: RefCell<Vec<Sender<Option<T>>>>,
 }
 
-impl<'a, T: 'static + Clone + Send> Signal<'a, T> {
+impl<'a, T> Signal<'a, T> 
+where T: 'static + Clone + Send,
+{
     pub fn new(coordinator: &'a Coordinator, rx: Receiver<Option<T>>) -> Signal<'a, T> {
         Signal { coordinator: coordinator, rx: rx, txs: RefCell::new(Vec::new()) }
     }
