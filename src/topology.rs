@@ -5,7 +5,7 @@ use super::coordinator::Coordinator;
 
 pub struct Topology {
     pub coordinator: Coordinator,
-    pub nodes: Vec<Box<Compile>>,
+    pub nodes: Vec<Box<Run>>,
 }
 
 impl Topology {
@@ -13,12 +13,9 @@ impl Topology {
         self.coordinator.run();
 
         for node in self.nodes.into_iter() {
-            // let moved_node = node;
-            // let compiled: Box<Run> = moved_node.compile();
-            // let compiled_node = node.compile();
-            // spawn(move || {
-            //     // compiled_node.run()
-            // });
+            spawn(move || {
+                node.run();
+            });
         }
     }
 }

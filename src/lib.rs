@@ -36,12 +36,8 @@ mod topology;
 
 use std::sync::mpsc::*;
 
-pub trait Compile {
-    fn compile(self) -> Box<Run>;
-}
-
 pub trait Run: Send {
-    fn run(mut self);
+    fn run(mut self: Box<Self>);
 }
 
 pub trait Signal<A> {

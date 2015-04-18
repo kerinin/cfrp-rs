@@ -38,10 +38,8 @@ impl Coordinator {
 
         Lift::new(Box::new(Clone::clone), sink_rx)
     }
-}
-
-impl Run for Coordinator {
-    fn run(mut self) {
+     
+    pub fn run(self) {
         let no_ops: Arc<Mutex<Vec<Box<NoOp>>>> = Arc::new(
             Mutex::new(
                 self.inputs.borrow().iter().map(|input| input.no_op()).collect()

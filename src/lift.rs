@@ -31,31 +31,39 @@ impl<F, A, B> Signal<B> for Lift<F, A, B> where
     }
 }
 
-impl<F, A, B> Compile for Lift<F, A, B> where
+impl<F, A, B> Run for Lift<F, A, B> where
     F: 'static + Send + Fn(&A) -> B,
     A: 'static + Send,
     B: 'static + Send + Eq + Clone,
 {
-    fn compile(self) -> Box<Run> {
+    fn run(mut self: Box<Self>) {
+        // NOTE: wierd, but required to get access to all the fields simultaneously
+        let unboxed = *self;
+        let Lift { f: f, source_rx: source_rx, sink_txs: sink_txs } = unboxed;
+
         let runner = CompiledLift {
-            f: self.f,
-            source_rx: self.source_rx,
-            sink_txs: self.sink_txs,
+            f: f,
+            source_rx: source_rx,
+            sink_txs: sink_txs.into_inner(),
             last_b: None,
         };
-        Box::new(runner)
+        runner.run();
     }
 }
 
 
-pub struct CompiledLift<F, A, B> {
+pub struct CompiledLift<F, A, B> where
+    F: 'static + Send + Fn(&A) -> B,
+    A: 'static + Send,
+    B: 'static + Send + Eq + Clone,
+{
     f: Box<F>,
     source_rx: Receiver<Option<A>>,
-    sink_txs: RefCell<Vec<Sender<Option<B>>>>,
+    sink_txs: Vec<Sender<Option<B>>>,
     last_b: Option<B>,
 }
 
-impl<F, A, B> Run for CompiledLift<F, A, B> where
+impl<F, A, B> CompiledLift<F, A, B> where
     F: Fn(&A) -> B + Send,
     A: Send,
     B: Eq + Clone + Send,
@@ -70,7 +78,7 @@ impl<F, A, B> Run for CompiledLift<F, A, B> where
 
                 // No change from previous - send it along!
                 Ok(None) => {
-                    for sink_tx in self.sink_txs.borrow().iter() {
+                    for sink_tx in self.sink_txs.iter() {
                         match sink_tx.send(None) {
                             Err(_) => { break }
                             _ => {}
@@ -83,12 +91,7 @@ impl<F, A, B> Run for CompiledLift<F, A, B> where
             }
         }
     }
-}
 
-impl<F, A, B> CompiledLift<F, A, B> where
-    F: Fn(&A) -> B,
-    B: Eq + Clone,
-{
     fn send_if_changed(&mut self, a: &A) -> bool {
         let b = Some((self.f)(a));
 
@@ -99,7 +102,7 @@ impl<F, A, B> CompiledLift<F, A, B> where
             b
         };
 
-        for sink_tx in self.sink_txs.borrow().iter() {
+        for sink_tx in self.sink_txs.iter() {
             match sink_tx.send(value.clone()) {
                 Err(_) => { return true }
                 _ => {}
