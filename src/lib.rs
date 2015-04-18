@@ -1,65 +1,46 @@
-/// 
-/// Facts:
-/// 1) Pointers to owned trait objects can ONLY be of the trait object type - ie
-/// they cannot be link to the base object type, even if reference was created
-/// before conversion to trait object.
-///
-/// 2) Circular references aren't possible
-///
-/// Assumptions:
-/// 1) Signals should be available with types
-/// 2) Signals should be fully constructed (arbitrary subscribers) and then run
-///
-/// Conclusions:
-/// 1) Signals cannot be owned by Coordinators
-/// 2) If Coordinator has references to signals, signals cannot have references 
-/// to coordinator
-///
-///
-/// Builder?  Keeps references to coordinator & all signals, signals keep 
-/// references to coordinator.  Responsible for running everything
-/// Builder -> Signal -> Coordinator
-///         -> Coordinator
-///
-/// Macro?  Raw usage returns signals owned by the scope, then a builder must
-/// be constructed with references to all of them.  Macro handles ensuring
-/// that anything defined gets added to the returned builder. Builder owns everything
-/// as trait objects, but because its build after the topology is defined, that's
-/// ok.
-///
-
-
-// mod channel;
 mod coordinator;
 mod lift;
 mod topology;
 
+pub use self::topology::Topology;
+pub use self::coordinator::Coordinator;
+pub use self::lift::Lift;
+
 use std::sync::mpsc::*;
 
-pub trait Run: Send {
-    fn run(mut self: Box<Self>);
+pub trait Spawn {
+    fn spawn(self: Box<Self>);
+}
+
+trait NoOp: Send {
+    fn no_op(&self) -> bool;
 }
 
 pub trait Signal<A> {
     fn publish_to(&self, Sender<Option<A>>);
-}
-
-pub trait NoOp: Send {
-    fn no_op(&self);
-    fn boxed_clone(&self) -> Box<NoOp>;
+    fn coordinator(&self) -> &Coordinator;
 }
 
 impl<A> NoOp for Sender<Option<A>> 
 where A: 'static + Send
 {
-    fn no_op(&self) {
-        self.send(None);
-    }
-    fn boxed_clone(&self) -> Box<NoOp> {
-        Box::new(self.clone())
+    fn no_op(&self) -> bool {
+        match self.send(None) {
+            Err(_) => true,
+            _ => false,
+        }
     }
 }
 
+
+pub fn lift<'a, F, A, B>(f: F, a: &'a Signal<A>) -> Lift<'a, F, A, B> where
+    F: Fn(&A) -> B,
+{
+    let (tx, rx) = channel();
+    a.publish_to(tx);
+    Lift::new(a.coordinator(), Box::new(f), rx)
+}
+    
 /*
 use std::thread;
 use std::sync::mpsc::*;

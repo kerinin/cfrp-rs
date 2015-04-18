@@ -1,21 +1,23 @@
-use std::thread::*;
-
-use super::*;
-use super::coordinator::Coordinator;
+use super::{Coordinator, Spawn};
 
 pub struct Topology {
-    pub coordinator: Coordinator,
-    pub nodes: Vec<Box<Run>>,
+    coordinator: Coordinator,
+    nodes: Vec<Box<Spawn>>,
 }
 
 impl Topology {
+    pub fn new(coordinator: Coordinator, nodes: Vec<Box<Spawn>>) -> Topology {
+        Topology {
+            coordinator: coordinator,
+            nodes: nodes,
+        }
+    }
+
     pub fn run(self) {
-        self.coordinator.run();
+        self.coordinator.spawn();
 
         for node in self.nodes.into_iter() {
-            spawn(move || {
-                node.run();
-            });
+            node.spawn();
         }
     }
 }

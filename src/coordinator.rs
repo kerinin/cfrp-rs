@@ -1,10 +1,10 @@
-use std::thread::*;
+use std::thread;
 use std::clone::*;
 use std::cell::*;
 use std::sync::*;
 use std::sync::mpsc::*;
 
-use super::*;
+use super::NoOp;
 use super::lift::Lift;
 
 trait RunInput: Send {
@@ -12,7 +12,7 @@ trait RunInput: Send {
     fn run(self: Box<Self>, idx: usize, no_ops: Arc<Mutex<Vec<Box<NoOp>>>>);
 }
 
-pub struct Input<A> {
+struct Input<A> {
     source_rx: Receiver<A>,
     sink_tx: Sender<Option<A>>,
 }
@@ -22,7 +22,7 @@ pub struct Coordinator {
 }
 
 impl Coordinator {
-    pub fn channel<'a, A>(&'a self, source_rx: Receiver<A>) -> Lift<fn(&A) -> A, A, A> where
+    pub fn channel<'a, A>(&'a self, source_rx: Receiver<A>) -> Lift<'a, fn(&A) -> A, A, A> where
         A: 'static + Send + Clone,
     {
         let (sink_tx, sink_rx) = channel();
@@ -36,10 +36,10 @@ impl Coordinator {
             )
         );
 
-        Lift::new(Box::new(Clone::clone), sink_rx)
+        Lift::new(&*self, Box::new(Clone::clone), sink_rx)
     }
      
-    pub fn run(self) {
+    pub fn spawn(self) {
         let no_ops: Arc<Mutex<Vec<Box<NoOp>>>> = Arc::new(
             Mutex::new(
                 self.inputs.borrow().iter().map(|input| input.no_op()).collect()
@@ -48,7 +48,7 @@ impl Coordinator {
 
         for (i, input) in self.inputs.into_inner().into_iter().enumerate() {
             let thread_no_ops = no_ops.clone();
-            spawn(move || {
+            thread::spawn(move || {
                 input.run(i, thread_no_ops);
             });
         }
@@ -69,9 +69,12 @@ impl<A> RunInput for Input<A> where
                     // NOTE: Memoize!
                     for (i, no_op) in no_ops.lock().unwrap().iter().enumerate() {
                         if i == idx {
-                            self.sink_tx.send(Some(a.clone()));
-                        } else {
-                            no_op.no_op();
+                            match self.sink_tx.send(Some(a.clone())) {
+                                Err(_) => { return }
+                                _ => {}
+                            }
+                        } else if no_op.no_op() {
+                            return
                         }
                     }
                 }
