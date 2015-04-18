@@ -1,60 +1,66 @@
 use std::cell::*;
 use std::sync::mpsc::*;
 
-use super::coordinator::{Coordinator};
+use super::*;
 
-pub trait Run {
-    fn run(self);
-}
-
-
-pub trait Signal<A> {
-    fn publish_to(&self, Sender<Option<A>>);
-}
-
-
-pub struct Lift<'a, F, A, B> {
-    coordinator: &'a Coordinator,
-    f: F,
+pub struct Lift<F, A, B> where
+    F: Fn(&A) -> B,
+{
+    f: Box<F>,
     source_rx: Receiver<Option<A>>,
     sink_txs: RefCell<Vec<Sender<Option<B>>>>,
 }
 
-impl<'a, F, A, B> Signal<B> for Lift<'a, F, A, B> {
+impl<F, A, B> Lift<F, A, B> where
+    F: Fn(&A) -> B,
+{
+    pub fn new(f: Box<F>, source_rx: Receiver<Option<A>>) -> Lift<F, A, B> {
+        Lift {
+            f: f,
+            source_rx: source_rx,
+            sink_txs: RefCell::new(Vec::new()),
+        }
+    }
+}
+
+impl<F, A, B> Signal<B> for Lift<F, A, B> where
+    F: Fn(&A) -> B,
+{
     fn publish_to(&self, tx: Sender<Option<B>>) {
         self.sink_txs.borrow_mut().push(tx);
     }
 }
 
-impl<'a, F, A, B> Run for Lift<'a, F, A, B> where
-    F: Send + Fn(&A) -> B,
-    A: Send,
-    B: Send + Eq + Clone,
+impl<F, A, B> Compile for Lift<F, A, B> where
+    F: 'static + Send + Fn(&A) -> B,
+    A: 'static + Send,
+    B: 'static + Send + Eq + Clone,
 {
-    fn run(self) {
-        let mut runner = LiftRunner {
+    fn compile(self) -> Box<Run> {
+        let runner = CompiledLift {
             f: self.f,
             source_rx: self.source_rx,
             sink_txs: self.sink_txs,
             last_b: None,
         };
-        runner.run()
+        Box::new(runner)
     }
 }
 
-pub struct LiftRunner<F, A, B> {
-    f: F,
+
+pub struct CompiledLift<F, A, B> {
+    f: Box<F>,
     source_rx: Receiver<Option<A>>,
     sink_txs: RefCell<Vec<Sender<Option<B>>>>,
     last_b: Option<B>,
 }
 
-impl<F, A, B> LiftRunner<F, A, B> where
-    F: Send + Fn(&A) -> B,
+impl<F, A, B> Run for CompiledLift<F, A, B> where
+    F: Fn(&A) -> B + Send,
     A: Send,
-    B: Send + Eq + Clone,
+    B: Eq + Clone + Send,
 {
-    pub fn run(mut self) {
+    fn run(mut self) {
         loop {
             match self.source_rx.recv() {
                 // Signal value changed
@@ -77,7 +83,12 @@ impl<F, A, B> LiftRunner<F, A, B> where
             }
         }
     }
+}
 
+impl<F, A, B> CompiledLift<F, A, B> where
+    F: Fn(&A) -> B,
+    B: Eq + Clone,
+{
     fn send_if_changed(&mut self, a: &A) -> bool {
         let b = Some((self.f)(a));
 

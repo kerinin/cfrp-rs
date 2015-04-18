@@ -29,12 +29,40 @@
 ///
 
 
-mod signal;
-// mod signal2;
+// mod channel;
 mod coordinator;
-// mod coordinator2;
-// mod transform;
+mod lift;
 mod topology;
+
+use std::sync::mpsc::*;
+
+pub trait Compile {
+    fn compile(self) -> Box<Run>;
+}
+
+pub trait Run: Send {
+    fn run(mut self);
+}
+
+pub trait Signal<A> {
+    fn publish_to(&self, Sender<Option<A>>);
+}
+
+pub trait NoOp: Send {
+    fn no_op(&self);
+    fn boxed_clone(&self) -> Box<NoOp>;
+}
+
+impl<A> NoOp for Sender<Option<A>> 
+where A: 'static + Send
+{
+    fn no_op(&self) {
+        self.send(None);
+    }
+    fn boxed_clone(&self) -> Box<NoOp> {
+        Box::new(self.clone())
+    }
+}
 
 /*
 use std::thread;
