@@ -121,19 +121,3 @@ impl<F, A, B> CompiledLift<F, A, B> where
         false
     }
 }
-
-#[cfg(test)] 
-mod test {
-    extern crate quickcheck;
-
-    use std::collections::*;
-
-    use self::quickcheck::quickcheck;
-
-    use db::deletion_variant::*;
-
-    #[test]
-    fn variants_compact_u64() {
-
-    }
-}

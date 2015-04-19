@@ -13,6 +13,10 @@ impl Topology {
         }
     }
 
+    pub fn add_node(&mut self, node: Box<Spawn>) {
+        self.nodes.push(node);
+    }
+
     pub fn run(self) {
         self.coordinator.spawn();
 

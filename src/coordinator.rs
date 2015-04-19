@@ -22,6 +22,10 @@ pub struct Coordinator {
 }
 
 impl Coordinator {
+    pub fn new() -> Coordinator {
+        Coordinator {inputs: RefCell::new(Vec::new())}
+    }
+
     pub fn channel<'a, A>(&'a self, source_rx: Receiver<A>) -> Lift<'a, fn(&A) -> A, A, A> where
         A: 'static + Send + Clone,
     {

@@ -241,4 +241,33 @@ fn async<'a, A>(signal: &Signal<'a, A>) -> Signal<'a, A> where
 
     signal
 }
+
+
+#[cfg(test)] 
+mod test {
+    // extern crate quickcheck;
+    
+    use std::sync::mpsc::*;
+
+    use super::*;
+
+    #[test]
+    fn integration() {
+        let coordinator = Coordinator::new();
+        let (in_tx, in_rx) = channel();
+        let s_1 = coordinator.channel(in_rx);
+        let s_2 = lift(|i: &usize| -> usize { i + 1 }, &s_1);
+        let (out_tx, out_rx) = channel();
+        s_2.publish_to(out_tx);
+
+        let topology = Topology::new(
+            coordinator,
+            vec![Box::new(s_1), Box::new(s_2)],
+        );
+        topology.run();
+
+        in_tx.send(0);
+        assert_eq!(Some(1), out_rx.recv().unwrap())
+    }
+}
 */
