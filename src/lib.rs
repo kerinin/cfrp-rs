@@ -18,7 +18,6 @@ trait NoOp: Send {
 
 pub trait Signal<A> {
     fn publish_to(&self, Sender<Option<A>>);
-    fn coordinator(&self) -> &Coordinator;
 }
 
 impl<A> NoOp for Sender<Option<A>> 
@@ -33,12 +32,12 @@ where A: 'static + Send
 }
 
 
-pub fn lift<'a, F, A, B>(f: F, a: &'a Signal<A>) -> Lift<'a, F, A, B> where
+pub fn lift<F, A, B>(f: F, a: &Signal<A>) -> Lift<F, A, B> where
     F: Fn(&A) -> B,
 {
     let (tx, rx) = channel();
     a.publish_to(tx);
-    Lift::new(a.coordinator(), Box::new(f), rx)
+    Lift::new(Box::new(f), rx)
 }
     
 /*
@@ -242,6 +241,7 @@ fn async<'a, A>(signal: &Signal<'a, A>) -> Signal<'a, A> where
     signal
 }
 
+*/
 
 #[cfg(test)] 
 mod test {
@@ -254,20 +254,18 @@ mod test {
     #[test]
     fn integration() {
         let coordinator = Coordinator::new();
-        let (in_tx, in_rx) = channel();
+        let (in_tx, in_rx): (Sender<usize>, Receiver<usize>) = channel();
         let s_1 = coordinator.channel(in_rx);
         let s_2 = lift(|i: &usize| -> usize { i + 1 }, &s_1);
-        let (out_tx, out_rx) = channel();
+        let (out_tx, out_rx): (Sender<Option<usize>>, Receiver<Option<usize>>) = channel();
         s_2.publish_to(out_tx);
 
-        let topology = Topology::new(
-            coordinator,
-            vec![Box::new(s_1), Box::new(s_2)],
-        );
+        let mut topology = Topology::new(coordinator);
+        topology.add_node(Box::new(s_1));
+        topology.add_node(Box::new(s_2));
         topology.run();
 
         in_tx.send(0);
         assert_eq!(Some(1), out_rx.recv().unwrap())
     }
 }
-*/

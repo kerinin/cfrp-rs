@@ -2,23 +2,21 @@ use std::cell::*;
 use std::thread;
 use std::sync::mpsc::*;
 
-use super::{Coordinator, Signal, Spawn};
+use super::{Signal, Spawn};
 
-pub struct Lift<'a, F, A, B> where
+pub struct Lift<F, A, B> where
     F: Fn(&A) -> B,
 {
-    coordinator: &'a Coordinator,
     f: Box<F>,
     source_rx: Receiver<Option<A>>,
     sink_txs: RefCell<Vec<Sender<Option<B>>>>,
 }
 
-impl<'a, F, A, B> Lift<'a, F, A, B> where
+impl<F, A, B> Lift<F, A, B> where
     F: Fn(&A) -> B,
 {
-    pub fn new(coordinator: &'a Coordinator, f: Box<F>, source_rx: Receiver<Option<A>>) -> Lift<F, A, B> {
+    pub fn new(f: Box<F>, source_rx: Receiver<Option<A>>) -> Lift<F, A, B> {
         Lift {
-            coordinator: coordinator,
             f: f,
             source_rx: source_rx,
             sink_txs: RefCell::new(Vec::new()),
@@ -26,19 +24,15 @@ impl<'a, F, A, B> Lift<'a, F, A, B> where
     }
 }
 
-impl<'a, F, A, B> Signal<B> for Lift<'a, F, A, B> where
+impl<F, A, B> Signal<B> for Lift<F, A, B> where
     F: Fn(&A) -> B,
 {
     fn publish_to(&self, tx: Sender<Option<B>>) {
         self.sink_txs.borrow_mut().push(tx);
     }
-
-    fn coordinator(&self) -> &Coordinator {
-        &*self.coordinator
-    }
 }
 
-impl<'a, F, A, B> Spawn for Lift<'a, F, A, B> where
+impl<F, A, B> Spawn for Lift<F, A, B> where
     F: 'static + Send + Fn(&A) -> B,
     A: 'static + Send,
     B: 'static + Send + Eq + Clone,
@@ -46,7 +40,7 @@ impl<'a, F, A, B> Spawn for Lift<'a, F, A, B> where
     fn spawn(self: Box<Self>) {
         // NOTE: weird, but required to get access to all the fields simultaneously
         let unboxed = *self;
-        let Lift { coordinator: _, f, source_rx, sink_txs } = unboxed;
+        let Lift { f, source_rx, sink_txs } = unboxed;
 
         let runner = CompiledLift {
             f: f,

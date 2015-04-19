@@ -26,7 +26,7 @@ impl Coordinator {
         Coordinator {inputs: RefCell::new(Vec::new())}
     }
 
-    pub fn channel<'a, A>(&'a self, source_rx: Receiver<A>) -> Lift<'a, fn(&A) -> A, A, A> where
+    pub fn channel<A>(&self, source_rx: Receiver<A>) -> Lift<fn(&A) -> A, A, A> where
         A: 'static + Send + Clone,
     {
         let (sink_tx, sink_rx) = channel();
@@ -40,7 +40,7 @@ impl Coordinator {
             )
         );
 
-        Lift::new(&*self, Box::new(Clone::clone), sink_rx)
+        Lift::new(Box::new(Clone::clone), sink_rx)
     }
      
     pub fn spawn(self) {

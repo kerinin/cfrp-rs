@@ -6,10 +6,10 @@ pub struct Topology {
 }
 
 impl Topology {
-    pub fn new(coordinator: Coordinator, nodes: Vec<Box<Spawn>>) -> Topology {
+    pub fn new(coordinator: Coordinator) -> Topology {
         Topology {
             coordinator: coordinator,
-            nodes: nodes,
+            nodes: Vec::new(),
         }
     }
 
