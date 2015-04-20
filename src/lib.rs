@@ -105,7 +105,7 @@ impl<A> Signal<A> for Channel<A> where
     fn recv(&self) -> Option<A> {
         match self.source_rx.recv() {
             Err(_) => None,
-            Ok(a) => { println!("Received something"); a },
+            Ok(a) => a,
         }
     }
 }
@@ -151,7 +151,7 @@ impl<F, A, B> Signal<B> for Lift<F, A, B> where
 {
     fn recv(&self) -> Option<B> {
        match self.parent.recv() {
-           Some(ref a) => { println!("Received something"); Some((self.f)(a)) },
+           Some(ref a) => Some((self.f)(a)),
            None => None,
        }
     }
@@ -212,18 +212,14 @@ impl<F, A, B> Signal<B> for Fold<F, A, B> where
     B: 'static + Send + Clone,
 {
     fn recv(&self) -> Option<B> {
-        /*
        match self.parent.recv() {
-           Some(ref a) => { 
-               println!("Received something");
+           Some(a) => { 
                let mut f: &mut F = &mut self.f.borrow_mut();
                f(&mut self.state.borrow_mut(), a);
                Some(self.state.borrow().clone())
             },
            None => None,
        }
-       */
-        None
     }
 }
 
@@ -260,9 +256,9 @@ impl<F, A, B> Run for Fold<F, A, B> where
     B: 'static + Send + Clone,
 {
     fn run(self: Box<Self>) {
-        // loop {
-        //     self.recv();
-        // }
+        loop {
+            self.recv();
+        }
     }
 }
 
@@ -314,7 +310,7 @@ impl<A> Signal<A> for Branch<A> where
     fn recv(&self) -> Option<A> {
         match self.source_rx.recv() {
             Err(_) => None,
-            Ok(a) => { println!("Received something"); a },
+            Ok(a) => a,
         }
     }
 }
@@ -378,21 +374,17 @@ impl<T> Topology<T> {
         let Builder {inputs, root_signals} = self.builder;
 
         for root_signal in root_signals.into_inner().into_iter() {
-            /*
             spawn(move || {
                 root_signal.run();
             });
-            */
         }
 
         let no_ops = Arc::new(Mutex::new(inputs.borrow().iter().map(|i| i.boxed_no_op()).collect::<Vec<Box<NoOp>>>()));
         for (idx, input) in inputs.into_inner().into_iter().enumerate() {
-            /*
             let no_ops_i = no_ops.clone();
             spawn(move || {
                 input.run(idx, no_ops_i);
             });
-            */
         }
     }
 }
