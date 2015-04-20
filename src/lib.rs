@@ -4,31 +4,47 @@ use std::cell::*;
 use std::thread::spawn;
 use std::sync::mpsc::*;
 
-#[derive(Debug, PartialEq, Eq)]
-pub enum Event<A> where
-    A: 'static + Send,
-{
-    Changed(A),
-    NoChange,
-    Exit,
-}
-
 pub trait Signal<A>
 {
     fn recv(&self) -> Option<A>;
 }
 
-pub trait Reactive<A> where
-    A: 'static + Send,
-{
+pub trait Reactive<A> {
     fn lift<F, B>(self, f: F) -> Lift<F, A, B> where
         F: 'static + Send + Fn(A) -> B,
+        A: 'static + Send,
         B: 'static + Send;
 
     fn foldp<F, B>(self, initial: B, f: F) -> Fold<F, A, B> where
         F: 'static + Send + FnMut(&mut B, A),
+        A: 'static + Send,
         B: 'static + Send + Clone;
+}
 
+impl<A, T> Reactive<A> for T where T: 'static + Signal<A> + Send
+{
+    fn lift<F, B>(self, f: F) -> Lift<F, A, B> where
+        F: 'static + Send + Fn(A) -> B,
+        A: 'static + Send,
+        B: 'static + Send,
+    {
+        Lift {
+            parent: Box::new(self),
+            f: f,
+        }
+    }
+
+    fn foldp<F, B>(self, initial: B, f: F) -> Fold<F, A, B> where
+        F: 'static + Send + FnMut(&mut B, A),
+        A: 'static + Send,
+        B: 'static + Send + Clone,
+    {
+        Fold {
+            parent: Box::new(self),
+            f: RefCell::new(f),
+            state: RefCell::new(initial),
+        }
+    }
 }
 
 pub trait Run: Send {
@@ -110,31 +126,6 @@ impl<A> Signal<A> for Channel<A> where
     }
 }
 
-impl<A> Reactive<A> for Channel<A> where
-    A: 'static + Send,
-{ 
-    fn lift<F, B>(self, f: F) -> Lift<F, A, B> where
-        F: 'static + Send + Fn(A) -> B,
-        B: 'static + Send,
-    {
-        Lift {
-            parent: Box::new(self),
-            f: f,
-        }
-    }
-
-    fn foldp<F, B>(self, initial: B, f: F) -> Fold<F, A, B> where
-        F: 'static + Send + FnMut(&mut B, A),
-        B: 'static + Send + Clone,
-    {
-        Fold {
-            parent: Box::new(self),
-            f: RefCell::new(f),
-            state: RefCell::new(initial),
-        }
-    }
-}
-
 pub struct Lift<F, A, B> where
     F: 'static + Send + Fn(A) -> B,
     A: 'static + Send,
@@ -154,33 +145,6 @@ impl<F, A, B> Signal<B> for Lift<F, A, B> where
            Some(a) => Some((self.f)(a)),
            None => None,
        }
-    }
-}
-
-impl<F, A, B> Reactive<B> for Lift<F, A, B> where
-    F: 'static + Send + Fn(A) -> B,
-    A: 'static + Send,
-    B: 'static + Send,
-{ 
-    fn lift<G, C>(self, g: G) -> Lift<G, B, C> where
-        G: 'static + Send + Fn(B) -> C,
-        C: 'static + Send,
-    {
-        Lift {
-            parent: Box::new(self),
-            f: g,
-        }
-    }
-
-    fn foldp<G, C>(self, initial: C, g: G) -> Fold<G, B, C> where
-        G: 'static + Send + FnMut(&mut C, B),
-        C: 'static + Send + Clone,
-    {
-        Fold {
-            parent: Box::new(self),
-            f: RefCell::new(g),
-            state: RefCell::new(initial),
-        }
     }
 }
 
@@ -220,33 +184,6 @@ impl<F, A, B> Signal<B> for Fold<F, A, B> where
             },
            None => None,
        }
-    }
-}
-
-impl<F, A, B> Reactive<B> for Fold<F, A, B> where
-    F: 'static + Send + FnMut(&mut B, A),
-    A: 'static + Send,
-    B: 'static + Send + Clone,
-{ 
-    fn lift<G, C>(self, g: G) -> Lift<G, B, C> where
-        G: 'static + Send + Fn(B) -> C,
-        C: 'static + Send,
-    {
-        Lift {
-            parent: Box::new(self),
-            f: g,
-        }
-    }
-
-    fn foldp<G, C>(self, initial: C, g: G) -> Fold<G, B, C> where
-        G: 'static + Send + FnMut(&mut C, B),
-        C: 'static + Send + Clone,
-    {
-        Fold {
-            parent: Box::new(self),
-            f: RefCell::new(g),
-            state: RefCell::new(initial),
-        }
     }
 }
 
