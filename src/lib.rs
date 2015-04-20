@@ -404,7 +404,7 @@ mod test {
 
         Topology::build( (in_rx, out_tx), |t, (in_rx, out_tx)| {
 
-            let channel: Channel<usize> = t.channel(in_rx);
+            let channel = t.channel(in_rx);
             let lift = channel.lift(|i| -> usize { i + 1 });
             let fold = lift.foldp(out_tx, |tx, a| { tx.send(a); });
             t.add(Box::new(fold));
@@ -415,7 +415,7 @@ mod test {
             // ));
         }).run();
 
-        in_tx.send(0);
+        in_tx.send(0usize);
 
         println!("Received {}", out_rx.recv().unwrap());
     }
