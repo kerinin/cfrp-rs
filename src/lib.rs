@@ -15,7 +15,7 @@ pub enum Event<A> where
 
 pub trait Signal<A>
 {
-    fn recv(&mut self) -> Option<A>;
+    fn recv(&self) -> Option<A>;
 }
 
 pub trait Reactive<A> where
@@ -32,7 +32,7 @@ pub trait Reactive<A> where
 }
 
 pub trait Run: Send {
-    fn run(mut self: Box<Self>);
+    fn run(self: Box<Self>);
 }
 
 trait NoOp: Send {
@@ -102,7 +102,7 @@ pub struct Channel<A> where
 impl<A> Signal<A> for Channel<A> where
     A: 'static + Send,
 {
-    fn recv(&mut self) -> Option<A> {
+    fn recv(&self) -> Option<A> {
         match self.source_rx.recv() {
             Err(_) => None,
             Ok(a) => { println!("Received something"); a },
@@ -129,8 +129,8 @@ impl<A> Reactive<A> for Channel<A> where
     {
         Fold {
             parent: Box::new(self),
-            f: f,
-            state: initial,
+            f: RefCell::new(f),
+            state: RefCell::new(initial),
         }
     }
 }
@@ -149,7 +149,7 @@ impl<F, A, B> Signal<B> for Lift<F, A, B> where
     A: 'static + Send,
     B: 'static + Send,
 {
-    fn recv(&mut self) -> Option<B> {
+    fn recv(&self) -> Option<B> {
        match self.parent.recv() {
            Some(ref a) => { println!("Received something"); Some((self.f)(a)) },
            None => None,
@@ -178,8 +178,8 @@ impl<F, A, B> Reactive<B> for Lift<F, A, B> where
     {
         Fold {
             parent: Box::new(self),
-            f: g,
-            state: initial,
+            f: RefCell::new(g),
+            state: RefCell::new(initial),
         }
     }
 }
@@ -189,7 +189,7 @@ impl<F, A, B> Run for Lift<F, A, B> where
     A: 'static + Send,
     B: 'static + Send,
 {
-    fn run(mut self: Box<Self>) {
+    fn run(self: Box<Self>) {
         loop {
             self.recv();
         }
@@ -202,8 +202,8 @@ pub struct Fold<F, A, B> where
     B: 'static + Send + Clone,
 {
     parent: Box<Signal<A> + Send>,
-    f: F,
-    state: B,
+    f: RefCell<F>,
+    state: RefCell<B>,
 }
 
 impl<F, A, B> Signal<B> for Fold<F, A, B> where
@@ -211,12 +211,13 @@ impl<F, A, B> Signal<B> for Fold<F, A, B> where
     A: 'static + Send,
     B: 'static + Send + Clone,
 {
-    fn recv(&mut self) -> Option<B> {
+    fn recv(&self) -> Option<B> {
        match self.parent.recv() {
            Some(ref a) => { 
                println!("Received something");
-               (self.f)(&mut self.state, a);
-               Some(self.state.clone())
+               let mut f: &mut F = &mut self.f.borrow_mut();
+               f(&mut self.state.borrow_mut(), a);
+               Some(self.state.borrow().clone())
             },
            None => None,
        }
@@ -244,18 +245,18 @@ impl<F, A, B> Reactive<B> for Fold<F, A, B> where
     {
         Fold {
             parent: Box::new(self),
-            f: g,
-            state: initial,
+            f: RefCell::new(g),
+            state: RefCell::new(initial),
         }
     }
 }
 
 impl<F, A, B> Run for Fold<F, A, B> where
-    F: 'static + Send + Fn(&mut B, &A),
+    F: 'static + Send + FnMut(&mut B, &A),
     A: 'static + Send,
     B: 'static + Send + Clone,
 {
-    fn run(mut self: Box<Self>) {
+    fn run(self: Box<Self>) {
         loop {
             self.recv();
         }
@@ -272,7 +273,7 @@ pub struct Fork<A> where
 impl<A> Run for Fork<A> where
     A: 'static + Clone + Send,
 {
-    fn run(mut self: Box<Self>) {
+    fn run(self: Box<Self>) {
         loop {
             match self.parent.recv() {
                 Some(a) => {
@@ -307,7 +308,7 @@ impl<A> Clone for Branch<A> where
 impl<A> Signal<A> for Branch<A> where
     A: 'static + Send,
 {
-    fn recv(&mut self) -> Option<A> {
+    fn recv(&self) -> Option<A> {
         match self.source_rx.recv() {
             Err(_) => None,
             Ok(a) => { println!("Received something"); a },
