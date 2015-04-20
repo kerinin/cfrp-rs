@@ -6,12 +6,10 @@ mod lift;
 mod reactive;
 mod topology;
 
-// NOTE: See how much of this we can keep private...
-pub use channel::Channel;
-pub use lift::Lift;
-pub use fold::Fold;
-pub use input::{Input, CoordinatedInput, NoOp};
-pub use fork::{Fork, Branch};
+use std::sync::*;
+use std::cell::*;
+use std::sync::mpsc::*;
+
 pub use reactive::Reactive;
 pub use topology::{Topology, Builder};
 
@@ -20,9 +18,112 @@ pub trait Signal<A>
     fn recv(&self) -> Option<A>;
 }
 
-pub trait Run: Send {
+trait Run: Send {
     fn run(self: Box<Self>);
 }
+
+pub struct Channel<A> where
+    A: 'static + Send,
+{
+    source_rx: Receiver<Option<A>>,
+}
+
+impl<A> Channel<A> where
+    A: 'static + Send,
+{
+    fn new(source_rx: Receiver<Option<A>>) -> Channel<A> {
+        Channel {
+            source_rx: source_rx,
+        }
+    }
+}
+
+pub struct Lift<F, A, B> where
+    F: 'static + Send + Fn(A) -> B,
+    A: 'static + Send,
+    B: 'static + Send,
+{
+    parent: Box<Signal<A> + Send>,
+    f: F,
+    last: RefCell<Option<A>>,
+}
+
+impl<F, A, B> Lift<F, A, B> where
+    F: 'static + Send + Fn(A) -> B,
+    A: 'static + Send,
+    B: 'static + Send,
+{
+    fn new(parent: Box<Signal<A> + Send>, f: F) -> Lift<F, A, B> {
+        Lift {
+            parent: parent,
+            f: f,
+            last: RefCell::new(None),
+        }
+    }
+}
+
+pub struct Fold<F, A, B> where
+    F: 'static + Send + FnMut(&mut B, A),
+    A: 'static + Send,
+    B: 'static + Send + Clone,
+{
+    parent: Box<Signal<A> + Send>,
+    f: RefCell<F>,
+    state: RefCell<B>,
+}
+
+impl<F, A, B> Fold<F, A, B> where
+    F: 'static + Send + FnMut(&mut B, A),
+    A: 'static + Send,
+    B: 'static + Send + Clone,
+{
+    fn new(parent: Box<Signal<A> + Send>, f: F, initial: B) -> Fold<F, A, B> {
+        Fold {
+            parent: parent,
+            f: RefCell::new(f),
+            state: RefCell::new(initial),
+        }
+    }
+}
+
+struct Fork<A> where
+    A: 'static + Send,
+{
+    parent: Box<Signal<A> + Send>,
+    sink_txs: Arc<Mutex<Vec<Sender<Option<A>>>>>,
+}
+
+impl<A> Fork<A> where
+    A: 'static + Clone + Send,
+{
+    fn new(parent: Box<Signal<A> + Send>, sink_txs: Arc<Mutex<Vec<Sender<Option<A>>>>>) -> Fork<A> {
+        Fork {
+            parent: parent,
+            sink_txs: sink_txs,
+        }
+    }
+}
+
+
+pub struct Branch<A> where
+    A: 'static + Send,
+{
+    // Arc<T> is send if T: Send + Sync (which mutex is, unconditionally)
+    fork_txs: Arc<Mutex<Vec<Sender<Option<A>>>>>,
+    source_rx: Receiver<Option<A>>,
+}
+
+impl<A> Branch<A> where
+    A: 'static + Send,
+{
+    fn new(fork_txs: Arc<Mutex<Vec<Sender<Option<A>>>>>, source_rx: Receiver<Option<A>>) -> Branch<A> {
+        Branch {
+            fork_txs: fork_txs,
+            source_rx: source_rx,
+        }
+    }
+}
+
 
 
 #[cfg(test)] 

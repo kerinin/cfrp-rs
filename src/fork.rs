@@ -1,25 +1,7 @@
 use std::sync::*;
 use std::sync::mpsc::*;
 
-use super::{Signal, Run};
-
-pub struct Fork<A> where
-    A: 'static + Send,
-{
-    parent: Box<Signal<A> + Send>,
-    sink_txs: Arc<Mutex<Vec<Sender<Option<A>>>>>,
-}
-
-impl<A> Fork<A> where
-    A: 'static + Clone + Send,
-{
-    pub fn new(parent: Box<Signal<A> + Send>, sink_txs: Arc<Mutex<Vec<Sender<Option<A>>>>>) -> Fork<A> {
-        Fork {
-            parent: parent,
-            sink_txs: sink_txs,
-        }
-    }
-}
+use super::{Fork, Branch, Signal, Run};
 
 impl<A> Run for Fork<A> where
     A: 'static + Clone + Send,
@@ -34,25 +16,6 @@ impl<A> Run for Fork<A> where
                 },
                 _ => {},
             }
-        }
-    }
-}
-
-pub struct Branch<A> where
-    A: 'static + Send,
-{
-    // Arc<T> is send if T: Send + Sync (which mutex is, unconditionally)
-    fork_txs: Arc<Mutex<Vec<Sender<Option<A>>>>>,
-    source_rx: Receiver<Option<A>>,
-}
-
-impl<A> Branch<A> where
-    A: 'static + Send,
-{
-    pub fn new(fork_txs: Arc<Mutex<Vec<Sender<Option<A>>>>>, source_rx: Receiver<Option<A>>) -> Branch<A> {
-        Branch {
-            fork_txs: fork_txs,
-            source_rx: source_rx,
         }
     }
 }

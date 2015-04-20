@@ -15,6 +15,7 @@ pub struct Input<A> where
 {
     source_rx: Receiver<A>,
     sink_tx: Sender<Option<A>>,
+    last: Option<A>,
 }
 
 impl<A> Input<A> where
@@ -24,23 +25,27 @@ impl<A> Input<A> where
         Input {
             source_rx: source_rx,
             sink_tx: sink_tx,
+            last: None,
         }
     }
 }
 
 impl<A> CoordinatedInput for Input<A> where
-    A: 'static + Clone + Send,
+    A: 'static + Clone + Send + Eq,
 {
-    fn run(self: Box<Self>, idx: usize, no_ops: Arc<Mutex<Vec<Box<NoOp>>>>) {
+    fn run(mut self: Box<Self>, idx: usize, no_ops: Arc<Mutex<Vec<Box<NoOp>>>>) {
         loop {
             match self.source_rx.recv() {
                 Ok(ref a) => {
-                    for (i, ref no_op) in no_ops.lock().unwrap().iter().enumerate() {
-                        if i == idx {
-                            self.sink_tx.send(Some(a.clone()));
-                        } else {
-                            no_op.send_no_change();
+                    if self.last.as_ref() != Some(a) {
+                        for (i, ref no_op) in no_ops.lock().unwrap().iter().enumerate() {
+                            if i == idx {
+                                self.sink_tx.send(Some(a.clone()));
+                            } else {
+                                no_op.send_no_change();
+                            }
                         }
+                        self.last = Some(a.clone());
                     }
                 },
                 Err(_) => {

@@ -1,26 +1,4 @@
-use super::{Signal, Run};
-
-pub struct Lift<F, A, B> where
-    F: 'static + Send + Fn(A) -> B,
-    A: 'static + Send,
-    B: 'static + Send,
-{
-    parent: Box<Signal<A> + Send>,
-    f: F,
-}
-
-impl<F, A, B> Lift<F, A, B> where
-    F: 'static + Send + Fn(A) -> B,
-    A: 'static + Send,
-    B: 'static + Send,
-{
-    pub fn new(parent: Box<Signal<A> + Send>, f: F) -> Lift<F, A, B> {
-        Lift {
-            parent: parent,
-            f: f,
-        }
-    }
-}
+use super::{Lift, Signal, Run};
 
 impl<F, A, B> Signal<B> for Lift<F, A, B> where
     F: 'static + Send + Fn(A) -> B,

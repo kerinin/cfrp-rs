@@ -4,7 +4,8 @@ use std::sync::mpsc::*;
 use std::thread::spawn;
 use std::marker::*;
 
-use super::{Signal, Run, CoordinatedInput, Fork, Branch, Channel, Input, NoOp};
+use super::input::{Input, CoordinatedInput, NoOp};
+use super::{Signal, Run, Fork, Branch, Channel};
 
 pub struct Builder {
     inputs: RefCell<Vec<Box<CoordinatedInput>>>,
@@ -26,7 +27,7 @@ impl Builder {
     }
 
     pub fn channel<A>(&self, source_rx: Receiver<A>) -> Channel<A> where
-        A: 'static + Clone + Send,
+        A: 'static + Clone + Send + Eq,
     {
         let (tx, rx) = channel();
         let input = Input::new(source_rx, tx);
