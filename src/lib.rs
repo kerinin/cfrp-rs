@@ -26,7 +26,7 @@ pub trait Reactive<A> where
         B: 'static + Send;
 
     fn foldp<F, B>(self, initial: B, f: F) -> Fold<F, A, B> where
-        F: 'static + Send + FnMut(&mut B, &A),
+        F: 'static + Send + FnOnce(B, A) -> B,
         B: 'static + Send + Clone;
 
 }
@@ -124,7 +124,7 @@ impl<A> Reactive<A> for Channel<A> where
     }
 
     fn foldp<F, B>(self, initial: B, f: F) -> Fold<F, A, B> where
-        F: 'static + Send + FnMut(&mut B, &A),
+        F: 'static + Send + FnOnce(B, A) -> B,
         B: 'static + Send + Clone,
     {
         Fold {
@@ -173,7 +173,7 @@ impl<F, A, B> Reactive<B> for Lift<F, A, B> where
     }
 
     fn foldp<G, C>(self, initial: C, g: G) -> Fold<G, B, C> where
-        G: 'static + Send + FnMut(&mut C, &B),
+        G: 'static + Send + FnOnce(C, B) -> C,
         C: 'static + Send + Clone,
     {
         Fold {
@@ -197,7 +197,7 @@ impl<F, A, B> Run for Lift<F, A, B> where
 }
 
 pub struct Fold<F, A, B> where
-    F: 'static + Send + FnMut(&mut B, &A),
+    F: 'static + Send + FnOnce(B, A) -> B,
     A: 'static + Send,
     B: 'static + Send + Clone,
 {
@@ -207,11 +207,12 @@ pub struct Fold<F, A, B> where
 }
 
 impl<F, A, B> Signal<B> for Fold<F, A, B> where
-    F: 'static + Send + FnMut(&mut B, &A),
+    F: 'static + Send + FnOnce(B, A) -> B,
     A: 'static + Send,
     B: 'static + Send + Clone,
 {
     fn recv(&self) -> Option<B> {
+        /*
        match self.parent.recv() {
            Some(ref a) => { 
                println!("Received something");
@@ -221,11 +222,13 @@ impl<F, A, B> Signal<B> for Fold<F, A, B> where
             },
            None => None,
        }
+       */
+        None
     }
 }
 
 impl<F, A, B> Reactive<B> for Fold<F, A, B> where
-    F: 'static + Send + FnMut(&mut B, &A),
+    F: 'static + Send + FnOnce(B, A) -> B,
     A: 'static + Send,
     B: 'static + Send + Clone,
 { 
@@ -240,7 +243,7 @@ impl<F, A, B> Reactive<B> for Fold<F, A, B> where
     }
 
     fn foldp<G, C>(self, initial: C, g: G) -> Fold<G, B, C> where
-        G: 'static + Send + FnMut(&mut C, &B),
+        G: 'static + Send + FnOnce(C, B) -> C,
         C: 'static + Send + Clone,
     {
         Fold {
@@ -252,14 +255,14 @@ impl<F, A, B> Reactive<B> for Fold<F, A, B> where
 }
 
 impl<F, A, B> Run for Fold<F, A, B> where
-    F: 'static + Send + FnMut(&mut B, &A),
+    F: 'static + Send + FnOnce(B, A) -> B,
     A: 'static + Send,
     B: 'static + Send + Clone,
 {
     fn run(self: Box<Self>) {
-        loop {
-            self.recv();
-        }
+        // loop {
+        //     self.recv();
+        // }
     }
 }
 
@@ -375,17 +378,21 @@ impl<T> Topology<T> {
         let Builder {inputs, root_signals} = self.builder;
 
         for root_signal in root_signals.into_inner().into_iter() {
+            /*
             spawn(move || {
                 root_signal.run();
             });
+            */
         }
 
         let no_ops = Arc::new(Mutex::new(inputs.borrow().iter().map(|i| i.boxed_no_op()).collect::<Vec<Box<NoOp>>>()));
         for (idx, input) in inputs.into_inner().into_iter().enumerate() {
+            /*
             let no_ops_i = no_ops.clone();
             spawn(move || {
                 input.run(idx, no_ops_i);
             });
+            */
         }
     }
 }
@@ -407,7 +414,7 @@ mod test {
 
             let channel: Channel<usize> = t.channel(in_rx);
             let lift = channel.lift(|i: &usize| -> usize { i + 1 });
-            let fold = lift.foldp(out_tx, |tx, a| { out_tx.send(a); });
+            let fold = lift.foldp(out_tx, |tx, a| -> Sender<usize> { tx.send(a); tx });
             t.add(Box::new(fold));
 
             // t.add(Box::new(
