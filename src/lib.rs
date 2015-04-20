@@ -101,9 +101,8 @@ impl<A> Channel<A> where
     A: 'static + Send,
 {
     pub fn lift<F, B>(self, f: F) -> Lift<F, A, B> where
-        F: 'static + Fn(&A) -> B + Send,
+        F: 'static + Send + Fn(&A) -> B,
         B: 'static + Send,
-        Signal<A>: Send,
     {
         Lift {
             parent: Box::new(self),
@@ -113,17 +112,16 @@ impl<A> Channel<A> where
 }
 
 pub struct Lift<F, A, B> where
-    F: 'static + Fn(&A) -> B + Send,
+    F: 'static + Send + Fn(&A) -> B,
     A: 'static + Send,
     B: 'static + Send,
 {
-    // NOTE: Recursive Send problem?
     parent: Box<Signal<A> + Send>,
     f: F,
 }
 
 impl<F, A, B> Signal<B> for Lift<F, A, B> where
-    F: 'static + Fn(&A) -> B + Send,
+    F: 'static + Send + Fn(&A) -> B,
     A: 'static + Send,
     B: 'static + Send,
 {
@@ -136,7 +134,7 @@ impl<F, A, B> Signal<B> for Lift<F, A, B> where
 }
 
 impl<F, A, B> Run for Lift<F, A, B> where
-    F: 'static + Fn(&A) -> B + Send,
+    F: 'static + Send + Fn(&A) -> B,
     A: 'static + Send,
     B: 'static + Send,
 {
@@ -288,10 +286,10 @@ mod test {
         Topology::build(|t: &Builder| {
             let (in_tx, in_rx): (Sender<usize>, Receiver<usize>) = channel();
 
-            let plus_one = t.add(Box::new(
-                t.channel(in_rx)
-                    // .lift(|i: &usize| -> usize { i + 1 })
-            ));
+            let channel: Channel<usize> = t.channel(in_rx);
+            let lift = channel.lift(|i: &usize| -> usize { i + 1 });
+            let plus_one = t.add(Box::new(lift));
+
             // t.add(Box::new(
             //     plus_one.
             //         lift(|i: &usize| -> usize { i + 1 })
