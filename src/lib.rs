@@ -22,7 +22,7 @@ pub trait Reactive<A> where
     A: 'static + Send,
 {
     fn lift<F, B>(self, f: F) -> Lift<F, A, B> where
-        F: 'static + Send + Fn(&A) -> B,
+        F: 'static + Send + Fn(A) -> B,
         B: 'static + Send;
 
     fn foldp<F, B>(self, initial: B, f: F) -> Fold<F, A, B> where
@@ -114,7 +114,7 @@ impl<A> Reactive<A> for Channel<A> where
     A: 'static + Send,
 { 
     fn lift<F, B>(self, f: F) -> Lift<F, A, B> where
-        F: 'static + Send + Fn(&A) -> B,
+        F: 'static + Send + Fn(A) -> B,
         B: 'static + Send,
     {
         Lift {
@@ -136,7 +136,7 @@ impl<A> Reactive<A> for Channel<A> where
 }
 
 pub struct Lift<F, A, B> where
-    F: 'static + Send + Fn(&A) -> B,
+    F: 'static + Send + Fn(A) -> B,
     A: 'static + Send,
     B: 'static + Send,
 {
@@ -145,25 +145,25 @@ pub struct Lift<F, A, B> where
 }
 
 impl<F, A, B> Signal<B> for Lift<F, A, B> where
-    F: 'static + Send + Fn(&A) -> B,
+    F: 'static + Send + Fn(A) -> B,
     A: 'static + Send,
     B: 'static + Send,
 {
     fn recv(&self) -> Option<B> {
        match self.parent.recv() {
-           Some(ref a) => Some((self.f)(a)),
+           Some(a) => Some((self.f)(a)),
            None => None,
        }
     }
 }
 
 impl<F, A, B> Reactive<B> for Lift<F, A, B> where
-    F: 'static + Send + Fn(&A) -> B,
+    F: 'static + Send + Fn(A) -> B,
     A: 'static + Send,
     B: 'static + Send,
 { 
     fn lift<G, C>(self, g: G) -> Lift<G, B, C> where
-        G: 'static + Send + Fn(&B) -> C,
+        G: 'static + Send + Fn(B) -> C,
         C: 'static + Send,
     {
         Lift {
@@ -185,7 +185,7 @@ impl<F, A, B> Reactive<B> for Lift<F, A, B> where
 }
 
 impl<F, A, B> Run for Lift<F, A, B> where
-    F: 'static + Send + Fn(&A) -> B,
+    F: 'static + Send + Fn(A) -> B,
     A: 'static + Send,
     B: 'static + Send,
 {
@@ -229,7 +229,7 @@ impl<F, A, B> Reactive<B> for Fold<F, A, B> where
     B: 'static + Send + Clone,
 { 
     fn lift<G, C>(self, g: G) -> Lift<G, B, C> where
-        G: 'static + Send + Fn(&B) -> C,
+        G: 'static + Send + Fn(B) -> C,
         C: 'static + Send,
     {
         Lift {
@@ -405,7 +405,7 @@ mod test {
         Topology::build( (in_rx, out_tx), |t, (in_rx, out_tx)| {
 
             let channel: Channel<usize> = t.channel(in_rx);
-            let lift = channel.lift(|i: &usize| -> usize { i + 1 });
+            let lift = channel.lift(|i| -> usize { i + 1 });
             let fold = lift.foldp(out_tx, |tx, a| { tx.send(a); });
             t.add(Box::new(fold));
 
