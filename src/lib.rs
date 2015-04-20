@@ -15,11 +15,24 @@ pub enum Event<A> where
 
 pub trait Signal<A>
 {
-    fn recv(&self) -> Option<A>;
+    fn recv(&mut self) -> Option<A>;
+}
+
+pub trait Reactive<A> where
+    A: 'static + Send,
+{
+    fn lift<F, B>(self, f: F) -> Lift<F, A, B> where
+        F: 'static + Send + Fn(&A) -> B,
+        B: 'static + Send;
+
+    fn foldp<F, B>(self, initial: B, f: F) -> Fold<F, A, B> where
+        F: 'static + Send + FnMut(&mut B, &A),
+        B: 'static + Send + Clone;
+
 }
 
 pub trait Run: Send {
-    fn run(self: Box<Self>);
+    fn run(mut self: Box<Self>);
 }
 
 trait NoOp: Send {
@@ -89,7 +102,7 @@ pub struct Channel<A> where
 impl<A> Signal<A> for Channel<A> where
     A: 'static + Send,
 {
-    fn recv(&self) -> Option<A> {
+    fn recv(&mut self) -> Option<A> {
         match self.source_rx.recv() {
             Err(_) => None,
             Ok(a) => { println!("Received something"); a },
@@ -97,16 +110,27 @@ impl<A> Signal<A> for Channel<A> where
     }
 }
 
-impl<A> Channel<A> where
+impl<A> Reactive<A> for Channel<A> where
     A: 'static + Send,
-{
-    pub fn lift<F, B>(self, f: F) -> Lift<F, A, B> where
+{ 
+    fn lift<F, B>(self, f: F) -> Lift<F, A, B> where
         F: 'static + Send + Fn(&A) -> B,
         B: 'static + Send,
     {
         Lift {
             parent: Box::new(self),
             f: f,
+        }
+    }
+
+    fn foldp<F, B>(self, initial: B, f: F) -> Fold<F, A, B> where
+        F: 'static + Send + FnMut(&mut B, &A),
+        B: 'static + Send + Clone,
+    {
+        Fold {
+            parent: Box::new(self),
+            f: f,
+            state: initial,
         }
     }
 }
@@ -125,11 +149,38 @@ impl<F, A, B> Signal<B> for Lift<F, A, B> where
     A: 'static + Send,
     B: 'static + Send,
 {
-    fn recv(&self) -> Option<B> {
+    fn recv(&mut self) -> Option<B> {
        match self.parent.recv() {
            Some(ref a) => { println!("Received something"); Some((self.f)(a)) },
            None => None,
        }
+    }
+}
+
+impl<F, A, B> Reactive<B> for Lift<F, A, B> where
+    F: 'static + Send + Fn(&A) -> B,
+    A: 'static + Send,
+    B: 'static + Send,
+{ 
+    fn lift<G, C>(self, g: G) -> Lift<G, B, C> where
+        G: 'static + Send + Fn(&B) -> C,
+        C: 'static + Send,
+    {
+        Lift {
+            parent: Box::new(self),
+            f: g,
+        }
+    }
+
+    fn foldp<G, C>(self, initial: C, g: G) -> Fold<G, B, C> where
+        G: 'static + Send + FnMut(&mut C, &B),
+        C: 'static + Send + Clone,
+    {
+        Fold {
+            parent: Box::new(self),
+            f: g,
+            state: initial,
+        }
     }
 }
 
@@ -138,7 +189,73 @@ impl<F, A, B> Run for Lift<F, A, B> where
     A: 'static + Send,
     B: 'static + Send,
 {
-    fn run(self: Box<Self>) {
+    fn run(mut self: Box<Self>) {
+        loop {
+            self.recv();
+        }
+    }
+}
+
+pub struct Fold<F, A, B> where
+    F: 'static + Send + FnMut(&mut B, &A),
+    A: 'static + Send,
+    B: 'static + Send + Clone,
+{
+    parent: Box<Signal<A> + Send>,
+    f: F,
+    state: B,
+}
+
+impl<F, A, B> Signal<B> for Fold<F, A, B> where
+    F: 'static + Send + FnMut(&mut B, &A),
+    A: 'static + Send,
+    B: 'static + Send + Clone,
+{
+    fn recv(&mut self) -> Option<B> {
+       match self.parent.recv() {
+           Some(ref a) => { 
+               println!("Received something");
+               (self.f)(&mut self.state, a);
+               Some(self.state.clone())
+            },
+           None => None,
+       }
+    }
+}
+
+impl<F, A, B> Reactive<B> for Fold<F, A, B> where
+    F: 'static + Send + FnMut(&mut B, &A),
+    A: 'static + Send,
+    B: 'static + Send + Clone,
+{ 
+    fn lift<G, C>(self, g: G) -> Lift<G, B, C> where
+        G: 'static + Send + Fn(&B) -> C,
+        C: 'static + Send,
+    {
+        Lift {
+            parent: Box::new(self),
+            f: g,
+        }
+    }
+
+    fn foldp<G, C>(self, initial: C, g: G) -> Fold<G, B, C> where
+        G: 'static + Send + FnMut(&mut C, &B),
+        C: 'static + Send + Clone,
+    {
+        Fold {
+            parent: Box::new(self),
+            f: g,
+            state: initial,
+        }
+    }
+}
+
+impl<F, A, B> Run for Fold<F, A, B> where
+    F: 'static + Send + Fn(&mut B, &A),
+    A: 'static + Send,
+    B: 'static + Send + Clone,
+{
+    fn run(mut self: Box<Self>) {
         loop {
             self.recv();
         }
@@ -155,7 +272,7 @@ pub struct Fork<A> where
 impl<A> Run for Fork<A> where
     A: 'static + Clone + Send,
 {
-    fn run(self: Box<Self>) {
+    fn run(mut self: Box<Self>) {
         loop {
             match self.parent.recv() {
                 Some(a) => {
@@ -190,7 +307,7 @@ impl<A> Clone for Branch<A> where
 impl<A> Signal<A> for Branch<A> where
     A: 'static + Send,
 {
-    fn recv(&self) -> Option<A> {
+    fn recv(&mut self) -> Option<A> {
         match self.source_rx.recv() {
             Err(_) => None,
             Ok(a) => { println!("Received something"); a },
@@ -283,13 +400,14 @@ mod test {
     #[test]
     fn integration() {
         let (in_tx, in_rx) = channel();
-        let (out_tx, out_rx): (Sender<Option<usize>>, Receiver<Option<usize>>) = channel();
+        let (out_tx, out_rx) = channel();
 
         Topology::build( (in_rx, out_tx), |t, (in_rx, out_tx)| {
 
             let channel: Channel<usize> = t.channel(in_rx);
             let lift = channel.lift(|i: &usize| -> usize { i + 1 });
-            let plus_one = t.add(Box::new(lift));
+            let fold = lift.foldp(out_tx, |tx, a| { out_tx.send(a); });
+            t.add(Box::new(fold));
 
             // t.add(Box::new(
             //     plus_one.
@@ -298,8 +416,7 @@ mod test {
         }).run();
 
         in_tx.send(0);
-        // NOTE: Not actually delivering data to out_rx ATM
-        // Also, need to do a bunch of optimizations around memoization and such
-        assert_eq!(Some(1), out_rx.recv().unwrap())
+
+        println!("Received {}", out_rx.recv().unwrap());
     }
 }
