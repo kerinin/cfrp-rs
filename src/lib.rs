@@ -16,7 +16,7 @@ pub trait Signal<A>
     fn recv(&self) -> Event<A>;
 }
 
-pub trait Run {
+pub trait Run: Send {
     fn run(self: Box<Self>);
 }
 
@@ -122,7 +122,8 @@ impl<F, A, B> Signal<B> for Lift<F, A, B> where
 }
 
 impl<F, A, B> Run for Lift<F, A, B> where
-    F: Fn(&A) -> B,
+    F: Fn(&A) -> B + Send,
+    Signal<A>: Send,
 {
     fn run(self: Box<Self>) {
         loop {
@@ -137,7 +138,8 @@ pub struct Fork<A> {
 }
 
 impl<A> Run for Fork<A> where
-    A: Clone,
+    A: Clone + Send,
+    Signal<A>: Send,
 {
     fn run(self: Box<Self>) {
         loop {
@@ -186,7 +188,8 @@ pub struct Builder {
 
 impl Builder {
     pub fn add<A>(&self, root: Box<Signal<A>>) -> Branch<A> where
-        A: Clone,
+        A: Clone + Send,
+        Signal<A>: Send,
     {
         let (tx, rx) = channel();
         let fork_txs = Arc::new(Mutex::new(vec![tx]));
@@ -196,7 +199,7 @@ impl Builder {
             sink_txs: fork_txs.clone(),
         };
 
-        self.root_signals.borrow_mut().push(Box::new(fork));
+        // self.root_signals.borrow_mut().push(Box::new(fork));
 
         Branch { fork_txs: fork_txs, source_rx: rx }
     }
@@ -235,14 +238,12 @@ impl Topology {
     pub fn run(self) {
         let Builder {inputs, root_signals} = self.builder;
 
-        /*
-        for root_signal in root_signals.into_iter() {
+        for root_signal in root_signals.into_inner().into_iter() {
             spawn(move || {
                 root_signal.run();
             });
         }
 
-        */
         let no_ops = Arc::new(Mutex::new(inputs.borrow().iter().map(|i| i.boxed_no_op()).collect::<Vec<Box<NoOp>>>()));
         for (idx, input) in inputs.into_inner().into_iter().enumerate() {
             let no_ops_i = no_ops.clone();
