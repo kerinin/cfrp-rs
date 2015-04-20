@@ -5,7 +5,9 @@ use std::thread::spawn;
 use std::sync::mpsc::*;
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum Event<A> {
+pub enum Event<A> where
+    A: 'static + Send,
+{
     Changed(A),
     NoChange,
     Exit,
@@ -13,7 +15,7 @@ pub enum Event<A> {
 
 pub trait Signal<A>
 {
-    fn recv(&self) -> Event<A>;
+    fn recv(&self) -> Option<A>;
 }
 
 pub trait Run: Send {
@@ -29,9 +31,11 @@ trait CoordinatedInput: Send {
     fn boxed_no_op(&self) -> Box<NoOp>;
 }
 
-struct Input<A> {
+struct Input<A> where
+    A: 'static + Send
+{
     source_rx: Receiver<A>,
-    sink_tx: Sender<Event<A>>,
+    sink_tx: Sender<Option<A>>,
 }
 
 impl<A> CoordinatedInput for Input<A> where
@@ -43,7 +47,7 @@ impl<A> CoordinatedInput for Input<A> where
                 Ok(ref a) => {
                     for (i, ref no_op) in no_ops.lock().unwrap().iter().enumerate() {
                         if i == idx {
-                            self.sink_tx.send(Event::Changed(a.clone()));
+                            self.sink_tx.send(Some(a.clone()));
                         } else {
                             no_op.send_no_change();
                         }
@@ -52,7 +56,7 @@ impl<A> CoordinatedInput for Input<A> where
                 Err(_) => {
                     for (i, no_op) in no_ops.lock().unwrap().iter().enumerate() {
                         if i == idx {
-                            self.sink_tx.send(Event::Exit);
+                            self.sink_tx.send(None);
                         } else {
                             no_op.send_no_change();
                         }
@@ -68,34 +72,38 @@ impl<A> CoordinatedInput for Input<A> where
     }
 }
 
-impl<A> NoOp for Sender<Event<A>> where
+impl<A> NoOp for Sender<Option<A>> where
     A: 'static + Send,
 {
     fn send_no_change(&self) {
-        self.send(Event::NoChange);
+        self.send(None);
     }
 }
 
-pub struct Channel<A> {
-    source_rx: Receiver<Event<A>>,
+pub struct Channel<A> where
+    A: 'static + Send,
+{
+    source_rx: Receiver<Option<A>>,
 }
 
-impl<A> Signal<A> for Channel<A>
+impl<A> Signal<A> for Channel<A> where
+    A: 'static + Send,
 {
-    fn recv(&self) -> Event<A> {
+    fn recv(&self) -> Option<A> {
         match self.source_rx.recv() {
-            Err(_) => Event::Exit,
+            Err(_) => None,
             Ok(a) => a,
         }
     }
 }
 
-impl<A> Channel<A>
+impl<A> Channel<A> where
+    A: 'static + Send,
 {
     pub fn lift<F, B>(self, f: F) -> Lift<F, A, B> where
-        F: Fn(&A) -> B,
-        A: 'static,
-        B: 'static,
+        F: 'static + Fn(&A) -> B + Send,
+        B: 'static + Send,
+        Signal<A>: Send,
     {
         Lift {
             parent: Box::new(self),
@@ -104,26 +112,33 @@ impl<A> Channel<A>
     }
 }
 
-pub struct Lift<F, A, B> where F: Fn(&A) -> B {
-    parent: Box<Signal<A>>,
+pub struct Lift<F, A, B> where
+    F: 'static + Fn(&A) -> B + Send,
+    A: 'static + Send,
+    B: 'static + Send,
+{
+    // NOTE: Recursive Send problem?
+    parent: Box<Signal<A> + Send>,
     f: F,
 }
 
 impl<F, A, B> Signal<B> for Lift<F, A, B> where
-    F: Fn(&A) -> B,
+    F: 'static + Fn(&A) -> B + Send,
+    A: 'static + Send,
+    B: 'static + Send,
 {
-    fn recv(&self) -> Event<B> {
+    fn recv(&self) -> Option<B> {
        match self.parent.recv() {
-           Event::Changed(ref a) => Event::Changed((self.f)(a)),
-           Event::NoChange => Event::NoChange,
-           Event::Exit => Event::Exit,
+           Some(ref a) => Some((self.f)(a)),
+           None => None,
        }
     }
 }
 
 impl<F, A, B> Run for Lift<F, A, B> where
-    F: Fn(&A) -> B + Send,
-    Signal<A>: Send,
+    F: 'static + Fn(&A) -> B + Send,
+    A: 'static + Send,
+    B: 'static + Send,
 {
     fn run(self: Box<Self>) {
         loop {
@@ -132,21 +147,22 @@ impl<F, A, B> Run for Lift<F, A, B> where
     }
 }
 
-pub struct Fork<A> {
-    parent: Box<Signal<A>>,
-    sink_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>,
+pub struct Fork<A> where
+    A: 'static + Send,
+{
+    parent: Box<Signal<A> + Send>,
+    sink_txs: Arc<Mutex<Vec<Sender<Option<A>>>>>,
 }
 
 impl<A> Run for Fork<A> where
-    A: Clone + Send,
-    Signal<A>: Send,
+    A: 'static + Clone + Send,
 {
     fn run(self: Box<Self>) {
         loop {
             match self.parent.recv() {
-                Event::Changed(a) => {
+                Some(a) => {
                     for sink in self.sink_txs.lock().unwrap().iter() {
-                        sink.send(Event::Changed(a.clone()));
+                        sink.send(Some(a.clone()));
                     }
                 },
                 _ => {},
@@ -156,13 +172,16 @@ impl<A> Run for Fork<A> where
 }
 
 pub struct Branch<A> where
-    A: 'static
+    A: 'static + Send,
 {
-    fork_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>,
-    source_rx: Receiver<Event<A>>,
+    // Arc<T> is send if T: Send + Sync (which mutex is, unconditionally)
+    fork_txs: Arc<Mutex<Vec<Sender<Option<A>>>>>,
+    source_rx: Receiver<Option<A>>,
 }
 
-impl<A> Clone for Branch<A> {
+impl<A> Clone for Branch<A> where
+    A: 'static + Send,
+{
     fn clone(&self) -> Branch<A> {
         let (tx, rx) = channel();
         self.fork_txs.lock().unwrap().push(tx);
@@ -170,11 +189,12 @@ impl<A> Clone for Branch<A> {
     }
 }
 
-impl<A> Signal<A> for Branch<A>
+impl<A> Signal<A> for Branch<A> where
+    A: 'static + Send,
 {
-    fn recv(&self) -> Event<A> {
+    fn recv(&self) -> Option<A> {
         match self.source_rx.recv() {
-            Err(_) => Event::Exit,
+            Err(_) => None,
             Ok(a) => a,
         }
     }
@@ -187,9 +207,8 @@ pub struct Builder {
 }
 
 impl Builder {
-    pub fn add<A>(&self, root: Box<Signal<A>>) -> Branch<A> where
-        A: Clone + Send,
-        Signal<A>: Send,
+    pub fn add<A>(&self, root: Box<Signal<A> + Send>) -> Branch<A> where
+        A: 'static + Clone + Send,
     {
         let (tx, rx) = channel();
         let fork_txs = Arc::new(Mutex::new(vec![tx]));
@@ -199,7 +218,7 @@ impl Builder {
             sink_txs: fork_txs.clone(),
         };
 
-        // self.root_signals.borrow_mut().push(Box::new(fork));
+        self.root_signals.borrow_mut().push(Box::new(fork));
 
         Branch { fork_txs: fork_txs, source_rx: rx }
     }
@@ -264,14 +283,14 @@ mod test {
 
     #[test]
     fn integration() {
-        let (out_tx, out_rx): (Sender<Event<usize>>, Receiver<Event<usize>>) = channel();
+        let (out_tx, out_rx): (Sender<Option<usize>>, Receiver<Option<usize>>) = channel();
 
         Topology::build(|t: &Builder| {
             let (in_tx, in_rx): (Sender<usize>, Receiver<usize>) = channel();
 
             let plus_one = t.add(Box::new(
                 t.channel(in_rx)
-                    .lift(|i: &usize| -> usize { i + 1 })
+                    // .lift(|i: &usize| -> usize { i + 1 })
             ));
             // t.add(Box::new(
             //     plus_one.
