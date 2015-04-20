@@ -92,7 +92,7 @@ impl<A> Signal<A> for Channel<A> where
     fn recv(&self) -> Option<A> {
         match self.source_rx.recv() {
             Err(_) => None,
-            Ok(a) => a,
+            Ok(a) => { println!("Received something"); a },
         }
     }
 }
@@ -127,7 +127,7 @@ impl<F, A, B> Signal<B> for Lift<F, A, B> where
 {
     fn recv(&self) -> Option<B> {
        match self.parent.recv() {
-           Some(ref a) => Some((self.f)(a)),
+           Some(ref a) => { println!("Received something"); Some((self.f)(a)) },
            None => None,
        }
     }
@@ -193,7 +193,7 @@ impl<A> Signal<A> for Branch<A> where
     fn recv(&self) -> Option<A> {
         match self.source_rx.recv() {
             Err(_) => None,
-            Ok(a) => a,
+            Ok(a) => { println!("Received something"); a },
         }
     }
 }
@@ -238,18 +238,19 @@ impl Builder {
     }
 }
 
-pub struct Topology {
+pub struct Topology<T> {
     builder: Builder,
+    marker: PhantomData<T>,
 }
 
-impl Topology {
-    pub fn build<F>(mut f: F) -> Self where 
-        F: Fn(&Builder),
+impl<T> Topology<T> {
+    pub fn build<F>(state: T, mut f: F) -> Self where 
+        F: Fn(&Builder, T),
     {
         let builder = Builder { root_signals: RefCell::new(Vec::new()), inputs: RefCell::new(Vec::new()) };
-        f(&builder);
+        f(&builder, state);
         
-        Topology { builder: builder }
+        Topology { builder: builder, marker: PhantomData }
     }
 
     pub fn run(self) {
@@ -281,10 +282,10 @@ mod test {
 
     #[test]
     fn integration() {
+        let (in_tx, in_rx) = channel();
         let (out_tx, out_rx): (Sender<Option<usize>>, Receiver<Option<usize>>) = channel();
 
-        Topology::build(|t: &Builder| {
-            let (in_tx, in_rx): (Sender<usize>, Receiver<usize>) = channel();
+        Topology::build( (in_rx, out_tx), |t, (in_rx, out_tx)| {
 
             let channel: Channel<usize> = t.channel(in_rx);
             let lift = channel.lift(|i: &usize| -> usize { i + 1 });
@@ -296,7 +297,9 @@ mod test {
             // ));
         }).run();
 
-        // in_tx.send(0);
-        // assert_eq!(Event::Changed(1), out_rx.recv().unwrap())
+        in_tx.send(0);
+        // NOTE: Not actually delivering data to out_rx ATM
+        // Also, need to do a bunch of optimizations around memoization and such
+        assert_eq!(Some(1), out_rx.recv().unwrap())
     }
 }
