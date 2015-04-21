@@ -19,6 +19,10 @@ pub struct Builder {
 }
 
 impl Builder {
+    /// Add a signal to the topology
+    ///
+    /// Returns a `Branch<A>`, allowing `root` to be used as input more than once
+    ///
     pub fn add<A>(&self, root: Box<Signal<A> + Send>) -> Box<Branch<A>> where
         A: 'static + Clone + Send,
     {
@@ -32,7 +36,13 @@ impl Builder {
         Box::new(Branch::new(fork_txs, rx))
     }
 
-    pub fn channel<A>(&self, source_rx: Receiver<A>) -> Box<Channel<A>> where
+    /// Listen to `source_rx` and push received data into the topology
+    ///
+    /// All data entering a topology must originate in a channel; channels ensure
+    /// data syncronization across the topology.  Each channel runs in its own 
+    /// thread
+    ///
+    pub fn channel<A>(&self, source_rx: Receiver<A>) -> Box<Signal<A>> where
         A: 'static + Clone + Send,
     {
         let (tx, rx) = channel();
@@ -52,6 +62,11 @@ pub struct Topology<T> {
 }
 
 impl<T> Topology<T> {
+    /// Construct a topology
+    ///
+    /// `F` will be called with a `Builder`, which exposes methods for adding
+    /// inputs & transformations to the topology
+    ///
     pub fn build<F>(state: T, f: F) -> Self where 
         F: Fn(&Builder, T),
     {
@@ -61,6 +76,8 @@ impl<T> Topology<T> {
         Topology { builder: builder, marker: PhantomData }
     }
 
+    /// Run the topology
+    ///
     pub fn run(self) {
         let Builder {inputs, root_signals} = self.builder;
 

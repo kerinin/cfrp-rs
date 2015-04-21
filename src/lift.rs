@@ -23,7 +23,7 @@ impl<F, A, B> Signal<B> for Lift<F, A, B> where
     }
 }
 
-pub struct LiftPusher<F, A, B> where
+struct LiftPusher<F, A, B> where
     F: 'static + Send + Fn(A) -> B,
     A: 'static + Send,
     B: 'static + Send,

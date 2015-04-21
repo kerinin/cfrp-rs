@@ -34,15 +34,7 @@ trait Run: Send {
     fn run(mut self: Box<Self>);
 }
 
-/// `Channel<A>` listens to a `Sender<A>` and pushes received data into the topology
-///
-/// All data entering a topology must originate in a channel; channels ensure
-/// data syncronization across the topology.  Each channel runs in its own 
-/// thread
-///
-/// Channels are created by calling `Builder#channel`
-///
-pub struct Channel<A> where
+struct Channel<A> where
     A: 'static + Send,
 {
     source_rx: Receiver<Event<A>>,
@@ -58,19 +50,7 @@ impl<A> Channel<A> where
     }
 }
 
-/// `Lift<F, A, B>` applies a pure function `F` to a data source `A`, generating a transformed 
-/// output data source `B`.
-///
-/// Other names for this operation include "map" or "collect".  Lifts run in
-/// their data source's thread
-///
-/// Because the function is assumed to be pure, it will only be evaluated for
-/// new data that has changed since the last observation.  If side-effects are
-/// desired, use a `Fold` instead.
-///
-/// Lifts are created by calling `lift` on a signal
-///
-pub struct Lift<F, A, B> where
+struct Lift<F, A, B> where
     F: 'static + Send + Fn(A) -> B,
     A: 'static + Send,
     B: 'static + Send,
@@ -92,19 +72,7 @@ impl<F, A, B> Lift<F, A, B> where
     }
 }
 
-/// `Fold<F, A, B>` applies a function `F` which uses a data source `A` to 
-/// mutate an instance of `B`, generating an output data source of the mutated 
-/// value
-///
-/// Other names for this operation include "reduce" or "inject".  Folds run in
-/// their data source's thread
-///
-/// Fold is assumed to be impure, therefore the function will be called with
-/// all data upstream of the fold, even if there are no changes in the stream.
-///
-/// Folds are created by calling `fold` on a signal
-///
-pub struct Fold<F, A, B> where
+struct Fold<F, A, B> where
     F: 'static + Send + FnMut(&mut B, A),
     A: 'static + Send,
     B: 'static + Send + Clone,
@@ -161,9 +129,9 @@ impl<A> Fork<A> where
 /// `Branch<A>` allows a data source `A` to be used as input more than once
 ///
 /// This operation is equivalent to a "let" binding, or variable assignment.
-/// Branch implements clone, and each clone runs in its own thread.
+/// Branch implements `Clone`, and each clone runs in its own thread.
 ///
-/// Branches are returned when `add` is called on a topology builder
+/// Branches are returned when `add` is called on a `Builder`
 ///
 pub struct Branch<A> where
     A: 'static + Send,

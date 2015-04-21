@@ -3,9 +3,9 @@ use std::sync::mpsc::*;
 
 use super::{Fork, Branch, Signal, Run, Push, Event};
 
-/// Fork is the incoming portion of a fork.  It is pushed data from upstream and
-/// clones it across a (possibly empty) set of child branches
-///
+// Fork is the incoming portion of a fork.  It is pushed data from upstream and
+// clones it across a (possibly empty) set of child branches
+//
 impl<A> Run for Fork<A> where
     A: 'static + Clone + Send,
 {
@@ -40,9 +40,9 @@ impl<A> Push<A> for ForkPusher<A> where
     }
 }
 
-/// Branch is the outgoig portion of a fork.  It spawns waits for incoming data 
-/// from it's parent fork and pushes it to its children
-///
+// Branch is the outgoig portion of a fork.  It spawns waits for incoming data 
+// from it's parent fork and pushes it to its children
+//
 impl<A> Signal<A> for Branch<A> where
     A: 'static + Send,
 {

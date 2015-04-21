@@ -5,7 +5,8 @@
   code
 * memoization & caching
 * return termination handle from topology `run`
-* implement async, liftn const, etc (liftn takes vector of signals and function
+* implement async, liftn const, etc
   taking vector of values)
 * macro
 * (more) tests
+* publish, travis, post

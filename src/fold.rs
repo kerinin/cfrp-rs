@@ -24,7 +24,7 @@ impl<F, A, B> Signal<B> for Fold<F, A, B> where
     }
 }
 
-pub struct FoldPusher<F, A, B> where
+struct FoldPusher<F, A, B> where
     F: 'static + Send + FnMut(&mut B, A),
     A: 'static + Send,
     B: 'static + Send + Clone,
