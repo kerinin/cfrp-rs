@@ -27,7 +27,7 @@ impl Builder {
     }
 
     pub fn channel<A>(&self, source_rx: Receiver<A>) -> Channel<A> where
-        A: 'static + Clone + Send + Eq,
+        A: 'static + Clone + Send,
     {
         let (tx, rx) = channel();
         let input = Input::new(source_rx, tx);

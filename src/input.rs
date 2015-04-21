@@ -11,7 +11,7 @@ pub trait CoordinatedInput: Send {
 }
 
 pub struct Input<A> where
-    A: 'static + Send
+    A: 'static + Send + Clone
 {
     source_rx: Receiver<A>,
     sink_tx: Sender<Option<A>>,
@@ -19,7 +19,7 @@ pub struct Input<A> where
 }
 
 impl<A> Input<A> where
-    A: 'static + Send
+    A: 'static + Send + Clone
 {
     pub fn new(source_rx: Receiver<A>, sink_tx: Sender<Option<A>>) -> Input<A> {
         Input {
@@ -31,33 +31,23 @@ impl<A> Input<A> where
 }
 
 impl<A> CoordinatedInput for Input<A> where
-    A: 'static + Clone + Send + Eq,
+    A: 'static + Send + Clone
 {
     fn run(mut self: Box<Self>, idx: usize, no_ops: Arc<Mutex<Vec<Box<NoOp>>>>) {
         loop {
             match self.source_rx.recv() {
-                Ok(ref a) => {
-                    if self.last.as_ref() != Some(a) {
-                        for (i, ref no_op) in no_ops.lock().unwrap().iter().enumerate() {
-                            if i == idx {
-                                self.sink_tx.send(Some(a.clone()));
-                            } else {
-                                no_op.send_no_change();
-                            }
-                        }
-                        self.last = Some(a.clone());
-                    }
-                },
-                Err(_) => {
-                    for (i, no_op) in no_ops.lock().unwrap().iter().enumerate() {
+                Ok(a) => {
+                    let received = Some(a);
+
+                    for (i, ref no_op) in no_ops.lock().unwrap().iter().enumerate() {
                         if i == idx {
-                            self.sink_tx.send(None);
+                            self.sink_tx.send(received.clone());
                         } else {
                             no_op.send_no_change();
                         }
                     }
-                    return;
                 },
+                Err(_) => return,
             }
         }
     }

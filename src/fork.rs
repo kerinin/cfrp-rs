@@ -6,9 +6,11 @@ use super::{Fork, Branch, Signal, Run};
 impl<A> Run for Fork<A> where
     A: 'static + Clone + Send,
 {
-    fn run(self: Box<Self>) {
+    fn run(mut self: Box<Self>) {
         loop {
-            match self.parent.recv() {
+            let received = self.parent.recv();
+
+            match received {
                 Some(a) => {
                     for sink in self.sink_txs.lock().unwrap().iter() {
                         sink.send(Some(a.clone()));
@@ -33,7 +35,7 @@ impl<A> Clone for Branch<A> where
 impl<A> Signal<A> for Branch<A> where
     A: 'static + Send,
 {
-    fn recv(&self) -> Option<A> {
+    fn recv(&mut self) -> Option<A> {
         match self.source_rx.recv() {
             Err(_) => None,
             Ok(a) => a,

@@ -7,7 +7,6 @@ mod reactive;
 mod topology;
 
 use std::sync::*;
-use std::cell::*;
 use std::sync::mpsc::*;
 
 pub use reactive::Reactive;
@@ -15,11 +14,11 @@ pub use topology::{Topology, Builder};
 
 pub trait Signal<A>
 {
-    fn recv(&self) -> Option<A>;
+    fn recv(&mut self) -> Option<A>;
 }
 
 trait Run: Send {
-    fn run(self: Box<Self>);
+    fn run(mut self: Box<Self>);
 }
 
 pub struct Channel<A> where
@@ -45,7 +44,6 @@ pub struct Lift<F, A, B> where
 {
     parent: Box<Signal<A> + Send>,
     f: F,
-    last: RefCell<Option<A>>,
 }
 
 impl<F, A, B> Lift<F, A, B> where
@@ -57,7 +55,6 @@ impl<F, A, B> Lift<F, A, B> where
         Lift {
             parent: parent,
             f: f,
-            last: RefCell::new(None),
         }
     }
 }
@@ -68,8 +65,8 @@ pub struct Fold<F, A, B> where
     B: 'static + Send + Clone,
 {
     parent: Box<Signal<A> + Send>,
-    f: RefCell<F>,
-    state: RefCell<B>,
+    f: F,
+    state: B,
 }
 
 impl<F, A, B> Fold<F, A, B> where
@@ -80,8 +77,8 @@ impl<F, A, B> Fold<F, A, B> where
     fn new(parent: Box<Signal<A> + Send>, f: F, initial: B) -> Fold<F, A, B> {
         Fold {
             parent: parent,
-            f: RefCell::new(f),
-            state: RefCell::new(initial),
+            f: f,
+            state: initial,
         }
     }
 }
