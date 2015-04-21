@@ -19,7 +19,7 @@ pub struct Builder {
 }
 
 impl Builder {
-    pub fn add<A>(&self, root: Box<Signal<A> + Send>) -> Branch<A> where
+    pub fn add<A>(&self, root: Box<Signal<A> + Send>) -> Box<Branch<A>> where
         A: 'static + Clone + Send,
     {
         let (tx, rx) = channel();
@@ -29,10 +29,10 @@ impl Builder {
 
         self.root_signals.borrow_mut().push(Box::new(fork));
 
-        Branch::new(fork_txs, rx)
+        Box::new(Branch::new(fork_txs, rx))
     }
 
-    pub fn channel<A>(&self, source_rx: Receiver<A>) -> Channel<A> where
+    pub fn channel<A>(&self, source_rx: Receiver<A>) -> Box<Channel<A>> where
         A: 'static + Clone + Send,
     {
         let (tx, rx) = channel();
@@ -40,7 +40,7 @@ impl Builder {
 
         self.inputs.borrow_mut().push(Box::new(input));
 
-        Channel::new(rx)
+        Box::new(Channel::new(rx))
     }
 }
 

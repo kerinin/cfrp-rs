@@ -201,15 +201,18 @@ mod test {
 
             let channel = t.channel(in_rx);
             let lift = channel.lift(|i| -> usize { i + 1 });
-            let plus_one = t.add(Box::new(lift));
 
-            let plus_two = t.add(Box::new(
-                plus_one.lift(|i| -> usize { i + 1 })
-            ));
+            let plus_one = t.add(t.channel(in_rx)
+                .lift(|i| -> usize { i + 1 })
+            );
 
-            t.add(Box::new(
-                plus_two.foldp(out_tx, |tx, a| { tx.send(a); })
-            ));
+            let plus_two = t.add(plus_one
+                .lift(|i| -> usize { i + 1 })
+            );
+
+            t.add(plus_two
+                .foldp(out_tx, |tx, a| { tx.send(a); })
+            );
 
         }).run();
 
