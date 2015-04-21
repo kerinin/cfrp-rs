@@ -22,7 +22,7 @@ pub enum Event<A> {
 
 pub trait Signal<A>
 {
-    fn recv(&mut self) -> Event<A>;
+    fn pull(&mut self) -> Event<A>;
 }
 
 trait Run: Send {

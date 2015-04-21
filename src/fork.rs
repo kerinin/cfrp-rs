@@ -1,4 +1,3 @@
-use std::sync::*;
 use std::sync::mpsc::*;
 
 use super::{Fork, Branch, Signal, Run, Event};
@@ -8,10 +7,13 @@ impl<A> Run for Fork<A> where
 {
     fn run(mut self: Box<Self>) {
         loop {
-            let received = self.parent.recv();
+            let received = self.parent.pull();
 
             for sink in self.sink_txs.lock().unwrap().iter() {
-                sink.send(received.clone());
+                match sink.send(received.clone()) {
+                    // We can't really terminate a child process, so just ignore errors...
+                    _ => {},
+                }
             }
         }
     }
@@ -30,7 +32,7 @@ impl<A> Clone for Branch<A> where
 impl<A> Signal<A> for Branch<A> where
     A: 'static + Send,
 {
-    fn recv(&mut self) -> Event<A> {
+    fn pull(&mut self) -> Event<A> {
         match self.source_rx.recv() {
             Err(_) => Event::Exit,
             Ok(a) => a,

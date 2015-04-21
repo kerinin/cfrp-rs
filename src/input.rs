@@ -33,7 +33,7 @@ impl<A> Input<A> where
 impl<A> CoordinatedInput for Input<A> where
     A: 'static + Send + Clone
 {
-    fn run(mut self: Box<Self>, idx: usize, no_ops: Arc<Mutex<Vec<Box<NoOp>>>>) {
+    fn run(self: Box<Self>, idx: usize, no_ops: Arc<Mutex<Vec<Box<NoOp>>>>) {
         loop {
             match self.source_rx.recv() {
                 Ok(a) => {
@@ -41,7 +41,10 @@ impl<A> CoordinatedInput for Input<A> where
 
                     for (i, ref no_op) in no_ops.lock().unwrap().iter().enumerate() {
                         if i == idx {
-                            self.sink_tx.send(received.clone());
+                            match self.sink_tx.send(received.clone()) {
+                                // We can't really terminate a child process, so just ignore errors...
+                                _ => {}
+                            }
                         } else {
                             no_op.send_no_change();
                         }
@@ -61,6 +64,9 @@ impl<A> NoOp for Sender<Event<A>> where
     A: 'static + Send,
 {
     fn send_no_change(&self) {
-        self.send(Event::NoOp);
+        match self.send(Event::NoOp) {
+            // We can't really terminate a child process, so just ignore errors...
+            _ => {}
+        }
     }
 }

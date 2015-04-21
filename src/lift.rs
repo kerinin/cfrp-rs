@@ -5,8 +5,8 @@ impl<F, A, B> Signal<B> for Lift<F, A, B> where
     A: 'static + Send,
     B: 'static + Send,
 {
-    fn recv(&mut self) -> Event<B> {
-        let received = self.parent.recv();
+    fn pull(&mut self) -> Event<B> {
+        let received = self.parent.pull();
         match received {
             Event::Changed(a) => {
                 let b = (self.f)(a);

@@ -1,5 +1,3 @@
-use std::cell::*;
-
 use super::{Fold, Signal, Run, Event};
 
 impl<F, A, B> Signal<B> for Fold<F, A, B> where
@@ -7,8 +5,8 @@ impl<F, A, B> Signal<B> for Fold<F, A, B> where
     A: 'static + Send,
     B: 'static + Send + Clone,
 {
-    fn recv(&mut self) -> Event<B> {
-        let received = self.parent.recv();
+    fn pull(&mut self) -> Event<B> {
+        let received = self.parent.pull();
 
         match received {
             Event::Changed(a) => { 
