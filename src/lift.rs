@@ -18,15 +18,3 @@ impl<F, A, B> Signal<B> for Lift<F, A, B> where
         }
     }
 }
-
-impl<F, A, B> Run for Lift<F, A, B> where
-F: 'static + Send + Fn(A) -> B,
-A: 'static + Send,
-B: 'static + Send,
-{
-    fn run(mut self: Box<Self>) {
-        loop {
-            self.recv();
-        }
-    }
-}
