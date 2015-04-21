@@ -1,3 +1,4 @@
+use std::thread::spawn;
 use std::sync::mpsc::*;
 
 use super::{Fork, Branch, Signal, Run, Event};
@@ -6,16 +7,32 @@ impl<A> Run for Fork<A> where
     A: 'static + Clone + Send,
 {
     fn run(mut self: Box<Self>) {
-        loop {
-            let received = self.parent.pull();
+        spawn(move || {
+            loop {
+                let received = self.parent.pull();
 
-            for sink in self.sink_txs.lock().unwrap().iter() {
-                match sink.send(received.clone()) {
-                    // We can't really terminate a child process, so just ignore errors...
-                    _ => {},
+                match received {
+                    Event::Exit => {
+                        for sink in self.sink_txs.lock().unwrap().iter() {
+                            match sink.send(received.clone()) {
+                                // We can't really terminate a child process, so just ignore errors...
+                                _ => {},
+                            }
+                        }
+
+                        return
+                    },
+                    _ => {
+                        for sink in self.sink_txs.lock().unwrap().iter() {
+                            match sink.send(received.clone()) {
+                                // We can't really terminate a child process, so just ignore errors...
+                                _ => {},
+                            }
+                        }
+                    }
                 }
             }
-        }
+        });
     }
 }
 

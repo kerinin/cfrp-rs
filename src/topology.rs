@@ -57,9 +57,7 @@ impl<T> Topology<T> {
         let Builder {inputs, root_signals} = self.builder;
 
         for root_signal in root_signals.into_inner().into_iter() {
-            spawn(move || {
-                root_signal.run();
-            });
+            root_signal.run();
         }
 
         let no_ops = Arc::new(Mutex::new(inputs.borrow().iter().map(|i| i.boxed_no_op()).collect::<Vec<Box<NoOp>>>()));
