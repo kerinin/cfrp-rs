@@ -1,18 +1,20 @@
-use super::{Lift, Signal, Run};
+use super::{Lift, Signal, Run, Event};
 
 impl<F, A, B> Signal<B> for Lift<F, A, B> where
     F: 'static + Send + Fn(A) -> B,
     A: 'static + Send,
     B: 'static + Send,
 {
-    fn recv(&mut self) -> Option<B> {
+    fn recv(&mut self) -> Event<B> {
         let received = self.parent.recv();
         match received {
-            Some(a) => {
+            Event::Changed(a) => {
                 let b = (self.f)(a);
-                Some(b)
+                Event::Changed(b)
             },
-            None => None,
+            Event::Unchanged => Event::Unchanged,
+            Event::NoOp => Event::NoOp,
+            Event::Exit => Event::Exit,
         }
     }
 }

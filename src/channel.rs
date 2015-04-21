@@ -1,13 +1,13 @@
 use std::sync::mpsc::*;
 
-use super::{Channel, Signal};
+use super::{Channel, Signal, Event};
 
 impl<A> Signal<A> for Channel<A> where
     A: 'static + Send,
 {
-    fn recv(&mut self) -> Option<A> {
+    fn recv(&mut self) -> Event<A> {
         match self.source_rx.recv() {
-            Err(_) => None,
+            Err(_) => Event::Exit,
             Ok(a) => a,
         }
     }

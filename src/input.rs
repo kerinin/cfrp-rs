@@ -1,6 +1,8 @@
 use std::sync::*;
 use std::sync::mpsc::*;
 
+use super::Event;
+
 pub trait NoOp: Send {
     fn send_no_change(&self);
 }
@@ -14,18 +16,16 @@ pub struct Input<A> where
     A: 'static + Send + Clone
 {
     source_rx: Receiver<A>,
-    sink_tx: Sender<Option<A>>,
-    last: Option<A>,
+    sink_tx: Sender<Event<A>>,
 }
 
 impl<A> Input<A> where
     A: 'static + Send + Clone
 {
-    pub fn new(source_rx: Receiver<A>, sink_tx: Sender<Option<A>>) -> Input<A> {
+    pub fn new(source_rx: Receiver<A>, sink_tx: Sender<Event<A>>) -> Input<A> {
         Input {
             source_rx: source_rx,
             sink_tx: sink_tx,
-            last: None,
         }
     }
 }
@@ -37,7 +37,7 @@ impl<A> CoordinatedInput for Input<A> where
         loop {
             match self.source_rx.recv() {
                 Ok(a) => {
-                    let received = Some(a);
+                    let received = Event::Changed(a);
 
                     for (i, ref no_op) in no_ops.lock().unwrap().iter().enumerate() {
                         if i == idx {
@@ -57,10 +57,10 @@ impl<A> CoordinatedInput for Input<A> where
     }
 }
 
-impl<A> NoOp for Sender<Option<A>> where
+impl<A> NoOp for Sender<Event<A>> where
     A: 'static + Send,
 {
     fn send_no_change(&self) {
-        self.send(None);
+        self.send(Event::NoOp);
     }
 }

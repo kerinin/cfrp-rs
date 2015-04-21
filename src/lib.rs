@@ -12,9 +12,17 @@ use std::sync::mpsc::*;
 pub use reactive::Reactive;
 pub use topology::{Topology, Builder};
 
+#[derive(Clone)]
+pub enum Event<A> {
+    Changed(A),
+    Unchanged,
+    NoOp,
+    Exit,
+}
+
 pub trait Signal<A>
 {
-    fn recv(&mut self) -> Option<A>;
+    fn recv(&mut self) -> Event<A>;
 }
 
 trait Run: Send {
@@ -24,13 +32,13 @@ trait Run: Send {
 pub struct Channel<A> where
     A: 'static + Send,
 {
-    source_rx: Receiver<Option<A>>,
+    source_rx: Receiver<Event<A>>,
 }
 
 impl<A> Channel<A> where
     A: 'static + Send,
 {
-    fn new(source_rx: Receiver<Option<A>>) -> Channel<A> {
+    fn new(source_rx: Receiver<Event<A>>) -> Channel<A> {
         Channel {
             source_rx: source_rx,
         }
@@ -87,13 +95,13 @@ struct Fork<A> where
     A: 'static + Send,
 {
     parent: Box<Signal<A> + Send>,
-    sink_txs: Arc<Mutex<Vec<Sender<Option<A>>>>>,
+    sink_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>,
 }
 
 impl<A> Fork<A> where
     A: 'static + Clone + Send,
 {
-    fn new(parent: Box<Signal<A> + Send>, sink_txs: Arc<Mutex<Vec<Sender<Option<A>>>>>) -> Fork<A> {
+    fn new(parent: Box<Signal<A> + Send>, sink_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>) -> Fork<A> {
         Fork {
             parent: parent,
             sink_txs: sink_txs,
@@ -106,14 +114,14 @@ pub struct Branch<A> where
     A: 'static + Send,
 {
     // Arc<T> is send if T: Send + Sync (which mutex is, unconditionally)
-    fork_txs: Arc<Mutex<Vec<Sender<Option<A>>>>>,
-    source_rx: Receiver<Option<A>>,
+    fork_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>,
+    source_rx: Receiver<Event<A>>,
 }
 
 impl<A> Branch<A> where
     A: 'static + Send,
 {
-    fn new(fork_txs: Arc<Mutex<Vec<Sender<Option<A>>>>>, source_rx: Receiver<Option<A>>) -> Branch<A> {
+    fn new(fork_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>, source_rx: Receiver<Event<A>>) -> Branch<A> {
         Branch {
             fork_txs: fork_txs,
             source_rx: source_rx,

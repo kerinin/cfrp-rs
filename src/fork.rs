@@ -1,7 +1,7 @@
 use std::sync::*;
 use std::sync::mpsc::*;
 
-use super::{Fork, Branch, Signal, Run};
+use super::{Fork, Branch, Signal, Run, Event};
 
 impl<A> Run for Fork<A> where
     A: 'static + Clone + Send,
@@ -10,13 +10,8 @@ impl<A> Run for Fork<A> where
         loop {
             let received = self.parent.recv();
 
-            match received {
-                Some(a) => {
-                    for sink in self.sink_txs.lock().unwrap().iter() {
-                        sink.send(Some(a.clone()));
-                    }
-                },
-                _ => {},
+            for sink in self.sink_txs.lock().unwrap().iter() {
+                sink.send(received.clone());
             }
         }
     }
@@ -35,9 +30,9 @@ impl<A> Clone for Branch<A> where
 impl<A> Signal<A> for Branch<A> where
     A: 'static + Send,
 {
-    fn recv(&mut self) -> Option<A> {
+    fn recv(&mut self) -> Event<A> {
         match self.source_rx.recv() {
-            Err(_) => None,
+            Err(_) => Event::Exit,
             Ok(a) => a,
         }
     }
