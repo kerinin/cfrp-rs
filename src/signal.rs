@@ -1,6 +1,8 @@
 use super::{Signal, Lift, Fold};
 
-pub trait Reactive<A> {
+/// Methods for manipulating data in a topology
+///
+pub trait SignalExt<A> {
     fn lift<F, B>(self, f: F) -> Lift<F, A, B> where
         F: 'static + Send + Fn(A) -> B,
         A: 'static + Send,
@@ -12,7 +14,7 @@ pub trait Reactive<A> {
         B: 'static + Send + Clone;
 }
 
-impl<A, T> Reactive<A> for T where T: 'static + Signal<A> + Send
+impl<A, T> SignalExt<A> for T where T: 'static + Signal<A> + Send
 {
     fn lift<F, B>(self, f: F) -> Lift<F, A, B> where
         F: 'static + Send + Fn(A) -> B,

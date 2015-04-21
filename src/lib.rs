@@ -3,13 +3,13 @@ mod fold;
 mod fork;
 mod input;
 mod lift;
-mod reactive;
+mod signal;
 mod topology;
 
 use std::sync::*;
 use std::sync::mpsc::*;
 
-pub use reactive::Reactive;
+pub use signal::SignalExt;
 pub use topology::{Topology, Builder};
 
 #[derive(Clone)]
@@ -20,15 +20,28 @@ pub enum Event<A> {
     Exit,
 }
 
+/// Types which can be used as nodes in a topology
 pub trait Signal<A>
 {
-    fn pull(&mut self) -> Event<A>;
+    fn push_to(self: Box<Self>, Box<Push<A>>);
+}
+
+pub trait Push<A> {
+    fn push(&mut self, Event<A>);
 }
 
 trait Run: Send {
     fn run(mut self: Box<Self>);
 }
 
+/// `Channel<A>` listens to a `Sender<A>` and pushes received data into the topology
+///
+/// All data entering a topology must originate in a channel; channels ensure
+/// data syncronization across the topology.  Each channel runs in its own 
+/// thread
+///
+/// Channels are created by calling `Builder#channel`
+///
 pub struct Channel<A> where
     A: 'static + Send,
 {
@@ -45,6 +58,18 @@ impl<A> Channel<A> where
     }
 }
 
+/// `Lift<F, A, B>` applies a pure function `F` to a data source `A`, generating a transformed 
+/// output data source `B`.
+///
+/// Other names for this operation include "map" or "collect".  Lifts run in
+/// their data source's thread
+///
+/// Because the function is assumed to be pure, it will only be evaluated for
+/// new data that has changed since the last observation.  If side-effects are
+/// desired, use a `Fold` instead.
+///
+/// Lifts are created by calling `lift` on a signal
+///
 pub struct Lift<F, A, B> where
     F: 'static + Send + Fn(A) -> B,
     A: 'static + Send,
@@ -67,6 +92,18 @@ impl<F, A, B> Lift<F, A, B> where
     }
 }
 
+/// `Fold<F, A, B>` applies a function `F` which uses a data source `A` to 
+/// mutate an instance of `B`, generating an output data source of the mutated 
+/// value
+///
+/// Other names for this operation include "reduce" or "inject".  Folds run in
+/// their data source's thread
+///
+/// Fold is assumed to be impure, therefore the function will be called with
+/// all data upstream of the fold, even if there are no changes in the stream.
+///
+/// Folds are created by calling `fold` on a signal
+///
 pub struct Fold<F, A, B> where
     F: 'static + Send + FnMut(&mut B, A),
     A: 'static + Send,
@@ -91,6 +128,17 @@ impl<F, A, B> Fold<F, A, B> where
     }
 }
 
+// A Fork is created internally when Builder#add is called.  The purpose of Fork is
+// to distribute incoming data to some number of child Branch instances.
+//
+// NOTE: We spin up a child on add and probably send data to it - are we goig to
+// get memory leaks?
+//
+// Fork is the "root" of the topology; when a topology is started, `run` is 
+// called for each Fork in the topology, which causes `push_to` to be called
+// for all the nodes upstream of the Fork. Forks run in their data source's 
+// thread.
+//
 struct Fork<A> where
     A: 'static + Send,
 {
@@ -110,10 +158,16 @@ impl<A> Fork<A> where
 }
 
 
+/// `Branch<A>` allows a data source `A` to be used as input more than once
+///
+/// This operation is equivalent to a "let" binding, or variable assignment.
+/// Branch implements clone, and each clone runs in its own thread.
+///
+/// Branches are returned when `add` is called on a topology builder
+///
 pub struct Branch<A> where
     A: 'static + Send,
 {
-    // Arc<T> is send if T: Send + Sync (which mutex is, unconditionally)
     fork_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>,
     source_rx: Receiver<Event<A>>,
 }

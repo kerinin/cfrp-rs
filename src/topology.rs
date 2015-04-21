@@ -7,6 +7,12 @@ use std::marker::*;
 use super::input::{Input, CoordinatedInput, NoOp};
 use super::{Signal, Run, Fork, Branch, Channel};
 
+/// `Builder` is used to construct topologies.  
+///
+/// Basic builder pattern - `Topology::build` accepts a function which takes
+/// a state type `T` and a mutable builder.  The builder can be used to create
+/// `Channel`s and to `add` nodes to the topology
+///
 pub struct Builder {
     inputs: RefCell<Vec<Box<CoordinatedInput>>>,
     root_signals: RefCell<Vec<Box<Run>>>,
@@ -38,6 +44,8 @@ impl Builder {
     }
 }
 
+/// `Topology<T>` describes a data flow and controls its execution
+///
 pub struct Topology<T> {
     builder: Builder,
     marker: PhantomData<T>,
@@ -57,7 +65,9 @@ impl<T> Topology<T> {
         let Builder {inputs, root_signals} = self.builder;
 
         for root_signal in root_signals.into_inner().into_iter() {
-            root_signal.run();
+            spawn(move || {
+                root_signal.run();
+            });
         }
 
         let no_ops = Arc::new(Mutex::new(inputs.borrow().iter().map(|i| i.boxed_no_op()).collect::<Vec<Box<NoOp>>>()));
