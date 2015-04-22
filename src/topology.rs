@@ -37,11 +37,11 @@ impl Builder {
 
     /// Listen to `source_rx` and push received data into the topology
     ///
-    /// All data entering a topology must originate in a channel; channels ensure
-    /// data syncronization across the topology.  Each channel runs in its own 
-    /// thread
+    /// All data must enter the topology via a call to `listen`; this function
+    /// ensures data syncronization across the topology.  Each listener runs in 
+    /// its own thread
     ///
-    pub fn channel<A, T>(&self, input: T) -> Signal<A> where
+    pub fn listen<A, T>(&self, input: T) -> Signal<A> where
         T: 'static + Input<A> + Send,
         A: 'static + Clone + Send,
     {
