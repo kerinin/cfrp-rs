@@ -38,22 +38,25 @@ trait Run: Send {
     fn run(mut self: Box<Self>);
 }
 
-struct Input<A> where
-    A: 'static + Send + Clone
-{
-    source_rx: Receiver<A>,
-    sink_tx: Sender<Event<A>>,
+trait RunInput: Send {
+    fn run(mut self: Box<Self>, usize, Arc<Mutex<Vec<Box<NoOp>>>>);
+    fn boxed_no_op(&self) -> Box<NoOp>;
 }
 
-impl<A> Input<A> where
+pub trait Input<A> {
+    fn pull(&mut self) -> Option<A>;
+}
+
+trait NoOp: Send {
+    fn send_no_change(&self);
+    fn send_exit(&self);
+}
+
+struct InternalInput<A> where
     A: 'static + Send + Clone
 {
-    fn new(source_rx: Receiver<A>, sink_tx: Sender<Event<A>>) -> Input<A> {
-        Input {
-            source_rx: source_rx,
-            sink_tx: sink_tx,
-        }
-    }
+    input: Box<Input<A> + Send>,
+    sink_tx: Sender<Event<A>>,
 }
 
 struct Channel<A> where

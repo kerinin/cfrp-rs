@@ -4,8 +4,7 @@ use std::sync::mpsc::*;
 use std::thread::spawn;
 use std::marker::*;
 
-use super::input::{CoordinatedInput, NoOp};
-use super::{Input, Signal, Run, Fork, Branch, Channel};
+use super::{NoOp, Input, InternalInput, Signal, Run, RunInput, Fork, Branch, Channel};
 
 /// `Builder` is used to construct topologies.  
 ///
@@ -14,7 +13,7 @@ use super::{Input, Signal, Run, Fork, Branch, Channel};
 /// `Channel`s and to `add` nodes to the topology
 ///
 pub struct Builder {
-    inputs: RefCell<Vec<Box<CoordinatedInput>>>,
+    inputs: RefCell<Vec<Box<RunInput>>>,
     root_signals: RefCell<Vec<Box<Run>>>,
 }
 
@@ -42,13 +41,17 @@ impl Builder {
     /// data syncronization across the topology.  Each channel runs in its own 
     /// thread
     ///
-    pub fn channel<A>(&self, source_rx: Receiver<A>) -> Signal<A> where
+    pub fn channel<A, T>(&self, input: T) -> Signal<A> where
+        T: 'static + Input<A> + Send,
         A: 'static + Clone + Send,
     {
         let (tx, rx) = channel();
-        let input = Input::new(source_rx, tx);
+        let internal_input = InternalInput {
+            input: Box::new(input),
+            sink_tx: tx,
+        };
 
-        self.inputs.borrow_mut().push(Box::new(input));
+        self.inputs.borrow_mut().push(Box::new(internal_input));
 
         Signal {
             internal_signal: Box::new(Channel::new(rx)),
