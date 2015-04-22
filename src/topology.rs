@@ -4,8 +4,8 @@ use std::sync::mpsc::*;
 use std::thread::spawn;
 use std::marker::*;
 
-use super::input::{Input, CoordinatedInput, NoOp};
-use super::{Signal, Run, Fork, Branch, Channel};
+use super::input::{CoordinatedInput, NoOp};
+use super::{Input, Signal, Run, Fork, Branch, Channel};
 
 /// `Builder` is used to construct topologies.  
 ///
@@ -23,13 +23,13 @@ impl Builder {
     ///
     /// Returns a `Branch<A>`, allowing `root` to be used as input more than once
     ///
-    pub fn add<A>(&self, root: Box<Signal<A> + Send>) -> Box<Branch<A>> where
+    pub fn add<A>(&self, root: Signal<A>) -> Box<Branch<A>> where
         A: 'static + Clone + Send,
     {
         let (tx, rx) = channel();
         let fork_txs = Arc::new(Mutex::new(vec![tx]));
 
-        let fork = Fork::new(root, fork_txs.clone());
+        let fork = Fork::new(root.internal_signal, fork_txs.clone());
 
         self.root_signals.borrow_mut().push(Box::new(fork));
 
@@ -42,7 +42,7 @@ impl Builder {
     /// data syncronization across the topology.  Each channel runs in its own 
     /// thread
     ///
-    pub fn channel<A>(&self, source_rx: Receiver<A>) -> Box<Signal<A>> where
+    pub fn channel<A>(&self, source_rx: Receiver<A>) -> Signal<A> where
         A: 'static + Clone + Send,
     {
         let (tx, rx) = channel();
@@ -50,11 +50,17 @@ impl Builder {
 
         self.inputs.borrow_mut().push(Box::new(input));
 
-        Box::new(Channel::new(rx))
+        Signal {
+            internal_signal: Box::new(Channel::new(rx)),
+        }
     }
 }
 
 /// `Topology<T>` describes a data flow and controls its execution
+///
+/// If a record of type `T` is passed to `build`, it will be proxied into the
+/// builder function as the second argument.  This allows data to be passed from
+/// outside the builder's scope into the topology.
 ///
 pub struct Topology<T> {
     builder: Builder,

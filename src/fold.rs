@@ -1,8 +1,8 @@
 use std::marker::*;
 
-use super::{Fold, Signal, Push, Event};
+use super::{Fold, InternalSignal, Push, Event};
 
-impl<F, A, B> Signal<B> for Fold<F, A, B> where
+impl<F, A, B> InternalSignal<B> for Fold<F, A, B> where
     F: 'static + Send + FnMut(&mut B, A),
     A: 'static + Send,
     B: 'static + Send + Clone,

@@ -1,6 +1,6 @@
-use super::{Channel, Signal, Push, Event};
+use super::{Channel, InternalSignal, Push, Event};
 
-impl<A> Signal<A> for Channel<A> where
+impl<A> InternalSignal<A> for Channel<A> where
     A: 'static + Send,
 {
     fn push_to(self: Box<Self>, mut target: Box<Push<A>>) {

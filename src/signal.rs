@@ -1,8 +1,7 @@
 use super::{Signal, Lift, Fold};
 
-/// Methods for manipulating data in a topology
-///
-pub trait SignalExt<A> {
+impl<A> Signal<A>
+{
     /// Apply a pure function `F` to a data source `Signal<A>`, generating a 
     /// transformed output data source `Signal<B>`.
     ///
@@ -13,10 +12,15 @@ pub trait SignalExt<A> {
     /// new data that has changed since the last observation.  If side-effects are
     /// desired, use `fold` instead.
     ///
-    fn lift<F, B>(self: Box<Self>, f: F) -> Box<Signal<B>> where
+    pub fn lift<F, B>(self, f: F) -> Signal<B> where
         F: 'static + Send + Fn(A) -> B,
         A: 'static + Send,
-        B: 'static + Send;
+        B: 'static + Send,
+    {
+        Signal {
+            internal_signal: Box::new(Lift::new(self.internal_signal, f)),
+        }
+    }
 
     /// Apply a function `F` which uses a data source `Signal<A>` to 
     /// mutate an instance of `B`, generating an output data source `Signal<B>`
@@ -28,27 +32,13 @@ pub trait SignalExt<A> {
     /// Fold is assumed to be impure, therefore the function will be called with
     /// all data upstream of the fold, even if there are no changes in the stream.
     ///
-    fn foldp<F, B>(self: Box<Self>, initial: B, f: F) -> Box<Signal<B>> where
-        F: 'static + Send + FnMut(&mut B, A),
-        A: 'static + Send,
-        B: 'static + Send + Clone;
-}
-
-impl<A, T> SignalExt<A> for T where T: 'static + Signal<A> + Send
-{
-    fn lift<F, B>(self: Box<Self>, f: F) -> Box<Signal<B>> where
-        F: 'static + Send + Fn(A) -> B,
-        A: 'static + Send,
-        B: 'static + Send,
-    {
-        Box::new(Lift::new(self, f))
-    }
-
-    fn foldp<F, B>(self: Box<Self>, initial: B, f: F) -> Box<Signal<B>> where
+    pub fn foldp<F, B>(self, initial: B, f: F) -> Signal<B> where
         F: 'static + Send + FnMut(&mut B, A),
         A: 'static + Send,
         B: 'static + Send + Clone,
     {
-        Box::new(Fold::new(self, f, initial))
+        Signal {
+            internal_signal: Box::new(Fold::new(self.internal_signal, f, initial))
+        }
     }
 }

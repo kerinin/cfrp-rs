@@ -1,8 +1,8 @@
 use std::marker::*;
 
-use super::{Lift, Signal, Push, Event};
+use super::{Lift, InternalSignal, Push, Event};
 
-impl<F, A, B> Signal<B> for Lift<F, A, B> where
+impl<F, A, B> InternalSignal<B> for Lift<F, A, B> where
     F: 'static + Send + Fn(A) -> B,
     A: 'static + Send,
     B: 'static + Send,

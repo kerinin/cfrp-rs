@@ -9,29 +9,51 @@ mod topology;
 use std::sync::*;
 use std::sync::mpsc::*;
 
-pub use signal::SignalExt;
 pub use topology::{Topology, Builder};
 
 #[derive(Clone)]
-pub enum Event<A> {
+enum Event<A> {
     Changed(A),
     Unchanged,
     NoOp,
     Exit,
 }
 
-/// Types which can be used as nodes in a topology
-pub trait Signal<A>
+/// A data source of type `A`
+///
+pub struct Signal<A> {
+    internal_signal: Box<InternalSignal<A> + Send>,
+}
+
+trait InternalSignal<A>
 {
     fn push_to(self: Box<Self>, Box<Push<A>>);
 }
 
-pub trait Push<A> {
+trait Push<A> {
     fn push(&mut self, Event<A>);
 }
 
 trait Run: Send {
     fn run(mut self: Box<Self>);
+}
+
+struct Input<A> where
+    A: 'static + Send + Clone
+{
+    source_rx: Receiver<A>,
+    sink_tx: Sender<Event<A>>,
+}
+
+impl<A> Input<A> where
+    A: 'static + Send + Clone
+{
+    fn new(source_rx: Receiver<A>, sink_tx: Sender<Event<A>>) -> Input<A> {
+        Input {
+            source_rx: source_rx,
+            sink_tx: sink_tx,
+        }
+    }
 }
 
 struct Channel<A> where
@@ -55,7 +77,7 @@ struct Lift<F, A, B> where
     A: 'static + Send,
     B: 'static + Send,
 {
-    parent: Box<Signal<A> + Send>,
+    parent: Box<InternalSignal<A> + Send>,
     f: F,
 }
 
@@ -64,7 +86,7 @@ impl<F, A, B> Lift<F, A, B> where
     A: 'static + Send,
     B: 'static + Send,
 {
-    fn new(parent: Box<Signal<A> + Send>, f: F) -> Lift<F, A, B> {
+    fn new(parent: Box<InternalSignal<A> + Send>, f: F) -> Lift<F, A, B> {
         Lift {
             parent: parent,
             f: f,
@@ -77,7 +99,7 @@ struct Fold<F, A, B> where
     A: 'static + Send,
     B: 'static + Send + Clone,
 {
-    parent: Box<Signal<A> + Send>,
+    parent: Box<InternalSignal<A> + Send>,
     f: F,
     state: B,
 }
@@ -87,7 +109,7 @@ impl<F, A, B> Fold<F, A, B> where
     A: 'static + Send,
     B: 'static + Send + Clone,
 {
-    fn new(parent: Box<Signal<A> + Send>, f: F, initial: B) -> Fold<F, A, B> {
+    fn new(parent: Box<InternalSignal<A> + Send>, f: F, initial: B) -> Fold<F, A, B> {
         Fold {
             parent: parent,
             f: f,
@@ -110,14 +132,14 @@ impl<F, A, B> Fold<F, A, B> where
 struct Fork<A> where
     A: 'static + Send,
 {
-    parent: Box<Signal<A> + Send>,
+    parent: Box<InternalSignal<A> + Send>,
     sink_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>,
 }
 
 impl<A> Fork<A> where
     A: 'static + Clone + Send,
 {
-    fn new(parent: Box<Signal<A> + Send>, sink_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>) -> Fork<A> {
+    fn new(parent: Box<InternalSignal<A> + Send>, sink_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>) -> Fork<A> {
         Fork {
             parent: parent,
             sink_txs: sink_txs,
@@ -126,7 +148,7 @@ impl<A> Fork<A> where
 }
 
 
-/// `Branch<A>` allows a data source `A` to be used as input more than once
+/// A data source of type `A` which can be used as input more than once
 ///
 /// This operation is equivalent to a "let" binding, or variable assignment.
 /// Branch implements `Clone`, and each clone runs in its own thread.
@@ -166,9 +188,6 @@ mod test {
         let (out_tx, out_rx) = channel();
 
         Topology::build( (in_rx, out_tx), |t, (in_rx, out_tx)| {
-
-            let channel = t.channel(in_rx);
-            let lift = channel.lift(|i| -> usize { i + 1 });
 
             let plus_one = t.add(t.channel(in_rx)
                 .lift(|i| -> usize { i + 1 })

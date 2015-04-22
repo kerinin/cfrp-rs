@@ -2,7 +2,7 @@ use std::sync::*;
 use std::thread::spawn;
 use std::sync::mpsc::*;
 
-use super::Event;
+use super::{Input, Event};
 
 pub trait NoOp: Send {
     fn send_no_change(&self);
@@ -12,24 +12,6 @@ pub trait NoOp: Send {
 pub trait CoordinatedInput: Send {
     fn run(self: Box<Self>, usize, Arc<Mutex<Vec<Box<NoOp>>>>);
     fn boxed_no_op(&self) -> Box<NoOp>;
-}
-
-pub struct Input<A> where
-    A: 'static + Send + Clone
-{
-    source_rx: Receiver<A>,
-    sink_tx: Sender<Event<A>>,
-}
-
-impl<A> Input<A> where
-    A: 'static + Send + Clone
-{
-    pub fn new(source_rx: Receiver<A>, sink_tx: Sender<Event<A>>) -> Input<A> {
-        Input {
-            source_rx: source_rx,
-            sink_tx: sink_tx,
-        }
-    }
 }
 
 impl<A> CoordinatedInput for Input<A> where
