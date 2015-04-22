@@ -7,19 +7,26 @@ impl<F, A, B> InternalSignal<B> for Lift<F, A, B> where
     A: 'static + Send,
     B: 'static + Send,
 {
-    fn push_to(self: Box<Self>, target: Box<Push<B>>) {
+    fn push_to(self: Box<Self>, target: Option<Box<Push<B>>>) {
         let inner = *self;
         let Lift { parent, f } = inner;
 
-        parent.push_to(
-            Box::new(
-                LiftPusher {
-                    child: target,
-                    f: f,
-                    marker: PhantomData,
-                }
-            )
-        );
+        match target {
+            Some(t) => {
+                parent.push_to(
+                    Some(
+                        Box::new(
+                            LiftPusher {
+                                child: t,
+                                f: f,
+                                marker: PhantomData,
+                            }
+                        )
+                    )
+                );
+            },
+            None => parent.push_to(None),
+        }
     }
 }
 

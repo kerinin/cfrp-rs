@@ -10,16 +10,25 @@ impl<A> Run for Fork<A> where
     A: 'static + Clone + Send,
 {
     fn run(self: Box<Self>) {
-        let inner = *self;
-        let Fork { parent, sink_txs } = inner;
+        let has_branches = !self.sink_txs.lock().unwrap().is_empty();
 
-        parent.push_to(
-            Box::new(
-                ForkPusher {
-                    sink_txs: sink_txs,
-                }
+        if has_branches {
+            let inner = *self;
+            let Fork { parent, sink_txs } = inner;
+
+            parent.push_to(
+                Some(
+                    Box::new(
+                        ForkPusher {
+                            sink_txs: sink_txs,
+                        }
+                    )
+                )
             )
-        )
+        } else {
+            self.parent.push_to(None);
+        }
+                
     }
 }
 
@@ -46,12 +55,26 @@ impl<A> Push<A> for ForkPusher<A> where
 impl<A> InternalSignal<A> for Branch<A> where
     A: 'static + Send,
 {
-    fn push_to(self: Box<Self>, mut target: Box<Push<A>>) {
-        loop {
-            match self.source_rx.recv() {
-                Ok(event) => target.push(event),
-                Err(_) => return,
+    fn push_to(self: Box<Self>, target: Option<Box<Push<A>>>) {
+        match (target, self.source_rx) {
+            (Some(mut t), Some(rx)) => {
+                loop {
+                    match rx.recv() {
+                        Ok(event) => t.push(event),
+                        Err(_) => return,
+                    }
+                }
+            },
+            (None, Some(rx)) => {
+                // Just ensuring the channel is drained so we don't get memory leaks
+                loop {
+                    match rx.recv() {
+                        Err(_) => return,
+                        _ => {},
+                    }
+                }
             }
+            _ => {},
         }
     }
 }
@@ -60,9 +83,7 @@ impl<A> Clone for Branch<A> where
     A: 'static + Send,
 {
     fn clone(&self) -> Branch<A> {
-        let (tx, rx) = channel();
-        self.fork_txs.lock().unwrap().push(tx);
-        Branch { fork_txs: self.fork_txs.clone(), source_rx: rx }
+        Branch { fork_txs: self.fork_txs.clone(), source_rx: None }
     }
 }
 
@@ -78,11 +99,15 @@ impl<A> Branch<A>
     /// new data that has changed since the last observation.  If side-effects are
     /// desired, use `fold` instead.
     ///
-    pub fn lift<F, B>(self, f: F) -> Signal<B> where
+    pub fn lift<F, B>(mut self, f: F) -> Signal<B> where
         F: 'static + Send + Fn(A) -> B,
         A: 'static + Send,
         B: 'static + Send,
     {
+        let (tx, rx) = channel();
+        self.fork_txs.lock().unwrap().push(tx);
+        self.source_rx = Some(rx);
+
         Signal {
             internal_signal: Box::new(Lift::new(Box::new(self), f)),
         }
@@ -98,11 +123,15 @@ impl<A> Branch<A>
     /// Fold is assumed to be impure, therefore the function will be called with
     /// all data upstream of the fold, even if there are no changes in the stream.
     ///
-    pub fn foldp<F, B>(self, initial: B, f: F) -> Signal<B> where
+    pub fn foldp<F, B>(mut self, initial: B, f: F) -> Signal<B> where
         F: 'static + Send + FnMut(&mut B, A),
         A: 'static + Send,
         B: 'static + Send + Clone,
     {
+        let (tx, rx) = channel();
+        self.fork_txs.lock().unwrap().push(tx);
+        self.source_rx = Some(rx);
+
         Signal {
             internal_signal: Box::new(Fold::new(Box::new(self), f, initial))
         }

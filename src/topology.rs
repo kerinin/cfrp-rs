@@ -25,14 +25,13 @@ impl Builder {
     pub fn add<A>(&self, root: Signal<A>) -> Box<Branch<A>> where
         A: 'static + Clone + Send,
     {
-        let (tx, rx) = channel();
-        let fork_txs = Arc::new(Mutex::new(vec![tx]));
+        let fork_txs = Arc::new(Mutex::new(Vec::new()));
 
         let fork = Fork::new(root.internal_signal, fork_txs.clone());
 
         self.root_signals.borrow_mut().push(Box::new(fork));
 
-        Box::new(Branch::new(fork_txs, rx))
+        Box::new(Branch::new(fork_txs, None))
     }
 
     /// Listen to `source_rx` and push received data into the topology

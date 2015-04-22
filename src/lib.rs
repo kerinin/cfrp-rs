@@ -27,7 +27,7 @@ pub struct Signal<A> {
 
 trait InternalSignal<A>
 {
-    fn push_to(self: Box<Self>, Box<Push<A>>);
+    fn push_to(self: Box<Self>, Option<Box<Push<A>>>);
 }
 
 trait Push<A> {
@@ -162,13 +162,13 @@ pub struct Branch<A> where
     A: 'static + Send,
 {
     fork_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>,
-    source_rx: Receiver<Event<A>>,
+    source_rx: Option<Receiver<Event<A>>>,
 }
 
 impl<A> Branch<A> where
     A: 'static + Send,
 {
-    fn new(fork_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>, source_rx: Receiver<Event<A>>) -> Branch<A> {
+    fn new(fork_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>, source_rx: Option<Receiver<Event<A>>>) -> Branch<A> {
         Branch {
             fork_txs: fork_txs,
             source_rx: source_rx,
