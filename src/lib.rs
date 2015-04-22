@@ -192,7 +192,7 @@ mod test {
 
         Topology::build( (in_rx, out_tx), |t, (in_rx, out_tx)| {
 
-            let plus_one = t.add(t.channel(in_rx)
+            let plus_one = t.add(t.listen(in_rx)
                 .lift(|i| -> usize { i + 1 })
             );
 
