@@ -5,6 +5,7 @@ mod input;
 mod lift;
 mod signal;
 mod topology;
+mod liftn;
 
 use std::sync::*;
 use std::sync::mpsc::*;
@@ -25,7 +26,7 @@ pub struct Signal<A> {
     internal_signal: Box<InternalSignal<A> + Send>,
 }
 
-trait InternalSignal<A>
+trait InternalSignal<A>: Send
 {
     fn push_to(self: Box<Self>, Option<Box<Push<A>>>);
 }
