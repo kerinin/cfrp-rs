@@ -21,7 +21,7 @@ impl<F, A, R, B> InternalSignal<B> for LiftN<F, A, R, B> where
     fn push_to(self: Box<Self>, target: Option<Box<Push<B>>>) {
         let inner = *self;
         let LiftN {head, rest, f} = inner;
-        let input_pullers = InputList::run(head, rest);
+        let mut input_pullers = InputList::run(head, rest);
 
         match target {
             Some(mut t) => {
@@ -29,8 +29,24 @@ impl<F, A, R, B> InternalSignal<B> for LiftN<F, A, R, B> where
                     let mut any_changed = false;
                     let mut any_exit = false;
                     let values = input_pullers.pull(&mut any_changed, &mut any_exit);
-                    let b = (f)(values);
-                    t.push(Event::Changed(b));
+
+                    match (any_exit, any_changed) {
+                        // Propagate exit
+                        (true, _) => {
+                            t.push(Event::Exit)
+                        },
+
+                        // Changed data, call the function & pass the return value
+                        (false, true) => {
+                            let b = (f)(values);
+                            t.push(Event::Changed(b));
+                        },
+
+                        // No changes, proxy it along
+                        (false, false) => {
+                            t.push(Event::Unchanged);
+                        },
+                    }
                 }
             },
             None => {
@@ -46,9 +62,6 @@ impl<F, A, R, B> InternalSignal<B> for LiftN<F, A, R, B> where
 
 
 
-
-
-
 trait InputList<Head> {
     type InputPullers: PullInputs;
 
@@ -56,8 +69,8 @@ trait InputList<Head> {
 }
 
 impl<H, R0> InputList<Box<InternalSignal<H>>> for (Box<InternalSignal<R0>>,) where
-    H: 'static + Send,
-    R0: 'static + Send,
+    H: 'static + Send + Clone,
+    R0: 'static + Send + Clone,
 {
     type InputPullers = (InputPuller<H>, InputPuller<R0>);
 
@@ -79,6 +92,8 @@ fn input_puller<T>(upstream: Box<InternalSignal<T>>) -> InputPuller<T> where
     });
 
     InputPuller {
+        last: None,
+        last_was_no_op: false,
         rx: rx,
     }
 }
@@ -86,14 +101,17 @@ fn input_puller<T>(upstream: Box<InternalSignal<T>>) -> InputPuller<T> where
 trait PullInputs {
     type Values;
 
-    fn pull(&self, any_changed: &mut bool, any_exit: &mut bool) -> Self::Values;
+    fn pull(&mut self, any_changed: &mut bool, any_exit: &mut bool) -> Self::Values;
 }
 
-impl<T0, T1> PullInputs for (InputPuller<T0>, InputPuller<T1>) {
+impl<T0, T1> PullInputs for (InputPuller<T0>, InputPuller<T1>) where
+    T0: Clone,
+    T1: Clone,
+{
     type Values = (Option<T0>, Option<T1>);
 
-    fn pull(&self, any_changed: &mut bool, any_exit: &mut bool) -> (Option<T0>, Option<T1>) {
-        (self.0.pull(), self.1.pull())
+    fn pull(&mut self, c: &mut bool, e: &mut bool) -> (Option<T0>, Option<T1>) {
+        (self.0.pull(c, e), self.1.pull(c, e))
     }
 }
 
@@ -108,221 +126,72 @@ impl<A> Push<A> for InputPusher<A> where
     A: 'static + Send,
 {
     fn push(&mut self, event: Event<A>) {
+        match self.tx.send(event) {
+            _ => {},
+        }
     }
 }
 
 // Pulls from channel, caches values to populate no-op fields
 struct InputPuller<A> {
+    last: Option<A>,
+    last_was_no_op: bool,
     rx: Receiver<Event<A>>,
 }
 
-impl<A> InputPuller<A> {
-    fn pull(&self) -> Option<A> {
-        None
-    }
-}
-
-/*
-// Combines the pulled data for all inputs and pushes downstream
-struct OutputPusher<A> {
-}
-
-impl<A> Push<A> for LiftNPusher<A> where
-    A: 'static + Send,
+impl<A> InputPuller<A> where
+    A: Clone,
 {
-    fn push(&mut self, event: Event<A>) {
-        match self.tx.send(event) {
-            _ => {},
-        }
-    }
-}
-
-impl<A> InputPuller<A> {
     fn pull(&mut self, any_changed: &mut bool, any_exit: &mut bool) -> Option<A> {
-    }
-}
 
-impl<A> OutputPusher<A> {
-    fn push(&mut self, event: Event<A>) {
-    }
-}
+        // NOTE: There may be a more efficient way of doing this than cloning
+        match (self.rx.recv(), self.last.clone(), self.last_was_no_op.clone()) {
 
-
-
-
-
-
-
-
-
-
-
-
-fn push<T>(signal: Box<InternalSignal<T>>) -> Receiver<Event<T>> where
-    T: 'static + Send,
-{
-    let (tx, rx) = channel();
-
-    spawn(move || {
-        let pusher = LiftNPusher {
-            tx: tx,
-        };
-
-        signal.push_to(Some(Box::new(pusher)));
-    });
-
-    LiftNPuller {
-        rx: rx
-    }
-}
-
-
-// Spawn threads to push data from various lengths of tuples
-
-trait RunBranches<Head> {
-    type Receivers;
-
-    fn run(Head, Self) -> Self::Receivers;
-}
-
-impl<H, R0> RunBranches<Box<InternalSignal<H>>> for (Box<InternalSignal<R0>>,) where
-    H: 'static + Send,
-    R0: 'static + Send,
-{
-    type Receivers = (LiftNPuller<H>, LiftNPuller<R0>);
-
-    fn run(head: Box<InternalSignal<H>>, rest: Self) -> (LiftNPuller<H>, LiftNPuller<R0>) {
-        (push(head), push(rest.0))
-    }
-}
-
-
-// Pull upstream data from channels
-
-fn pull<T>(puller: LiftNPuller<T>) -> T {
-    match puller.rx.recv() {
-        Ok(e) => e,
-        Err(_) => Event::Exit,
-    }
-}
-
-trait PullValues {
-    type Values;
-
-    fn pull_values(self) -> Self::Values;
-}
-
-impl<V0, V1> PullValues for (Receiver<Event<V0>>, Receiver<Event<V1>>)
-{
-    // NOTE: This should pull VALUES, not events
-    type Values = (Event<V0>, Event<V1>);
-
-    fn pull_values(self) -> (Event<V0>, Event<V1>) {
-        (pull(self.0), pull(self.1)) 
-    }
-}
-
-// PREVIOUS CODE
-struct LiftNPusher<A> {
-    tx: Sender<Event<A>>,
-}
-
-impl<A> Push<A> for LiftNPusher<A> where
-    A: 'static + Send,
-{
-    fn push(&mut self, event: Event<A>) {
-        match self.tx.send(event) {
-            _ => {},
-        }
-    }
-}
-
-fn push<T>(signal: Box<InternalSignal<T>>) -> Receiver<Event<T>> where
-    T: 'static + Send,
-    InternalSignal<T>: Send,
-{
-    let (tx, rx) = channel();
-
-    spawn(move || {
-        let pusher = LiftNPusher {
-            tx: tx,
-        };
-
-        signal.push_to(Some(Box::new(pusher)));
-    });
-
-    rx
-}
-
-fn pull<T>(rx: Receiver<Event<T>>) -> Event<T> {
-    match rx.recv() {
-        Ok(e) => e,
-        Err(_) => Event::Exit,
-    }
-}
-
-impl<A, B, C> Rest<Box<A>> for (Box<B>, Box<C>) where
-    A: 'static + Send + InternalSignal<A>,
-    B: 'static + Send + InternalSignal<B>,
-    C: 'static + Send + InternalSignal<C>,
-    InternalSignal<A>: Send,
-    InternalSignal<B>: Send,
-    InternalSignal<C>: Send,
-{
-    type List = (Box<A>, Box<B>, Box<C>);
-    type Receivers = (Receiver<Event<A>>, Receiver<Event<B>>, Receiver<Event<C>>);
-    type Values = (A, B, C);
-
-    fn cons(self, head: Box<A>) -> <Self as Rest<Box<A>>>::List {
-        (head, self.0, self.1)
-    }
-
-    fn run(list: <Self as Rest<Box<A>>>::List) -> <Self as Rest<Box<A>>>::Receivers {
-        (push(list.0), push(list.1), push(list.2))
-    }
-
-    fn pull(list: <Self as Rest<Box<A>>>::Receivers) -> <Self as Rest<Box<A>>>::Values {
-        (pull(list.0), pull(list.1), pull(list.2))
-    }
-}
-
-struct LiftN<F, A, R, B> where
-    F: Fn(<R as Rest<A>>::Values) -> B,
-    R: Rest<A>,
-    A: 'static + Send,
-    R: 'static + Send,
-    B: 'static + Send,
-{
-    upstream: <R as Rest<A>>::List,
-    f: F,
-}
-
-impl<F, A, R, B> InternalSignal<B> for LiftN<F, A, R, B> where
-    F: Fn(<R as Rest<A>>::Values) -> B,
-    R: Rest<A>,
-    A: 'static + Send,
-    R: 'static + Send,
-    B: 'static + Send,
-{
-    fn push_to(self: Box<Self>, target: Option<Box<Push<B>>>) {
-        // let receivers: <R as Rest<A>>::Values = Rest::<A>::run(self.upstream);
-        // let receivers: <R as Rest<A>>::Receivers = Rest::run(self.upstream);
-        self.upstream
-
-        match target {
-            Some(t) => {
-                loop {
-                    let values = Rest::pull(receivers);
-                    let b = (self.f)(values);
-                    t.push(Event::Changed(b));
-                }
+            // If the value changed, cache & return it
+            (Ok(Event::Changed(a)), _, _) => {
+                *any_changed = true;
+                self.last = Some(a.clone());
+                self.last_was_no_op = false;
+                Some(a)
             },
-            None => {
-                loop {
-                    Rest::pull(receivers);
-                }
-            }
+
+            // If the value didn't change but we have a cached value, return it
+            (Ok(Event::Unchanged), Some(a), _) => {
+                self.last_was_no_op = false;
+                Some(a)
+            },
+
+            // If the value didn't change and we haven't seen any values in the
+            // past, something is very wrong.
+            (Ok(Event::Unchanged), None, _) => {
+                // Should this really panic?
+                panic!("Recevied 'unchanged', but no cached data")
+            },
+
+            // If we're just keeping in sync, return None handling this appropriately
+            // is the responsiblity of the person using `liftn`
+            (Ok(Event::NoOp), _, true) => {
+                None
+            },
+
+
+            (Ok(Event::NoOp), _, false) => {
+                *any_changed = true;
+                self.last_was_no_op = true;
+                None
+            },
+
+            // Propagate exits
+            (Ok(Event::Exit), _, _) => {
+                *any_exit = true;
+                None
+            },
+
+            // Begin exiting if the other end went away
+            (Err(_), _, _) => {
+                *any_exit = true;
+                None
+            },
         }
     }
 }
-*/
