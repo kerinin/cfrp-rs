@@ -1,3 +1,5 @@
+use log;
+
 use std::sync::mpsc::*;
 use std::thread::spawn;
 
@@ -24,17 +26,20 @@ impl<F, A, R, B> InternalSignal<B> for LiftN<F, A, R, B> where
                     match (any_exit, any_changed) {
                         // Propagate exit
                         (true, _) => {
+                            println!("LiftN: Received Exit");
                             t.push(Event::Exit)
                         },
 
                         // Changed data, call the function & pass the return value
                         (false, true) => {
+                            println!("LiftN: Changed Data");
                             let b = (f)(values);
                             t.push(Event::Changed(b));
                         },
 
                         // No changes, proxy it along
                         (false, false) => {
+                            println!("LiftN: No Changes");
                             t.push(Event::Unchanged);
                         },
                     }
@@ -115,6 +120,7 @@ impl<A> Push<A> for InputPusher<A> where
     A: 'static + Send,
 {
     fn push(&mut self, event: Event<A>) {
+        println!("InputPusher pushing");
         match self.tx.send(event) {
             _ => {},
         }
@@ -132,6 +138,7 @@ impl<A> InputPuller<A> where
     A: Clone,
 {
     fn pull(&mut self, any_changed: &mut bool, any_exit: &mut bool) -> Option<A> {
+        println!("InputPuller pulling");
 
         // NOTE: There may be a more efficient way of doing this than cloning
         match (self.rx.recv(), self.last.clone(), self.last_was_no_op.clone()) {
@@ -172,12 +179,14 @@ impl<A> InputPuller<A> where
 
             // Propagate exits
             (Ok(Event::Exit), _, _) => {
+                println!("InputPuller: Received Exit event");
                 *any_exit = true;
                 None
             },
 
             // Begin exiting if the other end went away
             (Err(_), _, _) => {
+                println!("InputPuller: Error receiving data");
                 *any_exit = true;
                 None
             },

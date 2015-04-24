@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate log;
+
 mod channel;
 mod fold;
 mod fork;
@@ -6,6 +9,7 @@ mod lift;
 mod signal;
 mod topology;
 mod liftn;
+mod logger;
 
 use std::sync::*;
 use std::sync::mpsc::*;
@@ -175,10 +179,10 @@ impl<A> Branch<A> where
 
 #[cfg(test)] 
 mod test {
+    extern crate log;
+
     // extern crate quickcheck;
     use std::sync::mpsc::*;
-    
-    use super::*;
 
     #[test]
     fn integration() {
@@ -196,6 +200,7 @@ mod test {
             );
 
             let lifted = plus_one.liftn((plus_two,), |(i, j)| -> usize { 
+                println!("liftn-er liftn-ing");
                 match (i, j) {
                     (Some(a), Some(b)) => { a + b },
                     _ => 0,
