@@ -13,7 +13,7 @@ use std::sync::mpsc::*;
 pub use topology::{Topology, Builder};
 
 #[derive(Clone)]
-enum Event<A> {
+pub enum Event<A> {
     Changed(A),
     Unchanged,
     NoOp,
@@ -23,15 +23,15 @@ enum Event<A> {
 /// A data source of type `A`
 ///
 pub struct Signal<A> {
-    internal_signal: Box<InternalSignal<A> + Send>,
+    internal_signal: Box<InternalSignal<A>>,
 }
 
-trait InternalSignal<A>: Send
+pub trait InternalSignal<A>: Send
 {
     fn push_to(self: Box<Self>, Option<Box<Push<A>>>);
 }
 
-trait Push<A> {
+pub trait Push<A> {
     fn push(&mut self, Event<A>);
 }
 
@@ -81,21 +81,29 @@ struct Lift<F, A, B> where
     A: 'static + Send,
     B: 'static + Send,
 {
-    parent: Box<InternalSignal<A> + Send>,
+    parent: Box<InternalSignal<A>>,
     f: F,
 }
 
-impl<F, A, B> Lift<F, A, B> where
-    F: 'static + Send + Fn(A) -> B,
-    A: 'static + Send,
-    B: 'static + Send,
+pub trait InputList<Head> {
+    type InputPullers: 'static + PullInputs;
+
+    fn run(Head, Self) -> Self::InputPullers;
+}
+
+trait PullInputs {
+    type Values;
+
+    fn pull(&mut self, any_changed: &mut bool, any_exit: &mut bool) -> Self::Values;
+}
+
+struct LiftN<F, A, R, B> where
+    F: Fn(<<R as InputList<A>>::InputPullers as PullInputs>::Values) -> B,
+    R: InputList<A>,
 {
-    fn new(parent: Box<InternalSignal<A> + Send>, f: F) -> Lift<F, A, B> {
-        Lift {
-            parent: parent,
-            f: f,
-        }
-    }
+    head: A,
+    rest: R,
+    f: F,
 }
 
 struct Fold<F, A, B> where
@@ -103,23 +111,9 @@ struct Fold<F, A, B> where
     A: 'static + Send,
     B: 'static + Send + Clone,
 {
-    parent: Box<InternalSignal<A> + Send>,
+    parent: Box<InternalSignal<A>>,
     f: F,
     state: B,
-}
-
-impl<F, A, B> Fold<F, A, B> where
-    F: 'static + Send + FnMut(&mut B, A),
-    A: 'static + Send,
-    B: 'static + Send + Clone,
-{
-    fn new(parent: Box<InternalSignal<A> + Send>, f: F, initial: B) -> Fold<F, A, B> {
-        Fold {
-            parent: parent,
-            f: f,
-            state: initial,
-        }
-    }
 }
 
 // A Fork is created internally when Builder#add is called.  The purpose of Fork is
@@ -136,14 +130,14 @@ impl<F, A, B> Fold<F, A, B> where
 struct Fork<A> where
     A: 'static + Send,
 {
-    parent: Box<InternalSignal<A> + Send>,
+    parent: Box<InternalSignal<A>>,
     sink_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>,
 }
 
 impl<A> Fork<A> where
     A: 'static + Clone + Send,
 {
-    fn new(parent: Box<InternalSignal<A> + Send>, sink_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>) -> Fork<A> {
+    fn new(parent: Box<InternalSignal<A>>, sink_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>) -> Fork<A> {
         Fork {
             parent: parent,
             sink_txs: sink_txs,
@@ -197,11 +191,18 @@ mod test {
                 .lift(|i| -> usize { i + 1 })
             );
 
-            let plus_two = t.add(plus_one
+            let plus_two = t.add(plus_one.clone()
                 .lift(|i| -> usize { i + 1 })
             );
 
-            t.add(plus_two
+            let lifted = plus_one.liftn((plus_two,), |(i, j)| -> usize { 
+                match (i, j) {
+                    (Some(a), Some(b)) => { a + b },
+                    _ => 0,
+                }
+            });
+
+            t.add(lifted
                 .foldp(out_tx, |tx, a| { tx.send(a); })
             );
 
@@ -210,7 +211,7 @@ mod test {
         in_tx.send(0usize);
 
         let out = out_rx.recv().unwrap();
-        assert_eq!(out, 2);
+        assert_eq!(out, 3);
         println!("Received {}", out);
     }
 }

@@ -1,17 +1,8 @@
 use std::sync::mpsc::*;
 use std::thread::spawn;
 
-use super::{InternalSignal, Event, Push};
+use super::{InternalSignal, Event, Push, LiftN, InputList, PullInputs, Branch};
 
-
-struct LiftN<F, A, R, B> where
-    F: Fn(<<R as InputList<A>>::InputPullers as PullInputs>::Values) -> B,
-    R: InputList<A>,
-{
-    head: A,
-    rest: R,
-    f: F,
-}
 
 impl<F, A, R, B> InternalSignal<B> for LiftN<F, A, R, B> where
     F: 'static + Send + Fn(<<R as InputList<A>>::InputPullers as PullInputs>::Values) -> B,
@@ -61,14 +52,18 @@ impl<F, A, R, B> InternalSignal<B> for LiftN<F, A, R, B> where
 }
 
 
+impl<H, R0> InputList<Box<InternalSignal<H>>> for (Box<InternalSignal<R0>>,) where
+    H: 'static + Send + Clone,
+    R0: 'static + Send + Clone,
+{
+    type InputPullers = (InputPuller<H>, InputPuller<R0>);
 
-trait InputList<Head> {
-    type InputPullers: PullInputs;
-
-    fn run(Head, Self) -> Self::InputPullers;
+    fn run(head: Box<InternalSignal<H>>, rest: Self) -> (InputPuller<H>, InputPuller<R0>) {
+        (input_puller(head), input_puller(rest.0))
+    }
 }
 
-impl<H, R0> InputList<Box<InternalSignal<H>>> for (Box<InternalSignal<R0>>,) where
+impl<H, R0> InputList<Box<InternalSignal<H>>> for (Box<Branch<R0>>,) where
     H: 'static + Send + Clone,
     R0: 'static + Send + Clone,
 {
@@ -96,12 +91,6 @@ fn input_puller<T>(upstream: Box<InternalSignal<T>>) -> InputPuller<T> where
         last_was_no_op: false,
         rx: rx,
     }
-}
-
-trait PullInputs {
-    type Values;
-
-    fn pull(&mut self, any_changed: &mut bool, any_exit: &mut bool) -> Self::Values;
 }
 
 impl<T0, T1> PullInputs for (InputPuller<T0>, InputPuller<T1>) where
@@ -133,7 +122,7 @@ impl<A> Push<A> for InputPusher<A> where
 }
 
 // Pulls from channel, caches values to populate no-op fields
-struct InputPuller<A> {
+pub struct InputPuller<A> {
     last: Option<A>,
     last_was_no_op: bool,
     rx: Receiver<Event<A>>,

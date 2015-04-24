@@ -1,7 +1,7 @@
 use std::sync::*;
 use std::sync::mpsc::*;
 
-use super::{Fork, Branch, Signal, InternalSignal, Run, Push, Event, Lift, Fold};
+use super::{Fork, Branch, Signal, InternalSignal, Run, Push, Event, Lift, Fold, LiftN, PullInputs, InputList};
 
 // Fork is the incoming portion of a fork.  It is pushed data from upstream and
 // clones it across a (possibly empty) set of child branches
@@ -87,7 +87,8 @@ impl<A> Clone for Branch<A> where
     }
 }
 
-impl<A> Branch<A>
+impl<A> Branch<A> where
+    A: 'static + Send,
 {
     /// Apply a pure function `F` to a data source `Signal<A>`, generating a 
     /// transformed output data source `Signal<B>`.
@@ -109,7 +110,34 @@ impl<A> Branch<A>
         self.source_rx = Some(rx);
 
         Signal {
-            internal_signal: Box::new(Lift::new(Box::new(self), f)),
+            internal_signal: Box::new(
+                Lift {
+                    parent: Box::new(self),
+                    f: f,
+                }
+            )
+        }
+    }
+
+    pub fn liftn<F, R, B>(mut self, rest: R, f: F) -> Signal<B> where
+        F: 'static + Send + Fn(<<R as InputList<Box<InternalSignal<A>>>>::InputPullers as PullInputs>::Values) -> B,
+        R: 'static + Send + InputList<Box<InternalSignal<A>>>,
+        B: 'static + Send,
+    {
+        let (tx, rx) = channel();
+        self.fork_txs.lock().unwrap().push(tx);
+        self.source_rx = Some(rx);
+
+        let head: Box<InternalSignal<A>> = Box::new(self);
+
+        Signal {
+            internal_signal: Box::new(
+                LiftN {
+                    head: head,
+                    rest: rest,
+                    f: f,
+                }
+            ),
         }
     }
 
@@ -133,7 +161,13 @@ impl<A> Branch<A>
         self.source_rx = Some(rx);
 
         Signal {
-            internal_signal: Box::new(Fold::new(Box::new(self), f, initial))
+            internal_signal: Box::new(
+                Fold {
+                    parent: Box::new(self),
+                    f: f,
+                    state: initial,
+                }
+            )
         }
     }
 }
