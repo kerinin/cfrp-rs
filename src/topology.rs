@@ -1,7 +1,7 @@
 use std::cell::*;
 use std::sync::*;
 use std::sync::mpsc::*;
-use std::thread::spawn;
+use std::thread;
 use std::marker::*;
 
 use super::{NoOp, Input, InternalInput, Signal, Run, RunInput, Fork, Branch, Channel};
@@ -78,6 +78,8 @@ impl<T> Topology<T> {
     pub fn build<F>(state: T, f: F) -> Self where 
         F: Fn(&Builder, T),
     {
+        println!("----------------------> Building Topology");
+
         let builder = Builder { root_signals: RefCell::new(Vec::new()), inputs: RefCell::new(Vec::new()) };
         f(&builder, state);
         
@@ -87,20 +89,24 @@ impl<T> Topology<T> {
     /// Run the topology
     ///
     pub fn run(self) {
+        println!("----------------------> Running Topology");
+
         let Builder {inputs, root_signals} = self.builder;
 
         for root_signal in root_signals.into_inner().into_iter() {
-            spawn(move || {
+            thread::spawn(move || {
                 root_signal.run();
             });
+            thread::sleep_ms(100);
         }
 
         let no_ops = Arc::new(Mutex::new(inputs.borrow().iter().map(|i| i.boxed_no_op()).collect::<Vec<Box<NoOp>>>()));
         for (idx, input) in inputs.into_inner().into_iter().enumerate() {
             let no_ops_i = no_ops.clone();
-            spawn(move || {
+            thread::spawn(move || {
                 input.run(idx, no_ops_i);
             });
+            thread::sleep_ms(100);
         }
     }
 }

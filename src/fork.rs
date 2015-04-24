@@ -13,6 +13,8 @@ impl<A> Run for Fork<A> where
         let has_branches = !self.sink_txs.lock().unwrap().is_empty();
 
         if has_branches {
+            println!("Fork::run with branches");
+
             let inner = *self;
             let Fork { parent, sink_txs } = inner;
 
@@ -26,6 +28,8 @@ impl<A> Run for Fork<A> where
                 )
             )
         } else {
+            println!("Fork::run without branches");
+
             self.parent.push_to(None);
         }
                 
@@ -40,6 +44,8 @@ impl<A> Push<A> for ForkPusher<A> where
     A: 'static + Clone + Send,
 {
     fn push(&mut self, event: Event<A>) {
+        println!("ForkPusher handling Event");
+
         for sink_tx in self.sink_txs.lock().unwrap().iter() {
             match sink_tx.send(event.clone()) {
                 // We can't really terminate a child process, so just ignore errors...
@@ -49,7 +55,7 @@ impl<A> Push<A> for ForkPusher<A> where
     }
 }
 
-// Branch is the outgoig portion of a fork.  It spawns waits for incoming data 
+// Branch is the outgoig portion of a fork.  It waits for incoming data 
 // from it's parent fork and pushes it to its children
 //
 impl<A> InternalSignal<A> for Branch<A> where
@@ -58,6 +64,8 @@ impl<A> InternalSignal<A> for Branch<A> where
     fn push_to(self: Box<Self>, target: Option<Box<Push<A>>>) {
         match (target, self.source_rx) {
             (Some(mut t), Some(rx)) => {
+                println!("Branch::push_to with target");
+
                 loop {
                     match rx.recv() {
                         Ok(event) => t.push(event),
@@ -66,6 +74,8 @@ impl<A> InternalSignal<A> for Branch<A> where
                 }
             },
             (None, Some(rx)) => {
+                println!("Branch::push_to with empty target");
+
                 // Just ensuring the channel is drained so we don't get memory leaks
                 loop {
                     match rx.recv() {
@@ -74,7 +84,9 @@ impl<A> InternalSignal<A> for Branch<A> where
                     }
                 }
             }
-            _ => {},
+            _ => {
+                println!("Branch::push_to with neither target nor source")
+            },
         }
     }
 }
@@ -119,28 +131,6 @@ impl<A> Branch<A> where
         }
     }
 
-    pub fn liftn<F, R, B>(mut self, rest: R, f: F) -> Signal<B> where
-        F: 'static + Send + Fn(<<R as InputList<Box<InternalSignal<A>>>>::InputPullers as PullInputs>::Values) -> B,
-        R: 'static + Send + InputList<Box<InternalSignal<A>>>,
-        B: 'static + Send,
-    {
-        let (tx, rx) = channel();
-        self.fork_txs.lock().unwrap().push(tx);
-        self.source_rx = Some(rx);
-
-        let head: Box<InternalSignal<A>> = Box::new(self);
-
-        Signal {
-            internal_signal: Box::new(
-                LiftN {
-                    head: head,
-                    rest: rest,
-                    f: f,
-                }
-            ),
-        }
-    }
-
     /// Apply a function `F` which uses a data source `Signal<A>` to 
     /// mutate an instance of `B`, generating an output data source `Signal<B>`
     /// containing the mutated value
@@ -153,7 +143,7 @@ impl<A> Branch<A> where
     ///
     pub fn foldp<F, B>(mut self, initial: B, f: F) -> Signal<B> where
         F: 'static + Send + FnMut(&mut B, A),
-        A: 'static + Send,
+        A: 'static + Send + Clone,
         B: 'static + Send + Clone,
     {
         let (tx, rx) = channel();

@@ -4,7 +4,7 @@ use super::{Fold, InternalSignal, Push, Event};
 
 impl<F, A, B> InternalSignal<B> for Fold<F, A, B> where
     F: 'static + Send + FnMut(&mut B, A),
-    A: 'static + Send,
+    A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
     fn push_to(self: Box<Self>, target: Option<Box<Push<B>>>) {
@@ -13,6 +13,8 @@ impl<F, A, B> InternalSignal<B> for Fold<F, A, B> where
 
         match target {
             Some(t) => {
+                println!("Fold::push_to Some");
+
                 parent.push_to(
                     Some(
                         Box::new(
@@ -20,13 +22,15 @@ impl<F, A, B> InternalSignal<B> for Fold<F, A, B> where
                                 child: Some(t),
                                 f: f,
                                 state: state,
-                                marker: PhantomData,
+                                cache: None,
                             }
                         )
                     )
                 );
             },
             None => {
+                println!("Fold::push_to None");
+
                 parent.push_to(
                     Some(
                         Box::new(
@@ -34,7 +38,7 @@ impl<F, A, B> InternalSignal<B> for Fold<F, A, B> where
                                 child: None,
                                 f: f,
                                 state: state,
-                                marker: PhantomData,
+                                cache: None,
                             }
                         )
                     )
@@ -52,24 +56,43 @@ struct FoldPusher<F, A, B> where
     child: Option<Box<Push<B>>>,
     f: F,
     state: B,
-    marker: PhantomData<A>,
+    cache: Option<A>,
 }
 
 impl<F, A, B> Push<A> for FoldPusher<F, A, B> where
     F: 'static + Send + FnMut(&mut B, A),
-    A: 'static + Send,
+    A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
     fn push(&mut self, event: Event<A>) {
         let out = match event {
             Event::Changed(a) => { 
+                println!("FoldPusher handling Event::Changed");
+                self.cache = Some(a.clone());
                 (self.f)(&mut self.state, a);
                 Event::Changed(self.state.clone())
             },
-            Event::Unchanged => Event::Unchanged,
-            Event::NoOp => Event::NoOp,
-            Event::Exit => Event::Exit,
+            Event::Unchanged => {
+                println!("FoldPusher handling Event::Unchanged");
+
+                match self.cache {
+                    Some(ref a) => {
+                        (self.f)(&mut self.state, a.clone());
+                        Event::Changed(self.state.clone())
+                    },
+                    None => panic!("FoldPusher handling Event::Unchanged (no cached data)"),
+                }
+            },
+            Event::NoOp => {
+                println!("FoldPusher handling Event::NoOp");
+                Event::NoOp
+            },
+            Event::Exit => {
+                println!("FoldPusher handling Event::NoOp");
+                Event::Exit
+            },
         };
+
         match self.child {
             Some(ref mut c) => c.push(out),
             None => {},

@@ -1,4 +1,4 @@
-use super::{Signal, Lift, Fold, LiftN, InputList, PullInputs, InternalSignal};
+use super::{Signal, Lift, Lift2, Fold, LiftN, InputList, PullInputs, InternalSignal};
 
 impl<A> Signal<A>
 {
@@ -27,19 +27,20 @@ impl<A> Signal<A>
         }
     }
 
-    pub fn liftn<F, R, B>(self, rest: R, f: F) -> Signal<B> where
-        F: 'static + Send + Fn(<<R as InputList<Box<InternalSignal<A>>>>::InputPullers as PullInputs>::Values) -> B,
-        R: 'static + Send + InputList<Box<InternalSignal<A>>>,
-        B: 'static + Send,
+    pub fn lift2<F, B, C>(self, right: Signal<B>, f: F) -> Signal<C> where
+        F: 'static + Send + Fn(Option<A>, Option<B>) -> C,
+        A: 'static + Send + Clone,
+        B: 'static + Send + Clone,
+        C: 'static + Send + Clone,
     {
         Signal {
             internal_signal: Box::new(
-                LiftN {
-                    head: self.internal_signal,
-                    rest: rest,
+                Lift2 {
+                    left: self.internal_signal,
+                    right: right.internal_signal,
                     f: f,
                 }
-            ),
+            )
         }
     }
 
@@ -55,7 +56,7 @@ impl<A> Signal<A>
     ///
     pub fn foldp<F, B>(self, initial: B, f: F) -> Signal<B> where
         F: 'static + Send + FnMut(&mut B, A),
-        A: 'static + Send,
+        A: 'static + Send + Clone,
         B: 'static + Send + Clone,
     {
         Signal {

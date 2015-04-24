@@ -1,5 +1,3 @@
-use log;
-
 use std::sync::mpsc::*;
 use std::thread::spawn;
 
@@ -18,6 +16,8 @@ impl<F, A, R, B> InternalSignal<B> for LiftN<F, A, R, B> where
 
         match target {
             Some(mut t) => {
+                println!("LiftN::push_to Some");
+
                 loop {
                     let mut any_changed = false;
                     let mut any_exit = false;
@@ -46,6 +46,8 @@ impl<F, A, R, B> InternalSignal<B> for LiftN<F, A, R, B> where
                 }
             },
             None => {
+                println!("LiftN::push_to target None");
+
                 loop {
                     let mut any_changed = false;
                     let mut any_exit = false;
@@ -64,6 +66,7 @@ impl<H, R0> InputList<Box<InternalSignal<H>>> for (Box<InternalSignal<R0>>,) whe
     type InputPullers = (InputPuller<H>, InputPuller<R0>);
 
     fn run(head: Box<InternalSignal<H>>, rest: Self) -> (InputPuller<H>, InputPuller<R0>) {
+        println!("InputList::run for internal signal");
         (input_puller(head), input_puller(rest.0))
     }
 }
@@ -75,6 +78,7 @@ impl<H, R0> InputList<Box<InternalSignal<H>>> for (Box<Branch<R0>>,) where
     type InputPullers = (InputPuller<H>, InputPuller<R0>);
 
     fn run(head: Box<InternalSignal<H>>, rest: Self) -> (InputPuller<H>, InputPuller<R0>) {
+        println!("InputList::run for branch");
         (input_puller(head), input_puller(rest.0))
     }
 }
@@ -120,7 +124,8 @@ impl<A> Push<A> for InputPusher<A> where
     A: 'static + Send,
 {
     fn push(&mut self, event: Event<A>) {
-        println!("InputPusher pushing");
+        println!("LiftN::InputPusher::push");
+
         match self.tx.send(event) {
             _ => {},
         }
@@ -138,13 +143,13 @@ impl<A> InputPuller<A> where
     A: Clone,
 {
     fn pull(&mut self, any_changed: &mut bool, any_exit: &mut bool) -> Option<A> {
-        println!("InputPuller pulling");
-
         // NOTE: There may be a more efficient way of doing this than cloning
         match (self.rx.recv(), self.last.clone(), self.last_was_no_op.clone()) {
 
             // If the value changed, cache & return it
             (Ok(Event::Changed(a)), _, _) => {
+                println!("LiftN::InputPuller::pull handling Event::Changed");
+
                 *any_changed = true;
                 self.last = Some(a.clone());
                 self.last_was_no_op = false;
@@ -153,6 +158,8 @@ impl<A> InputPuller<A> where
 
             // If the value didn't change but we have a cached value, return it
             (Ok(Event::Unchanged), Some(a), _) => {
+                println!("LiftN::InputPuller::pull handling Event::Unchanged");
+
                 self.last_was_no_op = false;
                 Some(a)
             },
@@ -167,11 +174,15 @@ impl<A> InputPuller<A> where
             // If we're just keeping in sync, return None handling this appropriately
             // is the responsiblity of the person using `liftn`
             (Ok(Event::NoOp), _, true) => {
+                println!("LiftN::InputPuller::pull handling repeated Event::NoOp");
+
                 None
             },
 
 
             (Ok(Event::NoOp), _, false) => {
+                println!("LiftN::InputPuller::pull handling first Event::NoOp");
+
                 *any_changed = true;
                 self.last_was_no_op = true;
                 None
@@ -179,14 +190,16 @@ impl<A> InputPuller<A> where
 
             // Propagate exits
             (Ok(Event::Exit), _, _) => {
-                println!("InputPuller: Received Exit event");
+                println!("LiftN::InputPuller::pull handling Event::Exit");
+
                 *any_exit = true;
                 None
             },
 
             // Begin exiting if the other end went away
-            (Err(_), _, _) => {
-                println!("InputPuller: Error receiving data");
+            (Err(e), _, _) => {
+                println!("LiftN::InputPuller::pull handling Error {}", e);
+
                 *any_exit = true;
                 None
             },
