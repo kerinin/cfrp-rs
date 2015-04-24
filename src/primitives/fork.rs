@@ -1,7 +1,39 @@
 use std::sync::*;
 use std::sync::mpsc::*;
 
-use super::{Fork, Branch, Signal, InternalSignal, Run, Push, Event, Lift, Fold, LiftN, PullInputs, InputList};
+use super::*;
+use super::super::Signal;
+use super::lift::Lift;
+use super::fold::Fold;
+
+// A Fork is created internally when Builder#add is called.  The purpose of Fork is
+// to distribute incoming data to some number of child Branch instances.
+//
+// NOTE: We spin up a child on add and probably send data to it - are we goig to
+// get memory leaks?
+//
+// Fork is the "root" of the topology; when a topology is started, `run` is 
+// called for each Fork in the topology, which causes `push_to` to be called
+// for all the nodes upstream of the Fork. Forks run in their data source's 
+// thread.
+//
+pub struct Fork<A> where
+    A: 'static + Send,
+{
+    parent: Box<InternalSignal<A>>,
+    sink_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>,
+}
+
+impl<A> Fork<A> where
+    A: 'static + Clone + Send,
+{
+    pub fn new(parent: Box<InternalSignal<A>>, sink_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>) -> Fork<A> {
+        Fork {
+            parent: parent,
+            sink_txs: sink_txs,
+        }
+    }
+}
 
 // Fork is the incoming portion of a fork.  It is pushed data from upstream and
 // clones it across a (possibly empty) set of child branches
@@ -51,6 +83,31 @@ impl<A> Push<A> for ForkPusher<A> where
                 // We can't really terminate a child process, so just ignore errors...
                 _ => {},
             }
+        }
+    }
+}
+
+/// A data source of type `A` which can be used as input more than once
+///
+/// This operation is equivalent to a "let" binding, or variable assignment.
+/// Branch implements `Clone`, and each clone runs in its own thread.
+///
+/// Branches are returned when `add` is called on a `Builder`
+///
+pub struct Branch<A> where
+    A: 'static + Send,
+{
+    fork_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>,
+    source_rx: Option<Receiver<Event<A>>>,
+}
+
+impl<A> Branch<A> where
+    A: 'static + Send,
+{
+    pub fn new(fork_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>, source_rx: Option<Receiver<Event<A>>>) -> Branch<A> {
+        Branch {
+            fork_txs: fork_txs,
+            source_rx: source_rx,
         }
     }
 }

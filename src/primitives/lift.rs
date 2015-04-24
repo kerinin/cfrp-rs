@@ -1,6 +1,15 @@
 use std::marker::*;
 
-use super::{Lift, InternalSignal, Push, Event};
+use super::*;
+
+pub struct Lift<F, A, B> where
+    F: 'static + Send + Fn(A) -> B,
+    A: 'static + Send,
+    B: 'static + Send,
+{
+    pub parent: Box<InternalSignal<A>>,
+    pub f: F,
+}
 
 impl<F, A, B> InternalSignal<B> for Lift<F, A, B> where
     F: 'static + Send + Fn(A) -> B,

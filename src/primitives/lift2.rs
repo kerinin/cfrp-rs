@@ -1,7 +1,18 @@
 use std::thread::spawn;
 use std::sync::mpsc::*;
 
-use super::{InternalSignal, Event, Push, Lift2};
+use super::*;
+
+pub struct Lift2<F, A, B, C> where
+    F: 'static + Send + Fn(Option<A>, Option<B>) -> C,
+    A: 'static + Send,
+    B: 'static + Send,
+    C: 'static + Send + Clone,
+{
+    pub left: Box<InternalSignal<A>>,
+    pub right: Box<InternalSignal<B>>,
+    pub f: F,
+}
 
 impl<F, A, B, C> InternalSignal<C> for Lift2<F, A, B, C> where
     F: 'static + Send + Fn(Option<A>, Option<B>) -> C,

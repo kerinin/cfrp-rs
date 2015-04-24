@@ -1,6 +1,16 @@
 use std::marker::*;
 
-use super::{Fold, InternalSignal, Push, Event};
+use super::*;
+
+pub struct Fold<F, A, B> where
+    F: 'static + Send + FnMut(&mut B, A),
+    A: 'static + Send,
+    B: 'static + Send + Clone,
+{
+    pub parent: Box<InternalSignal<A>>,
+    pub f: F,
+    pub state: B,
+}
 
 impl<F, A, B> InternalSignal<B> for Fold<F, A, B> where
     F: 'static + Send + FnMut(&mut B, A),

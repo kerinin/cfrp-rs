@@ -1,8 +1,29 @@
 use std::sync::mpsc::*;
 use std::thread::spawn;
 
-use super::{InternalSignal, Event, Push, LiftN, InputList, PullInputs, Branch};
+use super::*
 
+
+pub trait InputList<Head> {
+    type InputPullers: 'static + PullInputs;
+
+    fn run(Head, Self) -> Self::InputPullers;
+}
+
+trait PullInputs {
+    type Values;
+
+    fn pull(&mut self, any_changed: &mut bool, any_exit: &mut bool) -> Self::Values;
+}
+
+struct LiftN<F, A, R, B> where
+    F: Fn(<<R as InputList<A>>::InputPullers as PullInputs>::Values) -> B,
+    R: InputList<A>,
+{
+    head: A,
+    rest: R,
+    f: F,
+}
 
 impl<F, A, R, B> InternalSignal<B> for LiftN<F, A, R, B> where
     F: 'static + Send + Fn(<<R as InputList<A>>::InputPullers as PullInputs>::Values) -> B,

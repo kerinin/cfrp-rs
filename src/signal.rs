@@ -1,4 +1,7 @@
-use super::{Signal, Lift, Lift2, Fold, LiftN, InputList, PullInputs, InternalSignal};
+use super::Signal;
+use super::primitives::lift::Lift;
+use super::primitives::lift2::Lift2;
+use super::primitives::fold::Fold;
 
 impl<A> Signal<A>
 {

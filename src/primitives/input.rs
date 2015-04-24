@@ -3,7 +3,21 @@ use std::sync::*;
 use std::thread::spawn;
 use std::sync::mpsc::*;
 
-use super::{Input, InternalInput, Event, RunInput, NoOp};
+use super::*;
+
+pub trait RunInput: Send {
+    fn run(mut self: Box<Self>, usize, Arc<Mutex<Vec<Box<NoOp>>>>);
+    fn boxed_no_op(&self) -> Box<NoOp>;
+}
+
+pub trait Input<A> {
+    fn pull(&mut self) -> Option<A>;
+}
+
+pub trait NoOp: Send {
+    fn send_no_change(&self);
+    fn send_exit(&self);
+}
 
 impl<A> Input<A> for Receiver<A> where
     A: Send,
@@ -36,6 +50,13 @@ impl<R> Input<String> for io::Lines<R> where
             _ => None,
         }
     }
+}
+
+pub struct InternalInput<A> where
+    A: 'static + Send + Clone
+{
+    pub input: Box<Input<A> + Send>,
+    pub sink_tx: Sender<Event<A>>,
 }
 
 impl<A> RunInput for InternalInput<A> where

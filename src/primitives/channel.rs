@@ -1,4 +1,22 @@
-use super::{Channel, InternalSignal, Push, Event};
+use std::sync::mpsc::*;
+
+use super::*;
+
+pub struct Channel<A> where
+    A: 'static + Send,
+{
+    source_rx: Receiver<Event<A>>,
+}
+
+impl<A> Channel<A> where
+    A: 'static + Send,
+{
+    pub fn new(source_rx: Receiver<Event<A>>) -> Channel<A> {
+        Channel {
+            source_rx: source_rx,
+        }
+    }
+}
 
 impl<A> InternalSignal<A> for Channel<A> where
     A: 'static + Send,
