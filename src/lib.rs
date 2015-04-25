@@ -1,12 +1,87 @@
+//! # Concurrent Function Reactive Programming
+//!
+//! Highly influenced by [Elm](http://elm-lang.org/) - provides a framework for describing &
+//! executing 
+//! concurrent data flow processes.
+//!
+//! If you're not familiar with Elm or the design behind Evan Czaplicki's 
+//! Concurrent FRP, you should read [Elm: Concurrent FRP for Functional
+//! GUIs](http://elm-lang.org/papers/concurrent-frp.pdf) or watch [his talk at
+//! StrangeLoop 2014](https://www.youtube.com/watch?v=Agu6jipKfYw).
+//!
+//! This codebase is larger and more complex than some similar libraries
+//! ([frp-rust](https://github.com/tiffany352/frp-rust),
+//! [carboxyl](https://github.com/aepsil0n/carboxyl),
+//! [rust-frp](https://github.com/glaebhoerl/rust-frp) etc) becasue it handles
+//! concurrency (and because I'm a Rust newb).  Simplification suggestions welcome!
+//! 
+//! # Examples
+//!
+//! ```
+//! use std::sync::mpsc::*;
+//! use cfrp::*;
+//!
+//! // create some channels for communicating with the topology
+//! let (in_tx, in_rx) = channel();
+//! //let (out_tx, out_rx) = channel();
+//! 
+//! // Topologies are statically defined, run-once structures.  Due to how
+//! // concurrency is handled, changes to the graph structure can cause
+//! // inconsistencies in the data processing
+//! // 
+//! // You can pass some state in (here we're passing `(in_rx, out_rx)`) if you need
+//! // to.
+//! run_topology( in_rx, |t, in_rx| {
+//! 
+//!     // Create a listener on `in_rx`.  Messages received on the channel will be
+//!     // sent to any nodes subscribed to `input`
+//!     let input = t.add(t.listen(in_rx));
+//! 
+//!     // Basic map operation.  Since this is a pure function, it will only be
+//!     // evaluated when the value of `input` changes
+//!     let plus_one = t.add(input.lift(|i| -> usize { i + 1 }));
+//! 
+//!     // The return value of `add` implements `Clone`, and can be used to
+//!     // 'fan-out' data
+//!     let plus_two = plus_one.clone().lift(|i| -> usize { i + 2 });
+//! 
+//!     // We can combine signals too.  Since it's possible to receive input on one
+//!     // side but not the other, `lift2` always passes `Option<T>` to its
+//!     // function.  Like `lift`, this function is only called when needed
+//!     let combined = plus_one.lift2(plus_two, |i, j| -> usize {
+//!         println!("lifting");
+//!         match (i, j) {
+//!             (Some(a), Some(b)) => a + b,
+//!             _ => 0,
+//!         } 
+//!     });
+//! 
+//!     // `fold` allows us to track state across events.  Since this is assumed to
+//!     // be impure, it is called any time a signal is received upstream of
+//!     // `combined`.
+//!     let accumulated = combined.fold(0, |sum, i| { *sum += i; });
+//! 
+//!     // Make sure to add transformations to the topology - if it's not added it
+//!     // won't be run...
+//!     t.add(accumulated);
+//! });
+//!
+//! in_tx.send(1usize).unwrap();
+//! // let out: usize = out_rx.recv().unwrap();
+//! // assert_eq!(out, 2);
+//! ```
+//!
+
 pub mod primitives;
 // mod topology;
 
 // pub use topology::{Topology, Builder};
-pub use primitives::{Topology, Builder};
+use primitives::{Topology, Builder};
 use primitives::LiftSignal;
 use primitives::Lift2Signal;
 use primitives::FoldSignal;
 
+/// Container for data as it flows across the topology
 #[derive(Clone)]
 pub enum Event<A> {
     Changed(A),
@@ -15,6 +90,8 @@ pub enum Event<A> {
     Exit,
 }
 
+/// Types which can serve as a data source
+///
 pub trait Signal<A>: Send {
     // Called at build time when a downstream process is created for the signal
     fn init(&mut self) {}
@@ -23,6 +100,8 @@ pub trait Signal<A>: Send {
     fn push_to(self: Box<Self>, Option<Box<Push<A>>>);
 }
 
+/// Types which can receive incoming data from other signals
+///
 pub trait Push<A> {
     fn push(&mut self, Event<A>);
 }
@@ -53,6 +132,16 @@ pub trait Lift<A>: Signal<A> + Sized {
     }
 }
 
+/// Apply a pure function `F` to a two data sources `Signal<A>`, and `Signal<B>`,
+/// generating a transformed output data source `Signal<C>`.
+///
+/// Other names for this operation include "map" or "collect".  `f` will be
+/// run in `self`'s thread
+///
+/// Because `F` is assumed to be pure, it will only be evaluated for
+/// new data that has changed since the last observation.  If side-effects are
+/// desired, use `fold` instead.
+///
 pub trait Lift2<A, B, SB>: Signal<A> + Sized {
     fn lift2<F, C>(mut self, mut right: SB, f: F) -> Lift2Signal<F, A, B, C> where
         Self: 'static,
@@ -100,6 +189,16 @@ pub trait Fold<A>: Signal<A> + Sized {
     }
 }
 
+/// Create a new topology and run it
+///
+/// Sugar for `Topology::build(state, f).run()`
+///
+pub fn run_topology<T, F>(state: T, f: F) where
+    F: Fn(&Builder, T),
+{
+    Topology::build(state, f).run()
+}
+
 #[cfg(test)] 
 mod test {
     extern crate log;
@@ -115,14 +214,10 @@ mod test {
         let (in_tx, in_rx) = channel();
         let (out_tx, out_rx) = channel();
 
-        Topology::build( (in_rx, out_tx), |t, (in_rx, out_tx)| {
+        run_topology((in_rx, out_tx), |t, (in_rx, out_tx)| {
 
             let input = t.add(t.listen(in_rx));
 
-            // t.add(input.clone()
-            //       .liftn((input,), |(i, j)| -> usize { println!("lifting"); 0 })
-            //       .fold(out_tx.clone(), |tx, a| { tx.send(a); })
-            //      );
             t.add(input.clone()
                   .lift(|i| -> usize { i })
                   .lift2(input, |i, j| -> usize {
@@ -134,44 +229,7 @@ mod test {
                   })
                   .fold(out_tx.clone(), |tx, a| { tx.send(a); })
                  );
-
-
-
-
-
-            /*
-            let plus_one = t.add(t.listen(in_rx)
-                .lift(|i| -> usize { println!("lifting to plus_one"); i + 1 })
-            );
-
-            let plus_two = t.add(plus_one.clone()
-                .lift(|i| -> usize { println!("lifting to plus_two"); i + 1 })
-            );
-
-            let plus_three = t.add(plus_one.clone()
-                .lift(|i| -> usize { println!("lifting to plus_three"); i + 2 })
-            );
-
-            t.add(plus_two
-                .liftn((plus_three,), |(i, j)| -> usize { 
-                    println!("liftn-ing to lifted");
-
-                    match (i, j) {
-                        (Some(a), Some(b)) => { a + b },
-                        _ => 0,
-                    }
-                }).fold(out_tx, |tx, a| { tx.send(a); })
-            );
-
-            t.add(plus_two
-                .fold(out_tx.clone(), |tx, a| { tx.send(a); })
-            );
-            t.add(plus_three
-                .fold(out_tx.clone(), |tx, a| { tx.send(a); })
-            );
-            */
-
-        }).run();
+        });
 
         in_tx.send(1usize);
 
@@ -180,9 +238,9 @@ mod test {
         // println!("Received {}", out);
         /*
 
-        let out = out_rx.recv().unwrap();
-        assert_eq!(out, 3);
-        println!("Received {}", out);
-        */
+           let out = out_rx.recv().unwrap();
+           assert_eq!(out, 3);
+           println!("Received {}", out);
+           */
     }
 }

@@ -1,3 +1,4 @@
+mod async;
 mod channel;
 mod fold;
 mod fork;

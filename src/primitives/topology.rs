@@ -8,6 +8,7 @@ use super::super::Signal;
 use super::input::{Input, RunInput, InternalInput, NoOp};
 use super::fork::{Run, Fork, Branch};
 use super::channel::Channel;
+use super::async::Async;
 
 /// `Builder` is used to construct topologies.  
 ///
@@ -58,6 +59,27 @@ impl Builder {
 
         Channel::new(rx)
     }
+
+    /// Combination of adding a signal and a channel
+    ///
+    /// Async allows signals to be processed downstream out of order.  Internally,
+    /// the output of `root` is sent to new input channel.  The result is that
+    /// long-running processes can be handled outside of the synchronized topology
+    /// process, and the result can be handled when it's available.
+    ///
+    pub fn async<A, SA>(&self, root: SA) -> Channel<A> where
+        SA: 'static + Signal<A>,
+        A: 'static + Clone + Send,
+    {
+        let (tx, rx) = channel();
+
+        let pusher = Async::new(Box::new(root), tx);
+
+        self.root_signals.borrow_mut().push(Box::new(pusher));
+
+        self.listen(rx)
+    }
+
 }
 
 /// `Topology<T>` describes a data flow and controls its execution

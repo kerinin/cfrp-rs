@@ -2,6 +2,8 @@ use std::marker::*;
 
 use super::super::{Event, Signal, Push, Lift, Lift2, Fold};
 
+/// The result of a `fold` operation
+///
 pub struct FoldSignal<F, A, B> where
     F: 'static + Send + FnMut(&mut B, A),
     A: 'static + Send,

@@ -3,6 +3,8 @@ use std::sync::mpsc::*;
 
 use super::super::{Event, Signal, Push, Lift, Lift2, Fold};
 
+/// The result of a `lift2` operation
+///
 pub struct Lift2Signal<F, A, B, C> where
     F: 'static + Send + Fn(Option<A>, Option<B>) -> C,
     A: 'static + Send,
