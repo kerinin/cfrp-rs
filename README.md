@@ -4,7 +4,7 @@ Concurrent FRP implemented in Rust.
 
 ![Build Status](https://travis-ci.org/kerinin/cfrp-rs.svg)
 
-[Documentation](http://kerinin.github.io/cfrp-rs/)
+[Documentation](http://kerinin.github.io/cfrp-rs/cfrp)
 
 
 ## TODO
