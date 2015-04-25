@@ -32,7 +32,7 @@ Topology::build( (in_rx, out_tx), |t, (in_rx, out_tx)| {
     let plus_two = plus_one.clone().lift(|i| -> usize { i + 2 });
 
     // We can combine signals too.  Since it's possible to receive input on one
-    // side but not the other, `lift2` always passes `Option<T>` to it's
+    // side but not the other, `lift2` always passes `Option<T>` to its
     // function.  Like `lift`, this function is only called when needed
     let combined = plus_one.lift2(plus_two, |i, j| -> usize {
         println!("lifting");
