@@ -1,10 +1,11 @@
 pub mod primitives;
-mod topology;
+// mod topology;
 
-pub use topology::{Topology, Builder};
-use primitives::lift::LiftSignal;
-use primitives::lift2::Lift2Signal;
-use primitives::fold::FoldSignal;
+// pub use topology::{Topology, Builder};
+pub use primitives::{Topology, Builder};
+use primitives::LiftSignal;
+use primitives::Lift2Signal;
+use primitives::FoldSignal;
 
 #[derive(Clone)]
 pub enum Event<A> {
