@@ -1,8 +1,8 @@
 use std::sync::mpsc::*;
 use std::thread::spawn;
 
-use super::*
-
+// use super::super::*;
+// use super::*
 
 pub trait InputList<Head> {
     type InputPullers: 'static + PullInputs;
@@ -25,7 +25,7 @@ struct LiftN<F, A, R, B> where
     f: F,
 }
 
-impl<F, A, R, B> InternalSignal<B> for LiftN<F, A, R, B> where
+impl<F, A, R, B> Signal<B> for LiftN<F, A, R, B> where
     F: 'static + Send + Fn(<<R as InputList<A>>::InputPullers as PullInputs>::Values) -> B,
     R: InputList<A>,
     A: 'static + Send, R: 'static + Send,
@@ -80,31 +80,31 @@ impl<F, A, R, B> InternalSignal<B> for LiftN<F, A, R, B> where
 }
 
 
-impl<H, R0> InputList<Box<InternalSignal<H>>> for (Box<InternalSignal<R0>>,) where
+impl<H, R0> InputList<Box<Signal<H>>> for (Box<Signal<R0>>,) where
     H: 'static + Send + Clone,
     R0: 'static + Send + Clone,
 {
     type InputPullers = (InputPuller<H>, InputPuller<R0>);
 
-    fn run(head: Box<InternalSignal<H>>, rest: Self) -> (InputPuller<H>, InputPuller<R0>) {
+    fn run(head: Box<Signal<H>>, rest: Self) -> (InputPuller<H>, InputPuller<R0>) {
         println!("InputList::run for internal signal");
         (input_puller(head), input_puller(rest.0))
     }
 }
 
-impl<H, R0> InputList<Box<InternalSignal<H>>> for (Box<Branch<R0>>,) where
+impl<H, R0> InputList<Box<Signal<H>>> for (Box<Branch<R0>>,) where
     H: 'static + Send + Clone,
     R0: 'static + Send + Clone,
 {
     type InputPullers = (InputPuller<H>, InputPuller<R0>);
 
-    fn run(head: Box<InternalSignal<H>>, rest: Self) -> (InputPuller<H>, InputPuller<R0>) {
+    fn run(head: Box<Signal<H>>, rest: Self) -> (InputPuller<H>, InputPuller<R0>) {
         println!("InputList::run for branch");
         (input_puller(head), input_puller(rest.0))
     }
 }
 
-fn input_puller<T>(upstream: Box<InternalSignal<T>>) -> InputPuller<T> where
+fn input_puller<T>(upstream: Box<Signal<T>>) -> InputPuller<T> where
     T: 'static + Send,
 {
     let (tx, rx) = channel();

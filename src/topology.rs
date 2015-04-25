@@ -5,9 +5,8 @@ use std::thread;
 use std::marker::*;
 
 use super::Signal;
-use super::primitives::Run;
 use super::primitives::input::{Input, RunInput, InternalInput, NoOp};
-use super::primitives::fork::{Fork, Branch};
+use super::primitives::fork::{Run, Fork, Branch};
 use super::primitives::channel::Channel;
 
 /// `Builder` is used to construct topologies.  
@@ -26,16 +25,17 @@ impl Builder {
     ///
     /// Returns a `Branch<A>`, allowing `root` to be used as input more than once
     ///
-    pub fn add<A>(&self, root: Signal<A>) -> Box<Branch<A>> where
+    pub fn add<A, SA>(&self, root: SA) -> Branch<A> where
+        SA: 'static + Signal<A>,
         A: 'static + Clone + Send,
     {
         let fork_txs = Arc::new(Mutex::new(Vec::new()));
 
-        let fork = Fork::new(root.internal_signal, fork_txs.clone());
+        let fork = Fork::new(Box::new(root), fork_txs.clone());
 
         self.root_signals.borrow_mut().push(Box::new(fork));
 
-        Box::new(Branch::new(fork_txs, None))
+        Branch::new(fork_txs, None)
     }
 
     /// Listen to `source_rx` and push received data into the topology
@@ -44,7 +44,7 @@ impl Builder {
     /// ensures data syncronization across the topology.  Each listener runs in 
     /// its own thread
     ///
-    pub fn listen<A, T>(&self, input: T) -> Signal<A> where
+    pub fn listen<A, T>(&self, input: T) -> Channel<A> where
         T: 'static + Input<A> + Send,
         A: 'static + Clone + Send,
     {
@@ -56,9 +56,7 @@ impl Builder {
 
         self.inputs.borrow_mut().push(Box::new(internal_input));
 
-        Signal {
-            internal_signal: Box::new(Channel::new(rx)),
-        }
+        Channel::new(rx)
     }
 }
 
@@ -68,18 +66,17 @@ impl Builder {
 /// builder function as the second argument.  This allows data to be passed from
 /// outside the builder's scope into the topology.
 ///
-pub struct Topology<T> {
+pub struct Topology {
     builder: Builder,
-    marker: PhantomData<T>,
 }
 
-impl<T> Topology<T> {
+impl Topology {
     /// Construct a topology
     ///
     /// `F` will be called with a `Builder`, which exposes methods for adding
     /// inputs & transformations to the topology
     ///
-    pub fn build<F>(state: T, f: F) -> Self where 
+    pub fn build<T, F>(state: T, f: F) -> Self where 
         F: Fn(&Builder, T),
     {
         println!("----------------------> Building Topology");
@@ -87,7 +84,7 @@ impl<T> Topology<T> {
         let builder = Builder { root_signals: RefCell::new(Vec::new()), inputs: RefCell::new(Vec::new()) };
         f(&builder, state);
         
-        Topology { builder: builder, marker: PhantomData }
+        Topology { builder: builder }
     }
 
     /// Run the topology

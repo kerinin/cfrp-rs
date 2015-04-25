@@ -1,18 +1,18 @@
 use std::marker::*;
 
-use super::*;
+use super::super::{Event, Signal, Push, Lift, Lift2, Fold};
 
 pub struct FoldSignal<F, A, B> where
     F: 'static + Send + FnMut(&mut B, A),
     A: 'static + Send,
     B: 'static + Send + Clone,
 {
-    pub parent: Box<InternalSignal<A>>,
+    pub parent: Box<Signal<A>>,
     pub f: F,
     pub state: B,
 }
 
-impl<F, A, B> InternalSignal<B> for FoldSignal<F, A, B> where
+impl<F, A, B> Signal<B> for FoldSignal<F, A, B> where
     F: 'static + Send + FnMut(&mut B, A),
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
@@ -57,6 +57,23 @@ impl<F, A, B> InternalSignal<B> for FoldSignal<F, A, B> where
         }
     }
 }
+
+impl<F, A, B> Lift<B> for FoldSignal<F, A, B> where
+    F: 'static + Send + FnMut(&mut B, A),
+    A: 'static + Send + Clone,
+    B: 'static + Send + Clone,
+{}
+impl<F, A, B, C, SC> Lift2<B, C, SC> for FoldSignal<F, A, B> where
+    F: 'static + Send + FnMut(&mut B, A),
+    A: 'static + Send + Clone,
+    B: 'static + Send + Clone,
+{}
+impl<F, A, B> Fold<B> for FoldSignal<F, A, B> where
+    F: 'static + Send + FnMut(&mut B, A),
+    A: 'static + Send + Clone,
+    B: 'static + Send + Clone,
+{}
+
 
 struct FoldPusher<F, A, B> where
     F: 'static + Send + FnMut(&mut B, A),

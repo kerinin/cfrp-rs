@@ -1,38 +1,91 @@
-mod primitives;
-mod signal;
+pub mod primitives;
 mod topology;
 
 pub use topology::{Topology, Builder};
-pub use primitives::fork::Branch;
+use primitives::lift::LiftSignal;
+use primitives::lift2::Lift2Signal;
+use primitives::fold::FoldSignal;
 
-use primitives::InternalSignal;
-
-/// A data source of type `A`
-///
-pub struct Signal<A> {
-    internal_signal: Box<InternalSignal<A>>,
+#[derive(Clone)]
+pub enum Event<A> {
+    Changed(A),
+    Unchanged,
+    NoOp,
+    Exit,
 }
 
-pub trait Lift<A> {
-    fn lift<F, B>(self, f: F) -> Signal<B> where
+pub trait Signal<A>: Send {
+    fn push_to(self: Box<Self>, Option<Box<Push<A>>>);
+}
+
+pub trait Push<A> {
+    fn push(&mut self, Event<A>);
+}
+
+/// Apply a pure function `F` to a data source `Signal<A>`, generating a 
+/// transformed output data source `Signal<B>`.
+///
+/// Other names for this operation include "map" or "collect".  `f` will be
+/// run in `self`'s thread
+///
+/// Because `F` is assumed to be pure, it will only be evaluated for
+/// new data that has changed since the last observation.  If side-effects are
+/// desired, use `fold` instead.
+///
+pub trait Lift<A>: Signal<A> + Sized {
+    fn lift<F, B>(self, f: F) -> LiftSignal<F, A, B> where
+        Self: 'static,
         F: 'static + Send + Fn(A) -> B,
         A: 'static + Send,
-        B: 'static + Send;
+        B: 'static + Send,
+    {
+        LiftSignal {
+            parent: Box::new(self),
+            f: f,
+        }
+    }
 }
 
-pub trait Lift2<A, B> {
-    fn lift2<F, C>(self, right: Signal<B>, f: F) -> Signal<C> where
+pub trait Lift2<A, B, SB>: Signal<A> + Sized {
+    fn lift2<F, C>(self, right: SB, f: F) -> Lift2Signal<F, A, B, C> where
+        Self: 'static,
+        SB: 'static + Signal<B>,
         F: 'static + Send + Fn(Option<A>, Option<B>) -> C,
         A: 'static + Send + Clone,
         B: 'static + Send + Clone,
-        C: 'static + Send + Clone;
+        C: 'static + Send + Clone,
+    {
+        Lift2Signal {
+            left: Box::new(self),
+            right: Box::new(right),
+            f: f,
+        }
+    }
 }
 
-pub trait Fold<A> {
-    fn foldp<F, B>(self, initial: B, f: F) -> Signal<B> where
+/// Apply a function `F` which uses a data source `Signal<A>` to 
+/// mutate an instance of `B`, generating an output data source `Signal<B>`
+/// containing the mutated value
+///
+/// Other names for this operation include "reduce" or "inject".  `f` will
+/// be run in `self`'s thread
+///
+/// Fold is assumed to be impure, therefore the function will be called with
+/// all data upstream of the fold, even if there are no changes in the stream.
+///
+pub trait Fold<A>: Signal<A> + Sized {
+    fn fold<F, B>(self, initial: B, f: F) -> FoldSignal<F, A, B> where
+        Self: 'static,
         F: 'static + Send + FnMut(&mut B, A),
         A: 'static + Send + Clone,
-        B: 'static + Send + Clone;
+        B: 'static + Send + Clone,
+    {
+        FoldSignal {
+            parent: Box::new(self),
+            f: f,
+            state: initial,
+        }
+    }
 }
 
 #[cfg(test)] 
@@ -56,7 +109,7 @@ mod test {
 
             // t.add(input.clone()
             //       .liftn((input,), |(i, j)| -> usize { println!("lifting"); 0 })
-            //       .foldp(out_tx.clone(), |tx, a| { tx.send(a); })
+            //       .fold(out_tx.clone(), |tx, a| { tx.send(a); })
             //      );
             t.add(input.clone()
                   .lift(|i| -> usize { i })
@@ -67,7 +120,7 @@ mod test {
                           _ => 0,
                       } 
                   })
-                  .foldp(out_tx.clone(), |tx, a| { tx.send(a); })
+                  .fold(out_tx.clone(), |tx, a| { tx.send(a); })
                  );
 
 
@@ -95,14 +148,14 @@ mod test {
                         (Some(a), Some(b)) => { a + b },
                         _ => 0,
                     }
-                }).foldp(out_tx, |tx, a| { tx.send(a); })
+                }).fold(out_tx, |tx, a| { tx.send(a); })
             );
 
             t.add(plus_two
-                .foldp(out_tx.clone(), |tx, a| { tx.send(a); })
+                .fold(out_tx.clone(), |tx, a| { tx.send(a); })
             );
             t.add(plus_three
-                .foldp(out_tx.clone(), |tx, a| { tx.send(a); })
+                .fold(out_tx.clone(), |tx, a| { tx.send(a); })
             );
             */
 

@@ -1,10 +1,14 @@
 use std::sync::*;
 use std::sync::mpsc::*;
 
-use super::*;
-use super::super::{Signal, Lift, Fold};
+use super::super::{Event, Signal, Push, Lift, Lift2, Fold};
 use super::lift::*;
+use super::lift2::*;
 use super::fold::*;
+
+pub trait Run: Send {
+    fn run(mut self: Box<Self>);
+}
 
 // A Fork is created internally when Builder#add is called.  The purpose of Fork is
 // to distribute incoming data to some number of child Branch instances.
@@ -20,14 +24,14 @@ use super::fold::*;
 pub struct Fork<A> where
     A: 'static + Send,
 {
-    parent: Box<InternalSignal<A>>,
+    parent: Box<Signal<A>>,
     sink_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>,
 }
 
 impl<A> Fork<A> where
     A: 'static + Clone + Send,
 {
-    pub fn new(parent: Box<InternalSignal<A>>, sink_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>) -> Fork<A> {
+    pub fn new(parent: Box<Signal<A>>, sink_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>) -> Fork<A> {
         Fork {
             parent: parent,
             sink_txs: sink_txs,
@@ -115,7 +119,7 @@ impl<A> Branch<A> where
 // Branch is the outgoig portion of a fork.  It waits for incoming data 
 // from it's parent fork and pushes it to its children
 //
-impl<A> InternalSignal<A> for Branch<A> where
+impl<A> Signal<A> for Branch<A> where
     A: 'static + Send,
 {
     fn push_to(self: Box<Self>, target: Option<Box<Push<A>>>) {
@@ -156,19 +160,10 @@ impl<A> Clone for Branch<A> where
     }
 }
 
-impl<A> Lift<A> for Branch<A>
+impl<A> Lift<A> for Branch<A> where
+    A: 'static + Send,
 {
-    /// Apply a pure function `F` to a data source `Signal<A>`, generating a 
-    /// transformed output data source `Signal<B>`.
-    ///
-    /// Other names for this operation include "map" or "collect".  `f` will be
-    /// run in `self`'s thread
-    ///
-    /// Because `F` is assumed to be pure, it will only be evaluated for
-    /// new data that has changed since the last observation.  If side-effects are
-    /// desired, use `fold` instead.
-    ///
-    fn lift<F, B>(mut self, f: F) -> Signal<B> where
+    fn lift<F, B>(mut self, f: F) -> LiftSignal<F, A, B> where
         F: 'static + Send + Fn(A) -> B,
         A: 'static + Send,
         B: 'static + Send,
@@ -177,30 +172,40 @@ impl<A> Lift<A> for Branch<A>
         self.fork_txs.lock().unwrap().push(tx);
         self.source_rx = Some(rx);
 
-        Signal {
-            internal_signal: Box::new(
-                LiftSignal {
-                    parent: Box::new(self),
-                    f: f,
-                }
-            )
+        LiftSignal {
+            parent: Box::new(self),
+            f: f,
         }
     }
 }
 
-impl<A> Fold<A> for Branch<A>
+impl<A, B, SB> Lift2<A, B, SB> for Branch<A> where
+    A: 'static + Send,
 {
-    /// Apply a function `F` which uses a data source `Signal<A>` to 
-    /// mutate an instance of `B`, generating an output data source `Signal<B>`
-    /// containing the mutated value
-    ///
-    /// Other names for this operation include "reduce" or "inject".  `f` will
-    /// be run in `self`'s thread
-    ///
-    /// Fold is assumed to be impure, therefore the function will be called with
-    /// all data upstream of the fold, even if there are no changes in the stream.
-    ///
-    fn foldp<F, B>(mut self, initial: B, f: F) -> Signal<B> where
+    fn lift2<F, C>(mut self, right: SB, f: F) -> Lift2Signal<F, A, B, C> where
+        Self: 'static,
+        SB: 'static + Signal<B>,
+        F: 'static + Send + Fn(Option<A>, Option<B>) -> C,
+        A: 'static + Send + Clone,
+        B: 'static + Send + Clone,
+        C: 'static + Send + Clone,
+    {
+        let (tx, rx) = channel();
+        self.fork_txs.lock().unwrap().push(tx);
+        self.source_rx = Some(rx);
+
+        Lift2Signal {
+            left: Box::new(self),
+            right: Box::new(right),
+            f: f,
+        }
+    }
+}
+
+impl<A> Fold<A> for Branch<A> where
+    A: 'static + Send,
+{
+    fn fold<F, B>(mut self, initial: B, f: F) -> FoldSignal<F, A, B> where
         F: 'static + Send + FnMut(&mut B, A),
         A: 'static + Send + Clone,
         B: 'static + Send + Clone,
@@ -209,14 +214,10 @@ impl<A> Fold<A> for Branch<A>
         self.fork_txs.lock().unwrap().push(tx);
         self.source_rx = Some(rx);
 
-        Signal {
-            internal_signal: Box::new(
-                FoldSignal {
-                    parent: Box::new(self),
-                    f: f,
-                    state: initial,
-                }
-            )
+        FoldSignal {
+            parent: Box::new(self),
+            f: f,
+            state: initial,
         }
     }
 }

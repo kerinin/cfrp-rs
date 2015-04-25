@@ -1,6 +1,6 @@
 use std::sync::mpsc::*;
 
-use super::*;
+use super::super::{Event, Signal, Push, Lift, Lift2, Fold};
 
 pub struct Channel<A> where
     A: 'static + Send,
@@ -18,7 +18,7 @@ impl<A> Channel<A> where
     }
 }
 
-impl<A> InternalSignal<A> for Channel<A> where
+impl<A> Signal<A> for Channel<A> where
     A: 'static + Send,
 {
     fn push_to(self: Box<Self>, target: Option<Box<Push<A>>>) {
@@ -55,3 +55,7 @@ impl<A> InternalSignal<A> for Channel<A> where
         }
     }
 }
+
+impl<A> Lift<A> for Channel<A> where A: 'static + Send, {}
+impl<A, B, SB> Lift2<A, B, SB> for Channel<A>  where A: 'static + Send {}
+impl<A> Fold<A> for Channel<A> where A: 'static + Send {}

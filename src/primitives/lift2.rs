@@ -1,7 +1,7 @@
 use std::thread::spawn;
 use std::sync::mpsc::*;
 
-use super::*;
+use super::super::{Event, Signal, Push, Lift, Lift2, Fold};
 
 pub struct Lift2Signal<F, A, B, C> where
     F: 'static + Send + Fn(Option<A>, Option<B>) -> C,
@@ -9,12 +9,12 @@ pub struct Lift2Signal<F, A, B, C> where
     B: 'static + Send,
     C: 'static + Send + Clone,
 {
-    pub left: Box<InternalSignal<A>>,
-    pub right: Box<InternalSignal<B>>,
+    pub left: Box<Signal<A>>,
+    pub right: Box<Signal<B>>,
     pub f: F,
 }
 
-impl<F, A, B, C> InternalSignal<C> for Lift2Signal<F, A, B, C> where
+impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
     F: 'static + Send + Fn(Option<A>, Option<B>) -> C,
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
@@ -136,6 +136,26 @@ impl<F, A, B, C> InternalSignal<C> for Lift2Signal<F, A, B, C> where
         }
     }
 }
+
+impl<F, A, B, C> Lift<C> for Lift2Signal<F, A, B, C> where
+    F: 'static + Send + Fn(Option<A>, Option<B>) -> C,
+    A: 'static + Send + Clone,
+    B: 'static + Send + Clone,
+    C: 'static + Send + Clone,
+{}
+impl<F, A, B, C, D, SD> Lift2<C, D, SD> for Lift2Signal<F, A, B, C> where
+    F: 'static + Send + Fn(Option<A>, Option<B>) -> C,
+    A: 'static + Send + Clone,
+    B: 'static + Send + Clone,
+    C: 'static + Send + Clone,
+{}
+impl<F, A, B, C> Fold<C> for Lift2Signal<F, A, B, C> where
+    F: 'static + Send + Fn(Option<A>, Option<B>) -> C,
+    A: 'static + Send + Clone,
+    B: 'static + Send + Clone,
+    C: 'static + Send + Clone,
+{}
+
 
 // Passed up the 'push_to' chain, finalizes by sending to a channel
 struct InputPusher<A> {

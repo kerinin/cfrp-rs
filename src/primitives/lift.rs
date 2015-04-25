@@ -1,17 +1,17 @@
 use std::marker::*;
 
-use super::*;
+use super::super::{Event, Signal, Push, Lift, Lift2, Fold};
 
 pub struct LiftSignal<F, A, B> where
     F: 'static + Send + Fn(A) -> B,
     A: 'static + Send,
     B: 'static + Send,
 {
-    pub parent: Box<InternalSignal<A>>,
+    pub parent: Box<Signal<A>>,
     pub f: F,
 }
 
-impl<F, A, B> InternalSignal<B> for LiftSignal<F, A, B> where
+impl<F, A, B> Signal<B> for LiftSignal<F, A, B> where
     F: 'static + Send + Fn(A) -> B,
     A: 'static + Send,
     B: 'static + Send,
@@ -44,6 +44,23 @@ impl<F, A, B> InternalSignal<B> for LiftSignal<F, A, B> where
         }
     }
 }
+
+impl<F, A, B> Lift<B> for LiftSignal<F, A, B> where
+    F: 'static + Send + Fn(A) -> B,
+    A: 'static + Send,
+    B: 'static + Send,
+{}
+impl<F, A, B, C, SC> Lift2<B, C, SC> for LiftSignal<F, A, B> where
+    F: 'static + Send + Fn(A) -> B,
+    A: 'static + Send,
+    B: 'static + Send,
+{}
+impl<F, A, B> Fold<B> for LiftSignal<F, A, B> where
+    F: 'static + Send + Fn(A) -> B,
+    A: 'static + Send,
+    B: 'static + Send,
+{}
+
 
 struct LiftPusher<F, A, B> where
     F: 'static + Send + Fn(A) -> B,

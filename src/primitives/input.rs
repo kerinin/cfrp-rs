@@ -3,7 +3,7 @@ use std::sync::*;
 use std::thread::spawn;
 use std::sync::mpsc::*;
 
-use super::*;
+use super::super::Event;
 
 pub trait RunInput: Send {
     fn run(mut self: Box<Self>, usize, Arc<Mutex<Vec<Box<NoOp>>>>);
