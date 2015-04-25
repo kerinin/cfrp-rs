@@ -2,9 +2,6 @@ use std::sync::*;
 use std::sync::mpsc::*;
 
 use super::super::{Event, Signal, Push, Lift, Lift2, Fold};
-use super::lift::*;
-use super::lift2::*;
-use super::fold::*;
 
 pub trait Run: Send {
     fn run(mut self: Box<Self>);
@@ -144,11 +141,22 @@ impl<A> Signal<A> for Branch<A> where
                         _ => {},
                     }
                 }
-            }
-            _ => {
+            },
+            (Some(_), None) => {
+                println!("Branch::push_to with no source")
+            },
+
+            (None, None) => {
                 println!("Branch::push_to with neither target nor source")
             },
+
         }
+    }
+
+    fn init(&mut self) {
+        let (tx, rx) = channel();
+        self.fork_txs.lock().unwrap().push(tx);
+        self.source_rx = Some(rx);
     }
 }
 
@@ -162,62 +170,10 @@ impl<A> Clone for Branch<A> where
 
 impl<A> Lift<A> for Branch<A> where
     A: 'static + Send,
-{
-    fn lift<F, B>(mut self, f: F) -> LiftSignal<F, A, B> where
-        F: 'static + Send + Fn(A) -> B,
-        A: 'static + Send,
-        B: 'static + Send,
-    {
-        let (tx, rx) = channel();
-        self.fork_txs.lock().unwrap().push(tx);
-        self.source_rx = Some(rx);
-
-        LiftSignal {
-            parent: Box::new(self),
-            f: f,
-        }
-    }
-}
-
+{}
 impl<A, B, SB> Lift2<A, B, SB> for Branch<A> where
     A: 'static + Send,
-{
-    fn lift2<F, C>(mut self, right: SB, f: F) -> Lift2Signal<F, A, B, C> where
-        Self: 'static,
-        SB: 'static + Signal<B>,
-        F: 'static + Send + Fn(Option<A>, Option<B>) -> C,
-        A: 'static + Send + Clone,
-        B: 'static + Send + Clone,
-        C: 'static + Send + Clone,
-    {
-        let (tx, rx) = channel();
-        self.fork_txs.lock().unwrap().push(tx);
-        self.source_rx = Some(rx);
-
-        Lift2Signal {
-            left: Box::new(self),
-            right: Box::new(right),
-            f: f,
-        }
-    }
-}
-
+{}
 impl<A> Fold<A> for Branch<A> where
     A: 'static + Send,
-{
-    fn fold<F, B>(mut self, initial: B, f: F) -> FoldSignal<F, A, B> where
-        F: 'static + Send + FnMut(&mut B, A),
-        A: 'static + Send + Clone,
-        B: 'static + Send + Clone,
-    {
-        let (tx, rx) = channel();
-        self.fork_txs.lock().unwrap().push(tx);
-        self.source_rx = Some(rx);
-
-        FoldSignal {
-            parent: Box::new(self),
-            f: f,
-            state: initial,
-        }
-    }
-}
+{}

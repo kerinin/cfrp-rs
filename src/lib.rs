@@ -15,6 +15,10 @@ pub enum Event<A> {
 }
 
 pub trait Signal<A>: Send {
+    // Called at build time when a downstream process is created for the signal
+    fn init(&mut self) {}
+
+    // Called at compile time when a donstream process is run
     fn push_to(self: Box<Self>, Option<Box<Push<A>>>);
 }
 
@@ -33,12 +37,14 @@ pub trait Push<A> {
 /// desired, use `fold` instead.
 ///
 pub trait Lift<A>: Signal<A> + Sized {
-    fn lift<F, B>(self, f: F) -> LiftSignal<F, A, B> where
+    fn lift<F, B>(mut self, f: F) -> LiftSignal<F, A, B> where
         Self: 'static,
         F: 'static + Send + Fn(A) -> B,
         A: 'static + Send,
         B: 'static + Send,
     {
+        self.init();
+
         LiftSignal {
             parent: Box::new(self),
             f: f,
@@ -47,7 +53,7 @@ pub trait Lift<A>: Signal<A> + Sized {
 }
 
 pub trait Lift2<A, B, SB>: Signal<A> + Sized {
-    fn lift2<F, C>(self, right: SB, f: F) -> Lift2Signal<F, A, B, C> where
+    fn lift2<F, C>(mut self, mut right: SB, f: F) -> Lift2Signal<F, A, B, C> where
         Self: 'static,
         SB: 'static + Signal<B>,
         F: 'static + Send + Fn(Option<A>, Option<B>) -> C,
@@ -55,6 +61,9 @@ pub trait Lift2<A, B, SB>: Signal<A> + Sized {
         B: 'static + Send + Clone,
         C: 'static + Send + Clone,
     {
+        self.init();
+        right.init();
+
         Lift2Signal {
             left: Box::new(self),
             right: Box::new(right),
@@ -74,12 +83,14 @@ pub trait Lift2<A, B, SB>: Signal<A> + Sized {
 /// all data upstream of the fold, even if there are no changes in the stream.
 ///
 pub trait Fold<A>: Signal<A> + Sized {
-    fn fold<F, B>(self, initial: B, f: F) -> FoldSignal<F, A, B> where
+    fn fold<F, B>(mut self, initial: B, f: F) -> FoldSignal<F, A, B> where
         Self: 'static,
         F: 'static + Send + FnMut(&mut B, A),
         A: 'static + Send + Clone,
         B: 'static + Send + Clone,
     {
+        self.init();
+
         FoldSignal {
             parent: Box::new(self),
             f: f,
@@ -113,7 +124,7 @@ mod test {
             //      );
             t.add(input.clone()
                   .lift(|i| -> usize { i })
-                  .lift2(input.lift(|i| -> usize { i }), |i, j| -> usize {
+                  .lift2(input, |i, j| -> usize {
                       println!("lifting");
                       match (i, j) {
                           (Some(a), Some(b)) => a + b,
@@ -160,8 +171,6 @@ mod test {
             */
 
         }).run();
-
-        thread::sleep_ms(1000);
 
         in_tx.send(1usize);
 

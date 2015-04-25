@@ -79,8 +79,6 @@ impl Topology {
     pub fn build<T, F>(state: T, f: F) -> Self where 
         F: Fn(&Builder, T),
     {
-        println!("----------------------> Building Topology");
-
         let builder = Builder { root_signals: RefCell::new(Vec::new()), inputs: RefCell::new(Vec::new()) };
         f(&builder, state);
         
@@ -90,15 +88,12 @@ impl Topology {
     /// Run the topology
     ///
     pub fn run(self) {
-        println!("----------------------> Running Topology");
-
         let Builder {inputs, root_signals} = self.builder;
 
         for root_signal in root_signals.into_inner().into_iter() {
             thread::spawn(move || {
                 root_signal.run();
             });
-            thread::sleep_ms(100);
         }
 
         let no_ops = Arc::new(Mutex::new(inputs.borrow().iter().map(|i| i.boxed_no_op()).collect::<Vec<Box<NoOp>>>()));
@@ -107,7 +102,6 @@ impl Topology {
             thread::spawn(move || {
                 input.run(idx, no_ops_i);
             });
-            thread::sleep_ms(100);
         }
     }
 }

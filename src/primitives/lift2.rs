@@ -1,4 +1,4 @@
-use std::thread::spawn;
+use std::thread;
 use std::sync::mpsc::*;
 
 use super::super::{Event, Signal, Push, Lift, Lift2, Fold};
@@ -25,18 +25,20 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
         let Lift2Signal {left, right, f} = inner;
 
         let (left_tx, left_rx) = channel();
-        spawn(move || {
+        thread::spawn(move || {
             let pusher = InputPusher {
                 tx: left_tx,
             };
+            println!("Pushing Lift2::InputPusher left");
             left.push_to(Some(Box::new(pusher)));
         });
 
         let (right_tx, right_rx) = channel();
-        spawn(move || {
+        thread::spawn(move || {
             let pusher = InputPusher {
                 tx: right_tx,
             };
+            println!("Pushing Lift2::InputPusher right");
             right.push_to(Some(Box::new(pusher)));
         });
 
@@ -166,9 +168,10 @@ impl<A> Push<A> for InputPusher<A> where
     A: 'static + Send,
 {
     fn push(&mut self, event: Event<A>) {
-        println!("LiftN::InputPusher::push");
+        println!("Lift2::InputPusher::push");
 
         match self.tx.send(event) {
+            Err(e) => { println!("Lift2::InputPusher received error {}", e) },
             _ => {},
         }
     }
