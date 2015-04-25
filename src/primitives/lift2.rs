@@ -11,9 +11,24 @@ pub struct Lift2Signal<F, A, B, C> where
     B: 'static + Send,
     C: 'static + Send + Clone,
 {
-    pub left: Box<Signal<A>>,
-    pub right: Box<Signal<B>>,
-    pub f: F,
+    left: Box<Signal<A>>,
+    right: Box<Signal<B>>,
+    f: F,
+}
+
+impl<F, A, B, C> Lift2Signal<F, A, B, C> where
+    F: 'static + Send + Fn(Option<A>, Option<B>) -> C,
+    A: 'static + Send,
+    B: 'static + Send,
+    C: 'static + Send + Clone,
+{
+    pub fn new(left: Box<Signal<A>>, right: Box<Signal<B>>, f: F) -> Self {
+        Lift2Signal {
+            left: left,
+            right: right,
+            f: f,
+        }
+    }
 }
 
 impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where

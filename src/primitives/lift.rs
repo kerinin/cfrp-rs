@@ -9,8 +9,21 @@ pub struct LiftSignal<F, A, B> where
     A: 'static + Send,
     B: 'static + Send,
 {
-    pub parent: Box<Signal<A>>,
-    pub f: F,
+    parent: Box<Signal<A>>,
+    f: F,
+}
+
+impl<F, A, B> LiftSignal<F, A, B> where
+    F: 'static + Send + Fn(A) -> B,
+    A: 'static + Send,
+    B: 'static + Send,
+{
+    pub fn new(parent: Box<Signal<A>>, f: F) -> Self {
+        LiftSignal {
+            parent: parent, 
+            f: f,
+        }
+    }
 }
 
 impl<F, A, B> Signal<B> for LiftSignal<F, A, B> where

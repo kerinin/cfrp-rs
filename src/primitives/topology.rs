@@ -9,6 +9,7 @@ use super::input::{Input, RunInput, InternalInput, NoOp};
 use super::fork::{Run, Fork, Branch};
 use super::channel::Channel;
 use super::async::Async;
+use super::value::Value;
 
 /// `Builder` is used to construct topologies.  
 ///
@@ -22,9 +23,34 @@ pub struct Builder {
 }
 
 impl Builder {
+    /// Create a new Builder
+    ///
+    pub fn new() -> Self {
+        Builder {
+            root_signals: RefCell::new(Vec::new()),
+            inputs: RefCell::new(Vec::new()),
+        }
+    }
+
     /// Add a signal to the topology
     ///
     /// Returns a `Branch<A>`, allowing `root` to be used as input more than once
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cfrp::*;
+    /// use cfrp::primitives::*;
+    ///
+    /// let b = Builder::new();
+    /// 
+    /// // Topologies only execute transformations which have been added to a builder.
+    /// let fork = b.add(b.value(1).lift(|i| { i + 1} ));
+    ///
+    /// // `add` returns a signal that can be used more than once
+    /// b.add(fork.clone().lift(|i| { i - 1 } ));
+    /// b.add(fork.lift(|i| { -i }));
+    /// ```
     ///
     pub fn add<A, SA>(&self, root: SA) -> Branch<A> where
         SA: 'static + Signal<A>,
@@ -39,11 +65,29 @@ impl Builder {
         Branch::new(fork_txs, None)
     }
 
-    /// Listen to `source_rx` and push received data into the topology
+    /// Listen to `input` and push received data into the topology
     ///
     /// All data must enter the topology via a call to `listen`; this function
     /// ensures data syncronization across the topology.  Each listener runs in 
     /// its own thread
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use std::sync::mpsc::*;
+    /// use cfrp::*;
+    /// use cfrp::primitives::*;
+    ///
+    /// let b = Builder::new();
+    /// 
+    /// let (tx, rx): (Sender<usize>, Receiver<usize>) = channel();
+    ///
+    /// // Receive data on `rx` and expose it as a signal.  This is necessary
+    /// // because the topology must maintain consistency between threads, so
+    /// // any message sent to any input is propagated to all other inputs as
+    /// // "no-op" messages.
+    /// let signal = b.listen(rx);
+    /// ```
     ///
     pub fn listen<A, T>(&self, input: T) -> Channel<A> where
         T: 'static + Input<A> + Send,
@@ -67,6 +111,26 @@ impl Builder {
     /// long-running processes can be handled outside of the synchronized topology
     /// process, and the result can be handled when it's available.
     ///
+    /// ```
+    /// use std::sync::mpsc::*;
+    /// use cfrp::*;
+    /// use cfrp::primitives::*;
+    ///
+    /// let b = Builder::new();
+    /// 
+    /// // This will now happen without blocking the rest of the topology
+    /// let result = b.async(
+    ///     b.value(0).fold(0, |i, j| {
+    ///         // Some very expensive code in here...
+    ///     })
+    /// );
+    ///
+    /// // ...and `result` will receive the output value when it's done
+    /// b.add(
+    ///     b.value(0).lift2(result, |i, j| { (i, j) })
+    /// );
+    /// ```
+    ///
     pub fn async<A, SA>(&self, root: SA) -> Channel<A> where
         SA: 'static + Signal<A>,
         A: 'static + Clone + Send,
@@ -80,6 +144,13 @@ impl Builder {
         self.listen(rx)
     }
 
+    /// Creats a channel with constant value `v`
+    ///
+    pub fn value<T>(&self, v: T) -> Channel<T> where
+        T: 'static + Clone + Send,
+    {
+        self.listen(Value(v))
+    }
 }
 
 /// `Topology<T>` describes a data flow and controls its execution
@@ -93,23 +164,15 @@ pub struct Topology {
 }
 
 impl Topology {
-    /// Construct a topology
+    /// Create a new topology from a builder
     ///
-    /// `F` will be called with a `Builder`, which exposes methods for adding
-    /// inputs & transformations to the topology
-    ///
-    pub fn build<T, F>(state: T, f: F) -> Self where 
-        F: Fn(&Builder, T),
-    {
-        let builder = Builder { root_signals: RefCell::new(Vec::new()), inputs: RefCell::new(Vec::new()) };
-        f(&builder, state);
-        
+    pub fn new(builder: Builder) -> Self {
         Topology { builder: builder }
     }
 
     /// Run the topology
     ///
-    pub fn run(self) {
+    pub fn run(self) -> TopologyHandle {
         let Builder {inputs, root_signals} = self.builder;
 
         for root_signal in root_signals.into_inner().into_iter() {
@@ -119,11 +182,30 @@ impl Topology {
         }
 
         let no_ops = Arc::new(Mutex::new(inputs.borrow().iter().map(|i| i.boxed_no_op()).collect::<Vec<Box<NoOp>>>()));
+        let term_txs = inputs.borrow().iter().map(|i| i.boxed_no_op()).collect::<Vec<Box<NoOp>>>();
         for (idx, input) in inputs.into_inner().into_iter().enumerate() {
             let no_ops_i = no_ops.clone();
             thread::spawn(move || {
                 input.run(idx, no_ops_i);
             });
+        }
+
+        TopologyHandle {
+            term_txs: term_txs,
+        }
+    }
+}
+
+/// For explicitly terminating a running topology
+///
+pub struct TopologyHandle {
+    term_txs: Vec<Box<NoOp>>,
+}
+
+impl Drop for TopologyHandle {
+    fn drop(&mut self) {
+        for tx in self.term_txs.iter() {
+            tx.send_exit();
         }
     }
 }

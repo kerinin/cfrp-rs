@@ -9,9 +9,23 @@ pub struct FoldSignal<F, A, B> where
     A: 'static + Send,
     B: 'static + Send + Clone,
 {
-    pub parent: Box<Signal<A>>,
-    pub f: F,
-    pub state: B,
+    parent: Box<Signal<A>>,
+    f: F,
+    state: B,
+}
+
+impl<F, A, B> FoldSignal<F, A, B> where
+    F: 'static + Send + FnMut(&mut B, A),
+    A: 'static + Send,
+    B: 'static + Send + Clone,
+{
+    pub fn new(parent: Box<Signal<A>>, initial: B, f: F) -> Self {
+        FoldSignal {
+            parent: parent, 
+            f: f,
+            state: initial,
+        }
+    }
 }
 
 impl<F, A, B> Signal<B> for FoldSignal<F, A, B> where

@@ -31,7 +31,7 @@
 //! // 
 //! // You can pass some state in (here we're passing `(in_rx, out_rx)`) if you need
 //! // to.
-//! run_topology( in_rx, |t, in_rx| {
+//! spawn_topology( in_rx, |t, in_rx| {
 //! 
 //!     // Create a listener on `in_rx`.  Messages received on the channel will be
 //!     // sent to any nodes subscribed to `input`
@@ -76,7 +76,7 @@ pub mod primitives;
 // mod topology;
 
 // pub use topology::{Topology, Builder};
-use primitives::{Topology, Builder};
+use primitives::{Topology, Builder, TopologyHandle};
 use primitives::LiftSignal;
 use primitives::Lift2Signal;
 use primitives::FoldSignal;
@@ -116,6 +116,19 @@ pub trait Push<A> {
 /// new data that has changed since the last observation.  If side-effects are
 /// desired, use `fold` instead.
 ///
+/// # Example
+///
+/// ```
+/// use cfrp::*;
+/// use cfrp::primitives::*;
+///
+/// // Create a constant-valued channel with value 1 and return a channel with
+/// // value 2.  The value will only be calculated with `i` changes (which in 
+/// // this case is never)
+/// Builder::new().value(1)
+///     .lift(|i| { i + 1 });
+/// ```
+///
 pub trait Lift<A>: Signal<A> + Sized {
     fn lift<F, B>(mut self, f: F) -> LiftSignal<F, A, B> where
         Self: 'static,
@@ -125,10 +138,7 @@ pub trait Lift<A>: Signal<A> + Sized {
     {
         self.init();
 
-        LiftSignal {
-            parent: Box::new(self),
-            f: f,
-        }
+        LiftSignal::new(Box::new(self), f)
     }
 }
 
@@ -142,6 +152,31 @@ pub trait Lift<A>: Signal<A> + Sized {
 /// new data that has changed since the last observation.  If side-effects are
 /// desired, use `fold` instead.
 ///
+/// # Example
+///
+/// ```
+/// use cfrp::*;
+/// use cfrp::primitives::*;
+///
+/// let b = Builder::new();
+///
+/// // Create two constant-valued channels with value 1 and return a channel with
+/// // their sum.  The value will only be calculated with `i` or `j` changes 
+/// // (which in this case is never)
+/// b.value(1).lift2(b.value(1), |i, j| { 
+///
+///     // All data entering the topology is processed by every node in the 
+///     // topology, this means that data entering a given channel will be `None`
+///     // downstream of other channels.
+///     match (i, j) {
+///         (Some(i), Some(j))  => { i + j },
+///         (Some(i), None)     => i,
+///         (None, Some(j))     => j,
+///         (None, None)        => 0,
+///     }
+/// });
+/// ```
+///
 pub trait Lift2<A, B, SB>: Signal<A> + Sized {
     fn lift2<F, C>(mut self, mut right: SB, f: F) -> Lift2Signal<F, A, B, C> where
         Self: 'static,
@@ -154,11 +189,7 @@ pub trait Lift2<A, B, SB>: Signal<A> + Sized {
         self.init();
         right.init();
 
-        Lift2Signal {
-            left: Box::new(self),
-            right: Box::new(right),
-            f: f,
-        }
+        Lift2Signal::new(Box::new(self), Box::new(right), f)
     }
 }
 
@@ -172,6 +203,17 @@ pub trait Lift2<A, B, SB>: Signal<A> + Sized {
 /// Fold is assumed to be impure, therefore the function will be called with
 /// all data upstream of the fold, even if there are no changes in the stream.
 ///
+/// # Example
+///
+/// ```
+/// use cfrp::*;
+/// use cfrp::primitives::*;
+///
+/// // Create a constant-valued channel with value 1 and fold it into a summation
+/// Builder::new().value(1)
+///     .fold(0, |sum, i| { *sum += i });
+/// ```
+///
 pub trait Fold<A>: Signal<A> + Sized {
     fn fold<F, B>(mut self, initial: B, f: F) -> FoldSignal<F, A, B> where
         Self: 'static,
@@ -181,22 +223,34 @@ pub trait Fold<A>: Signal<A> + Sized {
     {
         self.init();
 
-        FoldSignal {
-            parent: Box::new(self),
-            f: f,
-            state: initial,
-        }
+        FoldSignal::new(Box::new(self), initial, f)
     }
 }
 
-/// Create a new topology and run it
+/// Construct a new topology and run it
 ///
-/// Sugar for `Topology::build(state, f).run()`
+/// `f` will be called with a `Builder`, which exposes methods for adding
+/// inputs & transformations to the topology and `state` which is provided as 
+/// a convenience for passing values through to builder's scope.
 ///
-pub fn run_topology<T, F>(state: T, f: F) where
+/// # Example
+///
+/// ```
+/// use cfrp::*;
+///
+/// let handle = spawn_topology((0, 1), |t, (init, incr)| {
+///     t.add(
+///         t.value(incr).fold(init, |sum, i| { *sum += i })
+///     );
+/// });
+/// ```
+///
+pub fn spawn_topology<T, F>(state: T, f: F) -> TopologyHandle where
     F: Fn(&Builder, T),
 {
-    Topology::build(state, f).run()
+    let builder = Builder::new();
+    f(&builder, state);
+    Topology::new(builder).run()
 }
 
 #[cfg(test)] 
@@ -204,7 +258,6 @@ mod test {
     extern crate log;
 
     // extern crate quickcheck;
-    use std::thread;
     use std::sync::mpsc::*;
 
     use super::*;
@@ -214,7 +267,7 @@ mod test {
         let (in_tx, in_rx) = channel();
         let (out_tx, out_rx) = channel();
 
-        run_topology((in_rx, out_tx), |t, (in_rx, out_tx)| {
+        spawn_topology((in_rx, out_tx), |t, (in_rx, out_tx)| {
 
             let input = t.add(t.listen(in_rx));
 
@@ -227,11 +280,11 @@ mod test {
                           _ => 0,
                       } 
                   })
-                  .fold(out_tx.clone(), |tx, a| { tx.send(a); })
+                  .fold(out_tx.clone(), |tx, a| { tx.send(a).unwrap(); })
                  );
         });
 
-        in_tx.send(1usize);
+        in_tx.send(1usize).unwrap();
 
         let out = out_rx.recv().unwrap();
         assert_eq!(out, 2);
