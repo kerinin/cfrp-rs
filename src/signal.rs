@@ -1,4 +1,4 @@
-use super::{Signal, Lift, Fold};
+use super::{Signal, Lift, Lift2, Fold};
 use super::primitives::lift::*;
 use super::primitives::lift2::*;
 use super::primitives::fold::*;
@@ -31,10 +31,9 @@ impl<A> Lift<A> for Signal<A>
     }
 }
 
-/*
-impl<A, SB, B> Lift2<SB> for Signal<A> where SB: Signal<B>
+impl<A, B> Lift2<A, B> for Signal<A>
 {
-    pub fn lift2<F, C>(self, right: SB, f: F) -> Signal<C> where
+    fn lift2<F, C>(self, right: Signal<B>, f: F) -> Signal<C> where
         F: 'static + Send + Fn(Option<A>, Option<B>) -> C,
         A: 'static + Send + Clone,
         B: 'static + Send + Clone,
@@ -51,7 +50,6 @@ impl<A, SB, B> Lift2<SB> for Signal<A> where SB: Signal<B>
         }
     }
 }
-*/
 
 impl<A> Fold<A> for Signal<A>
 {

@@ -20,12 +20,13 @@ pub trait Lift<A> {
         B: 'static + Send;
 }
 
-/*
-pub trait Lift2<SB> where SB: Signal<B> {
-    fn lift2<F, B, C>(self, right: SB, f: F) -> Signal<C> 
-        where F: Fn(Option<A>, Option<B>) -> C;
+pub trait Lift2<A, B> {
+    fn lift2<F, C>(self, right: Signal<B>, f: F) -> Signal<C> where
+        F: 'static + Send + Fn(Option<A>, Option<B>) -> C,
+        A: 'static + Send + Clone,
+        B: 'static + Send + Clone,
+        C: 'static + Send + Clone;
 }
-*/
 
 pub trait Fold<A> {
     fn foldp<F, B>(self, initial: B, f: F) -> Signal<B> where
