@@ -2,9 +2,9 @@ use std::sync::*;
 use std::sync::mpsc::*;
 
 use super::*;
-use super::super::Signal;
-use super::lift::Lift;
-use super::fold::Fold;
+use super::super::{Signal, Lift, Fold};
+use super::lift::*;
+use super::fold::*;
 
 // A Fork is created internally when Builder#add is called.  The purpose of Fork is
 // to distribute incoming data to some number of child Branch instances.
@@ -156,8 +156,7 @@ impl<A> Clone for Branch<A> where
     }
 }
 
-impl<A> Branch<A> where
-    A: 'static + Send,
+impl<A> Lift<A> for Branch<A>
 {
     /// Apply a pure function `F` to a data source `Signal<A>`, generating a 
     /// transformed output data source `Signal<B>`.
@@ -169,7 +168,7 @@ impl<A> Branch<A> where
     /// new data that has changed since the last observation.  If side-effects are
     /// desired, use `fold` instead.
     ///
-    pub fn lift<F, B>(mut self, f: F) -> Signal<B> where
+    fn lift<F, B>(mut self, f: F) -> Signal<B> where
         F: 'static + Send + Fn(A) -> B,
         A: 'static + Send,
         B: 'static + Send,
@@ -180,14 +179,17 @@ impl<A> Branch<A> where
 
         Signal {
             internal_signal: Box::new(
-                Lift {
+                LiftSignal {
                     parent: Box::new(self),
                     f: f,
                 }
             )
         }
     }
+}
 
+impl<A> Fold<A> for Branch<A>
+{
     /// Apply a function `F` which uses a data source `Signal<A>` to 
     /// mutate an instance of `B`, generating an output data source `Signal<B>`
     /// containing the mutated value
@@ -198,7 +200,7 @@ impl<A> Branch<A> where
     /// Fold is assumed to be impure, therefore the function will be called with
     /// all data upstream of the fold, even if there are no changes in the stream.
     ///
-    pub fn foldp<F, B>(mut self, initial: B, f: F) -> Signal<B> where
+    fn foldp<F, B>(mut self, initial: B, f: F) -> Signal<B> where
         F: 'static + Send + FnMut(&mut B, A),
         A: 'static + Send + Clone,
         B: 'static + Send + Clone,
@@ -209,7 +211,7 @@ impl<A> Branch<A> where
 
         Signal {
             internal_signal: Box::new(
-                Fold {
+                FoldSignal {
                     parent: Box::new(self),
                     f: f,
                     state: initial,

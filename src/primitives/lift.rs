@@ -2,7 +2,7 @@ use std::marker::*;
 
 use super::*;
 
-pub struct Lift<F, A, B> where
+pub struct LiftSignal<F, A, B> where
     F: 'static + Send + Fn(A) -> B,
     A: 'static + Send,
     B: 'static + Send,
@@ -11,14 +11,14 @@ pub struct Lift<F, A, B> where
     pub f: F,
 }
 
-impl<F, A, B> InternalSignal<B> for Lift<F, A, B> where
+impl<F, A, B> InternalSignal<B> for LiftSignal<F, A, B> where
     F: 'static + Send + Fn(A) -> B,
     A: 'static + Send,
     B: 'static + Send,
 {
     fn push_to(self: Box<Self>, target: Option<Box<Push<B>>>) {
         let inner = *self;
-        let Lift { parent, f } = inner;
+        let LiftSignal { parent, f } = inner;
 
         match target {
             Some(t) => {

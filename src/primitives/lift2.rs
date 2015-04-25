@@ -3,7 +3,7 @@ use std::sync::mpsc::*;
 
 use super::*;
 
-pub struct Lift2<F, A, B, C> where
+pub struct Lift2Signal<F, A, B, C> where
     F: 'static + Send + Fn(Option<A>, Option<B>) -> C,
     A: 'static + Send,
     B: 'static + Send,
@@ -14,7 +14,7 @@ pub struct Lift2<F, A, B, C> where
     pub f: F,
 }
 
-impl<F, A, B, C> InternalSignal<C> for Lift2<F, A, B, C> where
+impl<F, A, B, C> InternalSignal<C> for Lift2Signal<F, A, B, C> where
     F: 'static + Send + Fn(Option<A>, Option<B>) -> C,
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
@@ -22,7 +22,7 @@ impl<F, A, B, C> InternalSignal<C> for Lift2<F, A, B, C> where
 {
     fn push_to(self: Box<Self>, target: Option<Box<Push<C>>>) {
         let inner = *self;
-        let Lift2 {left, right, f} = inner;
+        let Lift2Signal {left, right, f} = inner;
 
         let (left_tx, left_rx) = channel();
         spawn(move || {

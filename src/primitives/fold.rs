@@ -2,7 +2,7 @@ use std::marker::*;
 
 use super::*;
 
-pub struct Fold<F, A, B> where
+pub struct FoldSignal<F, A, B> where
     F: 'static + Send + FnMut(&mut B, A),
     A: 'static + Send,
     B: 'static + Send + Clone,
@@ -12,14 +12,14 @@ pub struct Fold<F, A, B> where
     pub state: B,
 }
 
-impl<F, A, B> InternalSignal<B> for Fold<F, A, B> where
+impl<F, A, B> InternalSignal<B> for FoldSignal<F, A, B> where
     F: 'static + Send + FnMut(&mut B, A),
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
     fn push_to(self: Box<Self>, target: Option<Box<Push<B>>>) {
         let inner = *self;
-        let Fold {parent, f, state} = inner;
+        let FoldSignal {parent, f, state} = inner;
 
         match target {
             Some(t) => {

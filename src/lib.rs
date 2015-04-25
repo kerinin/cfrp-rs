@@ -13,6 +13,27 @@ pub struct Signal<A> {
     internal_signal: Box<InternalSignal<A>>,
 }
 
+pub trait Lift<A> {
+    fn lift<F, B>(self, f: F) -> Signal<B> where
+        F: 'static + Send + Fn(A) -> B,
+        A: 'static + Send,
+        B: 'static + Send;
+}
+
+/*
+pub trait Lift2<SB> where SB: Signal<B> {
+    fn lift2<F, B, C>(self, right: SB, f: F) -> Signal<C> 
+        where F: Fn(Option<A>, Option<B>) -> C;
+}
+*/
+
+pub trait Fold<A> {
+    fn foldp<F, B>(self, initial: B, f: F) -> Signal<B> where
+        F: 'static + Send + FnMut(&mut B, A),
+        A: 'static + Send + Clone,
+        B: 'static + Send + Clone;
+}
+
 #[cfg(test)] 
 mod test {
     extern crate log;
