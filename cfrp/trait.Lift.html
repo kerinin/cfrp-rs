@@ -43,7 +43,7 @@
     <section id='main' class="content trait">
 <h1 class='fqn'><span class='in-band'>Trait <a href='index.html'>cfrp</a>::<wbr><a class='trait' href=''>Lift</a><wbr></span><span class='out-of-band'><span id='render-detail'>
             <a id="collapse-all" href="#">[-]</a>&nbsp;<a id="expand-all" href="#">[+]</a>
-        </span><a id='src-3758' href='../src/cfrp/lib.rs.html#132-143'>[src]</a></span></h1>
+        </span><a id='src-5439' href='../src/cfrp/lib.rs.html#123-134'>[src]</a></span></h1>
 <pre class='rust trait'>pub trait Lift&lt;A&gt;: <a class='trait' href='../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;A&gt; + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Sized.html' title='core::marker::Sized'>Sized</a> {
     fn <a href='#method.lift' class='fnname'>lift</a>&lt;F, B&gt;(self, f: F) -&gt; <a class='struct' href='../cfrp/primitives/struct.LiftSignal.html' title='cfrp::primitives::LiftSignal'>LiftSignal</a>&lt;F, A, B&gt; <span class='where'>where Self: 'static, F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(A) -&gt; B, A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a>, B: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a></span> { ... }
 }</pre><div class='docblock'><p>Apply a pure function <code>F</code> to a data source <code>Signal&lt;A&gt;</code>, generating a

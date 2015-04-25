@@ -330,15 +330,6 @@
 <span id="288">288</span>
 <span id="289">289</span>
 <span id="290">290</span>
-<span id="291">291</span>
-<span id="292">292</span>
-<span id="293">293</span>
-<span id="294">294</span>
-<span id="295">295</span>
-<span id="296">296</span>
-<span id="297">297</span>
-<span id="298">298</span>
-<span id="299">299</span>
 </pre><pre class='rust '>
 <span class='doccomment'>//! # Concurrent Function Reactive Programming</span>
 <span class='doccomment'>//!</span>
@@ -346,17 +337,6 @@
 <span class='doccomment'>//! executing </span>
 <span class='doccomment'>//! concurrent data flow processes.</span>
 <span class='doccomment'>//!</span>
-<span class='doccomment'>//! If you&#39;re not familiar with Elm or the design behind Evan Czaplicki&#39;s </span>
-<span class='doccomment'>//! Concurrent FRP, you should read [Elm: Concurrent FRP for Functional</span>
-<span class='doccomment'>//! GUIs](http://elm-lang.org/papers/concurrent-frp.pdf) or watch [his talk at</span>
-<span class='doccomment'>//! StrangeLoop 2014](https://www.youtube.com/watch?v=Agu6jipKfYw).</span>
-<span class='doccomment'>//!</span>
-<span class='doccomment'>//! This codebase is larger and more complex than some similar libraries</span>
-<span class='doccomment'>//! ([frp-rust](https://github.com/tiffany352/frp-rust),</span>
-<span class='doccomment'>//! [carboxyl](https://github.com/aepsil0n/carboxyl),</span>
-<span class='doccomment'>//! [rust-frp](https://github.com/glaebhoerl/rust-frp) etc) becasue it handles</span>
-<span class='doccomment'>//! concurrency (and because I&#39;m a Rust newb).  Simplification suggestions welcome!</span>
-<span class='doccomment'>//! </span>
 <span class='doccomment'>//! # Examples</span>
 <span class='doccomment'>//!</span>
 <span class='doccomment'>//! ```</span>
@@ -413,6 +393,8 @@
 <span class='doccomment'>//! // assert_eq!(out, 2);</span>
 <span class='doccomment'>//! ```</span>
 <span class='doccomment'>//!</span>
+<span class='attribute'>#[<span class='ident'>macro_use</span>]</span>
+<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>log</span>;
 
 <span class='kw'>pub</span> <span class='kw'>mod</span> <span class='ident'>primitives</span>;
 <span class='comment'>// mod topology;</span>
