@@ -66,7 +66,8 @@ mod test {
                           (Some(a), Some(b)) => a + b,
                           _ => 0,
                       } 
-                  }).foldp(out_tx.clone(), |tx, a| { tx.send(a); })
+                  })
+                  .foldp(out_tx.clone(), |tx, a| { tx.send(a); })
                  );
 
 
