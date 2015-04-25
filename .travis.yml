@@ -1,0 +1,9 @@
+language: rust
+# script:
+# - make check
+# - make generate
+after_success:
+- test $TRAVIS_PULL_REQUEST == "false" && test $TRAVIS_BRANCH == "master" && bash deploy.sh
+env:
+  global:
+    secure: ak+2t/rSn4z/aMxSYa4UqLCqXP4KENOBXKZGuJsK5FSDNB91jfk1+XwlwNNX79AUmRr350evXo8UqaLAn+ah/3vlbmB2jrxmBagDUjBaxBuwi+l248zUNVh7CEYAQMRqClPdzHWP4q9Fxq8RNQz2YfoRuvXab6/GYSpABE35WPc=
