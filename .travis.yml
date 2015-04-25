@@ -1,9 +1,20 @@
 language: rust
+rust:
+  - 1.0.0-beta
+
 script:
   - cargo test
   - cargo doc
+
 after_success:
 - test $TRAVIS_PULL_REQUEST == "false" && test $TRAVIS_BRANCH == "master" && bash deploy.sh
+
+notifications:
+  email:
+    on_success: never
+    on_failure: change
+
 env:
   global:
     secure: ak+2t/rSn4z/aMxSYa4UqLCqXP4KENOBXKZGuJsK5FSDNB91jfk1+XwlwNNX79AUmRr350evXo8UqaLAn+ah/3vlbmB2jrxmBagDUjBaxBuwi+l248zUNVh7CEYAQMRqClPdzHWP4q9Fxq8RNQz2YfoRuvXab6/GYSpABE35WPc=
+          
