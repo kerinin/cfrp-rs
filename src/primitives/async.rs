@@ -21,7 +21,7 @@ impl<A> Run for Async<A> where
     A: 'static + Send + Clone
 {
     fn run(self: Box<Self>) {
-        println!("Async::run");
+        debug!("Async::run");
 
         let inner = *self;
         let Async { parent, tx } = inner;
@@ -38,7 +38,7 @@ impl<A> Push<A> for AsyncPusher<A> where
     A: 'static + Clone + Send,
 {
     fn push(&mut self, event: Event<A>) {
-        println!("Async handling Event");
+        debug!("Async handling Event");
 
         match event {
             Event::Changed(a) => {

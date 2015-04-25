@@ -37,7 +37,7 @@ impl<F, A, B> Signal<B> for LiftSignal<F, A, B> where
 
         match target {
             Some(t) => {
-                println!("Lift::push_to Some");
+                debug!("Lift::push_to Some");
 
                 parent.push_to(
                     Some(
@@ -52,7 +52,7 @@ impl<F, A, B> Signal<B> for LiftSignal<F, A, B> where
                 );
             },
             None => {
-                println!("Lift::push_to None");
+                debug!("Lift::push_to None");
 
                 parent.push_to(None)
             },
@@ -95,20 +95,20 @@ impl<F, A, B> Push<A> for LiftPusher<F, A, B> where
     fn push(&mut self, event: Event<A>) {
         let out = match event {
             Event::Changed(a) => {
-                println!("LiftPusher handling Event::Changed");
+                debug!("LiftPusher handling Event::Changed");
                 let b = (self.f)(a);
                 Event::Changed(b)
             },
             Event::Unchanged => {
-                println!("LiftPusher handling Event::Unchanged");
+                debug!("LiftPusher handling Event::Unchanged");
                 Event::Unchanged
             },
             Event::NoOp => {
-                println!("LiftPusher handling Event::NoOp");
+                debug!("LiftPusher handling Event::NoOp");
                 Event::NoOp
             },
             Event::Exit => {
-                println!("LiftPusher handling Event::NoOp");
+                debug!("LiftPusher handling Event::NoOp");
                 Event::Exit
             },
         };

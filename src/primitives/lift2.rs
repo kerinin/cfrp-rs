@@ -46,7 +46,7 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
             let pusher = InputPusher {
                 tx: left_tx,
             };
-            println!("Pushing Lift2::InputPusher left");
+            debug!("Pushing Lift2::InputPusher left");
             left.push_to(Some(Box::new(pusher)));
         });
 
@@ -55,7 +55,7 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
             let pusher = InputPusher {
                 tx: right_tx,
             };
-            println!("Pushing Lift2::InputPusher right");
+            debug!("Pushing Lift2::InputPusher right");
             right.push_to(Some(Box::new(pusher)));
         });
 
@@ -185,10 +185,10 @@ impl<A> Push<A> for InputPusher<A> where
     A: 'static + Send,
 {
     fn push(&mut self, event: Event<A>) {
-        println!("Lift2::InputPusher::push");
+        debug!("Lift2::InputPusher::push");
 
         match self.tx.send(event) {
-            Err(e) => { println!("Lift2::InputPusher received error {}", e) },
+            Err(e) => { debug!("Lift2::InputPusher received error {}", e) },
             _ => {},
         }
     }

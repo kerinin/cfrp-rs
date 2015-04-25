@@ -39,7 +39,7 @@ impl<F, A, B> Signal<B> for FoldSignal<F, A, B> where
 
         match target {
             Some(t) => {
-                println!("Fold::push_to Some");
+                debug!("Fold::push_to Some");
 
                 parent.push_to(
                     Some(
@@ -55,7 +55,7 @@ impl<F, A, B> Signal<B> for FoldSignal<F, A, B> where
                 );
             },
             None => {
-                println!("Fold::push_to None");
+                debug!("Fold::push_to None");
 
                 parent.push_to(
                     Some(
@@ -110,13 +110,13 @@ impl<F, A, B> Push<A> for FoldPusher<F, A, B> where
     fn push(&mut self, event: Event<A>) {
         let out = match event {
             Event::Changed(a) => { 
-                println!("FoldPusher handling Event::Changed");
+                debug!("FoldPusher handling Event::Changed");
                 self.cache = Some(a.clone());
                 (self.f)(&mut self.state, a);
                 Event::Changed(self.state.clone())
             },
             Event::Unchanged => {
-                println!("FoldPusher handling Event::Unchanged");
+                debug!("FoldPusher handling Event::Unchanged");
 
                 match self.cache {
                     Some(ref a) => {
@@ -127,11 +127,11 @@ impl<F, A, B> Push<A> for FoldPusher<F, A, B> where
                 }
             },
             Event::NoOp => {
-                println!("FoldPusher handling Event::NoOp");
+                debug!("FoldPusher handling Event::NoOp");
                 Event::NoOp
             },
             Event::Exit => {
-                println!("FoldPusher handling Event::NoOp");
+                debug!("FoldPusher handling Event::NoOp");
                 Event::Exit
             },
         };

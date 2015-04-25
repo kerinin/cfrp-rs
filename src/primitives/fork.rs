@@ -46,7 +46,7 @@ impl<A> Run for Fork<A> where
         let has_branches = !self.sink_txs.lock().unwrap().is_empty();
 
         if has_branches {
-            println!("Fork::run with branches");
+            debug!("Fork::run with branches");
 
             let inner = *self;
             let Fork { parent, sink_txs } = inner;
@@ -61,7 +61,7 @@ impl<A> Run for Fork<A> where
                 )
             )
         } else {
-            println!("Fork::run without branches");
+            debug!("Fork::run without branches");
 
             self.parent.push_to(None);
         }
@@ -77,7 +77,7 @@ impl<A> Push<A> for ForkPusher<A> where
     A: 'static + Clone + Send,
 {
     fn push(&mut self, event: Event<A>) {
-        println!("ForkPusher handling Event");
+        debug!("ForkPusher handling Event");
 
         for sink_tx in self.sink_txs.lock().unwrap().iter() {
             match sink_tx.send(event.clone()) {
@@ -122,7 +122,7 @@ impl<A> Signal<A> for Branch<A> where
     fn push_to(self: Box<Self>, target: Option<Box<Push<A>>>) {
         match (target, self.source_rx) {
             (Some(mut t), Some(rx)) => {
-                println!("Branch::push_to with target");
+                debug!("Branch::push_to with target");
 
                 loop {
                     match rx.recv() {
@@ -132,7 +132,7 @@ impl<A> Signal<A> for Branch<A> where
                 }
             },
             (None, Some(rx)) => {
-                println!("Branch::push_to with empty target");
+                debug!("Branch::push_to with empty target");
 
                 // Just ensuring the channel is drained so we don't get memory leaks
                 loop {
@@ -143,11 +143,11 @@ impl<A> Signal<A> for Branch<A> where
                 }
             },
             (Some(_), None) => {
-                println!("Branch::push_to with no source")
+                debug!("Branch::push_to with no source")
             },
 
             (None, None) => {
-                println!("Branch::push_to with neither target nor source")
+                debug!("Branch::push_to with neither target nor source")
             },
 
         }

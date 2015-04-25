@@ -4,17 +4,6 @@
 //! executing 
 //! concurrent data flow processes.
 //!
-//! If you're not familiar with Elm or the design behind Evan Czaplicki's 
-//! Concurrent FRP, you should read [Elm: Concurrent FRP for Functional
-//! GUIs](http://elm-lang.org/papers/concurrent-frp.pdf) or watch [his talk at
-//! StrangeLoop 2014](https://www.youtube.com/watch?v=Agu6jipKfYw).
-//!
-//! This codebase is larger and more complex than some similar libraries
-//! ([frp-rust](https://github.com/tiffany352/frp-rust),
-//! [carboxyl](https://github.com/aepsil0n/carboxyl),
-//! [rust-frp](https://github.com/glaebhoerl/rust-frp) etc) becasue it handles
-//! concurrency (and because I'm a Rust newb).  Simplification suggestions welcome!
-//! 
 //! # Examples
 //!
 //! ```
@@ -71,6 +60,8 @@
 //! // assert_eq!(out, 2);
 //! ```
 //!
+#[macro_use]
+extern crate log;
 
 pub mod primitives;
 // mod topology;
