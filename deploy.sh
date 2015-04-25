@@ -4,7 +4,7 @@ set -o errexit -o nounset
 
 rev=$(git rev-parse --short HEAD)
 
-cd target/doc/cfrp
+cd target/doc
 
 git init
 git config user.name "Ryan Michael"
