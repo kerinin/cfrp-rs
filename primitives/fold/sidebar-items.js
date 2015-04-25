@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["FoldSignal","The result of a `fold` operation"]]});

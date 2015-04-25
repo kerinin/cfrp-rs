@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Lift2Signal","The result of a `lift2` operation"]]});

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `cfrp` crate.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, cfrp">
+
+    <title>cfrp - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../main.css">
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <section class="sidebar">
+        
+        <p class='location'></p><script>window.sidebarCurrent = {name: 'cfrp', ty: 'mod', relpath: '../'};</script>
+    </section>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press 'S' to search, '?' for more options..."
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content mod">
+<h1 class='fqn'><span class='in-band'>Crate <a class='mod' href=''>cfrp</a><wbr></span><span class='out-of-band'><a href='stability.html'>[stability]</a> <span id='render-detail'>
+            <a id="collapse-all" href="#">[-]</a>&nbsp;<a id="expand-all" href="#">[+]</a>
+        </span><a id='src-0' href='../src/cfrp/lib.rs.html#1-299'>[src]</a></span></h1>
+<div class='docblock'>
+<h1 id="concurrent-function-reactive-programming" class='section-header'><a
+                           href="#concurrent-function-reactive-programming">Concurrent Function Reactive Programming</a></h1>
+<p>Highly influenced by <a href="http://elm-lang.org/">Elm</a> - provides a framework for describing &amp;
+executing 
+concurrent data flow processes.</p>
+
+<p>If you&#39;re not familiar with Elm or the design behind Evan Czaplicki&#39;s 
+Concurrent FRP, you should read <a href="http://elm-lang.org/papers/concurrent-frp.pdf">Elm: Concurrent FRP for Functional
+GUIs</a> or watch <a href="https://www.youtube.com/watch?v=Agu6jipKfYw">his talk at
+StrangeLoop 2014</a>.</p>
+
+<p>This codebase is larger and more complex than some similar libraries
+(<a href="https://github.com/tiffany352/frp-rust">frp-rust</a>,
+<a href="https://github.com/aepsil0n/carboxyl">carboxyl</a>,
+<a href="https://github.com/glaebhoerl/rust-frp">rust-frp</a> etc) becasue it handles
+concurrency (and because I&#39;m a Rust newb).  Simplification suggestions welcome!</p>
+
+<h1 id="examples" class='section-header'><a
+                           href="#examples">Examples</a></h1><pre id='rust-example-rendered' class='rust '>
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>sync</span>::<span class='ident'>mpsc</span>::<span class='op'>*</span>;
+<span class='kw'>use</span> <span class='ident'>cfrp</span>::<span class='op'>*</span>;
+
+<span class='comment'>// create some channels for communicating with the topology</span>
+<span class='kw'>let</span> (<span class='ident'>in_tx</span>, <span class='ident'>in_rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
+<span class='comment'>//let (out_tx, out_rx) = channel();</span>
+ 
+<span class='comment'>// Topologies are statically defined, run-once structures.  Due to how</span>
+<span class='comment'>// concurrency is handled, changes to the graph structure can cause</span>
+<span class='comment'>// inconsistencies in the data processing</span>
+<span class='comment'>// </span>
+<span class='comment'>// You can pass some state in (here we&#39;re passing `(in_rx, out_rx)`) if you need</span>
+<span class='comment'>// to.</span>
+<span class='ident'>spawn_topology</span>( <span class='ident'>in_rx</span>, <span class='op'>|</span><span class='ident'>t</span>, <span class='ident'>in_rx</span><span class='op'>|</span> {
+ 
+    <span class='comment'>// Create a listener on `in_rx`.  Messages received on the channel will be</span>
+    <span class='comment'>// sent to any nodes subscribed to `input`</span>
+    <span class='kw'>let</span> <span class='ident'>input</span> <span class='op'>=</span> <span class='ident'>t</span>.<span class='ident'>add</span>(<span class='ident'>t</span>.<span class='ident'>listen</span>(<span class='ident'>in_rx</span>));
+ 
+    <span class='comment'>// Basic map operation.  Since this is a pure function, it will only be</span>
+    <span class='comment'>// evaluated when the value of `input` changes</span>
+    <span class='kw'>let</span> <span class='ident'>plus_one</span> <span class='op'>=</span> <span class='ident'>t</span>.<span class='ident'>add</span>(<span class='ident'>input</span>.<span class='ident'>lift</span>(<span class='op'>|</span><span class='ident'>i</span><span class='op'>|</span> <span class='op'>-&gt;</span> <span class='ident'>usize</span> { <span class='ident'>i</span> <span class='op'>+</span> <span class='number'>1</span> }));
+ 
+    <span class='comment'>// The return value of `add` implements `Clone`, and can be used to</span>
+    <span class='comment'>// &#39;fan-out&#39; data</span>
+    <span class='kw'>let</span> <span class='ident'>plus_two</span> <span class='op'>=</span> <span class='ident'>plus_one</span>.<span class='ident'>clone</span>().<span class='ident'>lift</span>(<span class='op'>|</span><span class='ident'>i</span><span class='op'>|</span> <span class='op'>-&gt;</span> <span class='ident'>usize</span> { <span class='ident'>i</span> <span class='op'>+</span> <span class='number'>2</span> });
+ 
+    <span class='comment'>// We can combine signals too.  Since it&#39;s possible to receive input on one</span>
+    <span class='comment'>// side but not the other, `lift2` always passes `Option&lt;T&gt;` to its</span>
+    <span class='comment'>// function.  Like `lift`, this function is only called when needed</span>
+    <span class='kw'>let</span> <span class='ident'>combined</span> <span class='op'>=</span> <span class='ident'>plus_one</span>.<span class='ident'>lift2</span>(<span class='ident'>plus_two</span>, <span class='op'>|</span><span class='ident'>i</span>, <span class='ident'>j</span><span class='op'>|</span> <span class='op'>-&gt;</span> <span class='ident'>usize</span> {
+        <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;lifting&quot;</span>);
+        <span class='kw'>match</span> (<span class='ident'>i</span>, <span class='ident'>j</span>) {
+            (<span class='prelude-val'>Some</span>(<span class='ident'>a</span>), <span class='prelude-val'>Some</span>(<span class='ident'>b</span>)) <span class='op'>=&gt;</span> <span class='ident'>a</span> <span class='op'>+</span> <span class='ident'>b</span>,
+            _ <span class='op'>=&gt;</span> <span class='number'>0</span>,
+        } 
+    });
+ 
+    <span class='comment'>// `fold` allows us to track state across events.  Since this is assumed to</span>
+    <span class='comment'>// be impure, it is called any time a signal is received upstream of</span>
+    <span class='comment'>// `combined`.</span>
+    <span class='kw'>let</span> <span class='ident'>accumulated</span> <span class='op'>=</span> <span class='ident'>combined</span>.<span class='ident'>fold</span>(<span class='number'>0</span>, <span class='op'>|</span><span class='ident'>sum</span>, <span class='ident'>i</span><span class='op'>|</span> { <span class='op'>*</span><span class='ident'>sum</span> <span class='op'>+=</span> <span class='ident'>i</span>; });
+ 
+    <span class='comment'>// Make sure to add transformations to the topology - if it&#39;s not added it</span>
+    <span class='comment'>// won&#39;t be run...</span>
+    <span class='ident'>t</span>.<span class='ident'>add</span>(<span class='ident'>accumulated</span>);
+});
+
+<span class='ident'>in_tx</span>.<span class='ident'>send</span>(<span class='number'>1usize</span>).<span class='ident'>unwrap</span>();
+<span class='comment'>// let out: usize = out_rx.recv().unwrap();</span>
+<span class='comment'>// assert_eq!(out, 2);</span>
+</pre>
+</div><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
+<table>
+                    <tr>
+                        <td><a class='stability Unmarked' title='No stability level'></a><a class='mod' href='primitives/index.html'
+                               title='cfrp::primitives'>primitives</a></td>
+                        <td class='docblock short'></td>
+                    </tr>
+                </table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table>
+                    <tr>
+                        <td><a class='stability Unmarked' title='No stability level'></a><a class='enum' href='enum.Event.html'
+                               title='cfrp::Event'>Event</a></td>
+                        <td class='docblock short'><p>Container for data as it flows across the topology</p>
+</td>
+                    </tr>
+                </table><h2 id='traits' class='section-header'><a href="#traits">Traits</a></h2>
+<table>
+                    <tr>
+                        <td><a class='stability Unmarked' title='No stability level'></a><a class='trait' href='trait.Fold.html'
+                               title='cfrp::Fold'>Fold</a></td>
+                        <td class='docblock short'><p>Apply a function <code>F</code> which uses a data source <code>Signal&lt;A&gt;</code> to
+mutate an instance of <code>B</code>, generating an output data source <code>Signal&lt;B&gt;</code>
+containing the mutated value</p>
+</td>
+                    </tr>
+                
+                    <tr>
+                        <td><a class='stability Unmarked' title='No stability level'></a><a class='trait' href='trait.Lift.html'
+                               title='cfrp::Lift'>Lift</a></td>
+                        <td class='docblock short'><p>Apply a pure function <code>F</code> to a data source <code>Signal&lt;A&gt;</code>, generating a
+transformed output data source <code>Signal&lt;B&gt;</code>.</p>
+</td>
+                    </tr>
+                
+                    <tr>
+                        <td><a class='stability Unmarked' title='No stability level'></a><a class='trait' href='trait.Lift2.html'
+                               title='cfrp::Lift2'>Lift2</a></td>
+                        <td class='docblock short'><p>Apply a pure function <code>F</code> to a two data sources <code>Signal&lt;A&gt;</code>, and <code>Signal&lt;B&gt;</code>,
+generating a transformed output data source <code>Signal&lt;C&gt;</code>.</p>
+</td>
+                    </tr>
+                
+                    <tr>
+                        <td><a class='stability Unmarked' title='No stability level'></a><a class='trait' href='trait.Push.html'
+                               title='cfrp::Push'>Push</a></td>
+                        <td class='docblock short'><p>Types which can receive incoming data from other signals</p>
+</td>
+                    </tr>
+                
+                    <tr>
+                        <td><a class='stability Unmarked' title='No stability level'></a><a class='trait' href='trait.Signal.html'
+                               title='cfrp::Signal'>Signal</a></td>
+                        <td class='docblock short'><p>Types which can serve as a data source</p>
+</td>
+                    </tr>
+                </table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
+<table>
+                    <tr>
+                        <td><a class='stability Unmarked' title='No stability level'></a><a class='fn' href='fn.spawn_topology.html'
+                               title='cfrp::spawn_topology'>spawn_topology</a></td>
+                        <td class='docblock short'><p>Construct a new topology and run it</p>
+</td>
+                    </tr>
+                </table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <div id="help" class="hidden">
+        <div class="shortcuts">
+            <h1>Keyboard shortcuts</h1>
+            <dl>
+                <dt>?</dt>
+                <dd>Show this help dialog</dd>
+                <dt>S</dt>
+                <dd>Focus the search field</dd>
+                <dt>&larrb;</dt>
+                <dd>Move up in search results</dd>
+                <dt>&rarrb;</dt>
+                <dd>Move down in search results</dd>
+                <dt>&#9166;</dt>
+                <dd>Go to active search result</dd>
+            </dl>
+        </div>
+        <div class="infos">
+            <h1>Search tricks</h1>
+            <p>
+                Prefix searches with a type followed by a colon (e.g.
+                <code>fn:</code>) to restrict the search to a given type.
+            </p>
+            <p>
+                Accepted types are: <code>fn</code>, <code>mod</code>,
+                <code>struct</code>, <code>enum</code>,
+                <code>trait</code>, <code>typedef</code> (or
+                <code>tdef</code>).
+            </p>
+        </div>
+    </div>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "cfrp";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../jquery.js"></script>
+    <script src="../main.js"></script>
+    
+    <script async src="../search-index.js"></script>
+</body>
+</html>

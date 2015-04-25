@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Fold` trait in crate `cfrp`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Fold">
+
+    <title>cfrp::Fold - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../main.css">
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <section class="sidebar">
+        
+        <p class='location'><a href='index.html'>cfrp</a></p><script>window.sidebarCurrent = {name: 'Fold', ty: 'trait', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </section>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press 'S' to search, '?' for more options..."
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content trait">
+<h1 class='fqn'><span class='in-band'>Trait <a href='index.html'>cfrp</a>::<wbr><a class='trait' href=''>Fold</a><wbr></span><span class='out-of-band'><span id='render-detail'>
+            <a id="collapse-all" href="#">[-]</a>&nbsp;<a id="expand-all" href="#">[+]</a>
+        </span><a id='src-3871' href='../src/cfrp/lib.rs.html#217-228'>[src]</a></span></h1>
+<pre class='rust trait'>pub trait Fold&lt;A&gt;: <a class='trait' href='../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;A&gt; + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Sized.html' title='core::marker::Sized'>Sized</a> {
+    fn <a href='#method.fold' class='fnname'>fold</a>&lt;F, B&gt;(self, initial: B, f: F) -&gt; <a class='struct' href='../cfrp/primitives/struct.FoldSignal.html' title='cfrp::primitives::FoldSignal'>FoldSignal</a>&lt;F, A, B&gt; <span class='where'>where Self: 'static, F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.FnMut.html' title='core::ops::FnMut'>FnMut</a>(&amp;mut B, A), A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>, B: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span> { ... }
+}</pre><div class='docblock'><p>Apply a function <code>F</code> which uses a data source <code>Signal&lt;A&gt;</code> to
+mutate an instance of <code>B</code>, generating an output data source <code>Signal&lt;B&gt;</code>
+containing the mutated value</p>
+
+<p>Other names for this operation include &quot;reduce&quot; or &quot;inject&quot;.  <code>f</code> will
+be run in <code>self</code>&#39;s thread</p>
+
+<p>Fold is assumed to be impure, therefore the function will be called with
+all data upstream of the fold, even if there are no changes in the stream.</p>
+
+<h1 id="example" class='section-header'><a
+                           href="#example">Example</a></h1><pre id='rust-example-rendered' class='rust '>
+<span class='kw'>use</span> <span class='ident'>cfrp</span>::<span class='op'>*</span>;
+<span class='kw'>use</span> <span class='ident'>cfrp</span>::<span class='ident'>primitives</span>::<span class='op'>*</span>;
+
+<span class='comment'>// Create a constant-valued channel with value 1 and fold it into a summation</span>
+<span class='ident'>Builder</span>::<span class='ident'>new</span>().<span class='ident'>value</span>(<span class='number'>1</span>)
+    .<span class='ident'>fold</span>(<span class='number'>0</span>, <span class='op'>|</span><span class='ident'>sum</span>, <span class='ident'>i</span><span class='op'>|</span> { <span class='op'>*</span><span class='ident'>sum</span> <span class='op'>+=</span> <span class='ident'>i</span> });
+</pre>
+</div>
+            <h2 id='provided-methods'>Provided Methods</h2>
+            <div class='methods'>
+        <h3 id='method.fold' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.fold' class='fnname'>fold</a>&lt;F, B&gt;(self, initial: B, f: F) -&gt; <a class='struct' href='../cfrp/primitives/struct.FoldSignal.html' title='cfrp::primitives::FoldSignal'>FoldSignal</a>&lt;F, A, B&gt; <span class='where'>where Self: 'static, F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.FnMut.html' title='core::ops::FnMut'>FnMut</a>(&amp;mut B, A), A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>, B: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></h3></div>
+        <h2 id='implementors'>Implementors</h2>
+        <ul class='item-list' id='implementors-list'>
+    <li><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;F, A, B&gt; <a class='trait' href='../cfrp/trait.Fold.html' title='cfrp::Fold'>Fold</a>&lt;B&gt; for <a class='struct' href='../cfrp/primitives/struct.FoldSignal.html' title='cfrp::primitives::FoldSignal'>FoldSignal</a>&lt;F, A, B&gt; <span class='where'>where F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.FnMut.html' title='core::ops::FnMut'>FnMut</a>(&amp;mut B, A), A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>, B: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></li>
+<li><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;F, A, B&gt; <a class='trait' href='../cfrp/trait.Fold.html' title='cfrp::Fold'>Fold</a>&lt;B&gt; for <a class='struct' href='../cfrp/primitives/struct.LiftSignal.html' title='cfrp::primitives::LiftSignal'>LiftSignal</a>&lt;F, A, B&gt; <span class='where'>where F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(A) -&gt; B, A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a>, B: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a></span></code></li>
+<li><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;F, A, B, C&gt; <a class='trait' href='../cfrp/trait.Fold.html' title='cfrp::Fold'>Fold</a>&lt;C&gt; for <a class='struct' href='../cfrp/primitives/struct.Lift2Signal.html' title='cfrp::primitives::Lift2Signal'>Lift2Signal</a>&lt;F, A, B, C&gt; <span class='where'>where F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(<a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;A&gt;, <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;B&gt;) -&gt; C, A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>, B: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>, C: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></li>
+</ul><script type="text/javascript" async
+                              src="../implementors/cfrp/trait.Fold.js">
+                      </script></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <div id="help" class="hidden">
+        <div class="shortcuts">
+            <h1>Keyboard shortcuts</h1>
+            <dl>
+                <dt>?</dt>
+                <dd>Show this help dialog</dd>
+                <dt>S</dt>
+                <dd>Focus the search field</dd>
+                <dt>&larrb;</dt>
+                <dd>Move up in search results</dd>
+                <dt>&rarrb;</dt>
+                <dd>Move down in search results</dd>
+                <dt>&#9166;</dt>
+                <dd>Go to active search result</dd>
+            </dl>
+        </div>
+        <div class="infos">
+            <h1>Search tricks</h1>
+            <p>
+                Prefix searches with a type followed by a colon (e.g.
+                <code>fn:</code>) to restrict the search to a given type.
+            </p>
+            <p>
+                Accepted types are: <code>fn</code>, <code>mod</code>,
+                <code>struct</code>, <code>enum</code>,
+                <code>trait</code>, <code>typedef</code> (or
+                <code>tdef</code>).
+            </p>
+        </div>
+    </div>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "cfrp";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../jquery.js"></script>
+    <script src="../main.js"></script>
+    
+    <script async src="../search-index.js"></script>
+</body>
+</html>
