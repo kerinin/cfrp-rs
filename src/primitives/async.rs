@@ -48,9 +48,12 @@ impl<A> Push<A> for AsyncPusher<A> where
                 }
             },
             Event::Unchanged => {
-                // NOTE: Send cached value
+                // No change, so no point in pushing...
             },
-            Event::Exit => {}
+            Event::Exit => {
+                // Exit should be propagated to all top-level inputs anyway, so
+                // nothing to do here...
+            }
         }
     }
 }

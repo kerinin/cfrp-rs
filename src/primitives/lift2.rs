@@ -1,7 +1,7 @@
 use std::thread;
 use std::sync::mpsc::*;
 
-use super::super::{Event, Signal, SignalType, Push, Lift, Lift2, Fold};
+use super::super::{Event, Signal, SignalType, Push};
 
 /// The result of a `lift2` operation
 ///
@@ -132,26 +132,6 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
         }
     }
 }
-
-impl<F, A, B, C> Lift<C> for Lift2Signal<F, A, B, C> where
-    F: 'static + Send + Fn(A, B) -> C,
-    A: 'static + Send + Clone,
-    B: 'static + Send + Clone,
-    C: 'static + Send + Clone,
-{}
-impl<F, A, B, C, D, SD> Lift2<C, D, SD> for Lift2Signal<F, A, B, C> where
-    F: 'static + Send + Fn(A, B) -> C,
-    A: 'static + Send + Clone,
-    B: 'static + Send + Clone,
-    C: 'static + Send + Clone,
-{}
-impl<F, A, B, C> Fold<C> for Lift2Signal<F, A, B, C> where
-    F: 'static + Send + Fn(A, B) -> C,
-    A: 'static + Send + Clone,
-    B: 'static + Send + Clone,
-    C: 'static + Send + Clone,
-{}
-
 
 // Passed up the 'push_to' chain, finalizes by sending to a channel
 struct InputPusher<A> {

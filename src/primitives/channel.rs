@@ -1,6 +1,6 @@
 use std::sync::mpsc::*;
 
-use super::super::{Event, Signal, SignalType, Push, Lift, Lift2, Fold};
+use super::super::{Event, Signal, SignalType, Push};
 
 pub struct Channel<A> where
     A: 'static + Send + Clone,
@@ -61,7 +61,3 @@ impl<A> Signal<A> for Channel<A> where
         }
     }
 }
-
-impl<A> Lift<A> for Channel<A> where A: 'static + Send + Clone, {}
-impl<A, B, SB> Lift2<A, B, SB> for Channel<A>  where A: 'static + Send + Clone {}
-impl<A> Fold<A> for Channel<A> where A: 'static + Send + Clone {}

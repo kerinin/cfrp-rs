@@ -97,7 +97,7 @@ impl Builder {
     /// let signal = b.listen(0, rx);
     /// ```
     ///
-    pub fn listen<A>(&self, initial: A, input: Receiver<A>) -> Channel<A> where
+    pub fn listen<A>(&self, initial: A, input: Receiver<A>) -> Box<Signal<A>> where
         A: 'static + Clone + Send,
     {
         let (tx, rx) = sync_channel(0);
@@ -106,7 +106,7 @@ impl Builder {
 
         self.inputs.borrow_mut().push(Box::new(runner));
 
-        Channel::new(rx, initial)
+        Box::new(Channel::new(rx, initial))
     }
 
     /// Combination of adding a signal and a channel
@@ -143,24 +143,11 @@ impl Builder {
 
         match root.initial() {
             SignalType::Dynamic(v) => {
-                // Push data from `root` to an internal input
-                let (input_tx, input_rx) = channel();
-
-                let pusher = Async::new(Box::new(root), input_tx);
-
+                let (tx, rx) = channel();
+                let pusher = Async::new(Box::new(root), tx);
                 self.root_signals.borrow_mut().push(Box::new(pusher));
 
-
-
-                // Push data from internal signal to channel
-
-                let (output_tx, output_rx) = sync_channel(0);
-
-                let runner = ReceiverInput::new(input_rx, output_tx);
-
-                self.inputs.borrow_mut().push(Box::new(runner));
-
-                Box::new(Channel::new(output_rx, v))
+                self.listen(v, rx)
             }
 
             SignalType::Constant(v) => {

@@ -1,7 +1,7 @@
 use std::sync::*;
 use std::sync::mpsc::*;
 
-use super::super::{Event, Signal, SignalType, Push, Lift, Lift2, Fold};
+use super::super::{Event, Signal, SignalType, Push};
 
 pub trait Run: Send {
     fn run(mut self: Box<Self>);
@@ -173,13 +173,3 @@ impl<A> Clone for Branch<A> where
         Branch { fork_txs: self.fork_txs.clone(), source_rx: None, initial: self.initial.clone() }
     }
 }
-
-impl<A> Lift<A> for Branch<A> where
-    A: 'static + Send + Clone,
-{}
-impl<A, B, SB> Lift2<A, B, SB> for Branch<A> where
-    A: 'static + Send + Clone,
-{}
-impl<A> Fold<A> for Branch<A> where
-    A: 'static + Send + Clone,
-{}

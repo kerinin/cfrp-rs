@@ -1,6 +1,6 @@
 use std::marker::*;
 
-use super::super::{Event, Signal, SignalType, Push, Lift, Lift2, Fold};
+use super::super::{Event, Signal, SignalType, Push};
 
 /// The result of a `fold` operation
 ///
@@ -77,23 +77,6 @@ impl<F, A, B> Signal<B> for FoldSignal<F, A, B> where
         }
     }
 }
-
-impl<F, A, B> Lift<B> for FoldSignal<F, A, B> where
-    F: 'static + Send + FnMut(&mut B, A),
-    A: 'static + Send + Clone,
-    B: 'static + Send + Clone,
-{}
-impl<F, A, B, C, SC> Lift2<B, C, SC> for FoldSignal<F, A, B> where
-    F: 'static + Send + FnMut(&mut B, A),
-    A: 'static + Send + Clone,
-    B: 'static + Send + Clone,
-{}
-impl<F, A, B> Fold<B> for FoldSignal<F, A, B> where
-    F: 'static + Send + FnMut(&mut B, A),
-    A: 'static + Send + Clone,
-    B: 'static + Send + Clone,
-{}
-
 
 struct FoldPusher<F, A, B> where
     F: 'static + Send + FnMut(&mut B, A),
