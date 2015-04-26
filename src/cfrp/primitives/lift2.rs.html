@@ -216,25 +216,6 @@
 <span id="174">174</span>
 <span id="175">175</span>
 <span id="176">176</span>
-<span id="177">177</span>
-<span id="178">178</span>
-<span id="179">179</span>
-<span id="180">180</span>
-<span id="181">181</span>
-<span id="182">182</span>
-<span id="183">183</span>
-<span id="184">184</span>
-<span id="185">185</span>
-<span id="186">186</span>
-<span id="187">187</span>
-<span id="188">188</span>
-<span id="189">189</span>
-<span id="190">190</span>
-<span id="191">191</span>
-<span id="192">192</span>
-<span id="193">193</span>
-<span id="194">194</span>
-<span id="195">195</span>
 </pre><pre class='rust '>
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>thread</span>;
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>sync</span>::<span class='ident'>mpsc</span>::<span class='op'>*</span>;
@@ -344,41 +325,22 @@
                             <span class='ident'>t</span>.<span class='ident'>push</span>(<span class='ident'>Event</span>::<span class='ident'>Unchanged</span>);
                         }
 
-                        (<span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>Changed</span>(<span class='ident'>l</span>)), <span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>NoOp</span>)) <span class='op'>=&gt;</span> {
-                            <span class='ident'>cached_left</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>l</span>.<span class='ident'>clone</span>());
-
-                            <span class='kw'>let</span> <span class='ident'>c</span> <span class='op'>=</span> <span class='ident'>f</span>(<span class='prelude-val'>Some</span>(<span class='ident'>l</span>), <span class='prelude-val'>None</span>);
-                            <span class='ident'>t</span>.<span class='ident'>push</span>(<span class='ident'>Event</span>::<span class='ident'>Changed</span>(<span class='ident'>c</span>));
+                        (<span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>Exit</span>), _) <span class='op'>=&gt;</span> {
+                            <span class='ident'>t</span>.<span class='ident'>push</span>(<span class='ident'>Event</span>::<span class='ident'>Exit</span>);
+                            <span class='comment'>// return</span>
                         }
 
-                        (<span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>NoOp</span>), <span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>Changed</span>(<span class='ident'>r</span>))) <span class='op'>=&gt;</span> {
-                            <span class='ident'>cached_right</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>r</span>.<span class='ident'>clone</span>());
-
-                            <span class='kw'>let</span> <span class='ident'>c</span> <span class='op'>=</span> <span class='ident'>f</span>(<span class='prelude-val'>None</span>, <span class='prelude-val'>Some</span>(<span class='ident'>r</span>));
-                            <span class='ident'>t</span>.<span class='ident'>push</span>(<span class='ident'>Event</span>::<span class='ident'>Changed</span>(<span class='ident'>c</span>));
+                        (_, <span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>Exit</span>)) <span class='op'>=&gt;</span> {
+                            <span class='ident'>t</span>.<span class='ident'>push</span>(<span class='ident'>Event</span>::<span class='ident'>Exit</span>);
+                            <span class='comment'>// return</span>
                         }
 
-                        (<span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>Unchanged</span>), <span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>NoOp</span>)) <span class='op'>=&gt;</span> {
-                            <span class='kw'>match</span> <span class='ident'>cached_left</span> {
-                                <span class='prelude-val'>Some</span>(<span class='kw-2'>ref</span> <span class='ident'>l</span>) <span class='op'>=&gt;</span> {
-                                    <span class='kw'>let</span> <span class='ident'>c</span> <span class='op'>=</span> <span class='ident'>f</span>(<span class='prelude-val'>Some</span>(<span class='ident'>l</span>.<span class='ident'>clone</span>()), <span class='prelude-val'>None</span>);
-                                    <span class='ident'>t</span>.<span class='ident'>push</span>(<span class='ident'>Event</span>::<span class='ident'>Changed</span>(<span class='ident'>c</span>));
-                                }
-                                <span class='prelude-val'>None</span> <span class='op'>=&gt;</span> <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;No cached right value&quot;</span>),
-                            }
+                        (<span class='prelude-val'>Err</span>(_), _) <span class='op'>=&gt;</span> {
+                            <span class='ident'>t</span>.<span class='ident'>push</span>(<span class='ident'>Event</span>::<span class='ident'>Exit</span>);
                         }
 
-                        (<span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>NoOp</span>), <span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>Unchanged</span>)) <span class='op'>=&gt;</span> {
-                            <span class='kw'>match</span> <span class='ident'>cached_right</span> {
-                                <span class='prelude-val'>Some</span>(<span class='kw-2'>ref</span> <span class='ident'>r</span>) <span class='op'>=&gt;</span> {
-                                    <span class='kw'>let</span> <span class='ident'>c</span> <span class='op'>=</span> <span class='ident'>f</span>(<span class='prelude-val'>None</span>, <span class='prelude-val'>Some</span>(<span class='ident'>r</span>.<span class='ident'>clone</span>()));
-                                    <span class='ident'>t</span>.<span class='ident'>push</span>(<span class='ident'>Event</span>::<span class='ident'>Changed</span>(<span class='ident'>c</span>));
-                                }
-                                <span class='prelude-val'>None</span> <span class='op'>=&gt;</span> <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;No cached right value&quot;</span>),
-                            }
-                        }
-
-                        (_, _) <span class='op'>=&gt;</span> {
+                        (_, <span class='prelude-val'>Err</span>(_)) <span class='op'>=&gt;</span> {
+                            <span class='ident'>t</span>.<span class='ident'>push</span>(<span class='ident'>Event</span>::<span class='ident'>Exit</span>);
                         }
                     }
                 }

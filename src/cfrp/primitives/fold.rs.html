@@ -172,18 +172,6 @@
 <span id="130">130</span>
 <span id="131">131</span>
 <span id="132">132</span>
-<span id="133">133</span>
-<span id="134">134</span>
-<span id="135">135</span>
-<span id="136">136</span>
-<span id="137">137</span>
-<span id="138">138</span>
-<span id="139">139</span>
-<span id="140">140</span>
-<span id="141">141</span>
-<span id="142">142</span>
-<span id="143">143</span>
-<span id="144">144</span>
 </pre><pre class='rust '>
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>marker</span>::<span class='op'>*</span>;
 
@@ -235,7 +223,7 @@
                                 <span class='ident'>child</span>: <span class='prelude-val'>Some</span>(<span class='ident'>t</span>),
                                 <span class='ident'>f</span>: <span class='ident'>f</span>,
                                 <span class='ident'>state</span>: <span class='ident'>state</span>,
-                                <span class='ident'>cache</span>: <span class='prelude-val'>None</span>,
+                                <span class='ident'>marker</span>: <span class='ident'>PhantomData</span>,
                             }
                         )
                     )
@@ -251,7 +239,7 @@
                                 <span class='ident'>child</span>: <span class='prelude-val'>None</span>,
                                 <span class='ident'>f</span>: <span class='ident'>f</span>,
                                 <span class='ident'>state</span>: <span class='ident'>state</span>,
-                                <span class='ident'>cache</span>: <span class='prelude-val'>None</span>,
+                                <span class='ident'>marker</span>: <span class='ident'>PhantomData</span>,
                             }
                         )
                     )
@@ -286,7 +274,7 @@
     <span class='ident'>child</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Push</span><span class='op'>&lt;</span><span class='ident'>B</span><span class='op'>&gt;&gt;</span><span class='op'>&gt;</span>,
     <span class='ident'>f</span>: <span class='ident'>F</span>,
     <span class='ident'>state</span>: <span class='ident'>B</span>,
-    <span class='ident'>cache</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span>,
+    <span class='ident'>marker</span>: <span class='ident'>PhantomData</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span>,
 }
 
 <span class='kw'>impl</span><span class='op'>&lt;</span><span class='ident'>F</span>, <span class='ident'>A</span>, <span class='ident'>B</span><span class='op'>&gt;</span> <span class='ident'>Push</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>FoldPusher</span><span class='op'>&lt;</span><span class='ident'>F</span>, <span class='ident'>A</span>, <span class='ident'>B</span><span class='op'>&gt;</span> <span class='kw'>where</span>
@@ -298,24 +286,12 @@
         <span class='kw'>let</span> <span class='ident'>out</span> <span class='op'>=</span> <span class='kw'>match</span> <span class='ident'>event</span> {
             <span class='ident'>Event</span>::<span class='ident'>Changed</span>(<span class='ident'>a</span>) <span class='op'>=&gt;</span> { 
                 <span class='macro'>debug</span><span class='macro'>!</span>(<span class='string'>&quot;FoldPusher handling Event::Changed&quot;</span>);
-                <span class='self'>self</span>.<span class='ident'>cache</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>a</span>.<span class='ident'>clone</span>());
                 (<span class='self'>self</span>.<span class='ident'>f</span>)(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>.<span class='ident'>state</span>, <span class='ident'>a</span>);
                 <span class='ident'>Event</span>::<span class='ident'>Changed</span>(<span class='self'>self</span>.<span class='ident'>state</span>.<span class='ident'>clone</span>())
             },
             <span class='ident'>Event</span>::<span class='ident'>Unchanged</span> <span class='op'>=&gt;</span> {
                 <span class='macro'>debug</span><span class='macro'>!</span>(<span class='string'>&quot;FoldPusher handling Event::Unchanged&quot;</span>);
-
-                <span class='kw'>match</span> <span class='self'>self</span>.<span class='ident'>cache</span> {
-                    <span class='prelude-val'>Some</span>(<span class='kw-2'>ref</span> <span class='ident'>a</span>) <span class='op'>=&gt;</span> {
-                        (<span class='self'>self</span>.<span class='ident'>f</span>)(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>.<span class='ident'>state</span>, <span class='ident'>a</span>.<span class='ident'>clone</span>());
-                        <span class='ident'>Event</span>::<span class='ident'>Changed</span>(<span class='self'>self</span>.<span class='ident'>state</span>.<span class='ident'>clone</span>())
-                    },
-                    <span class='prelude-val'>None</span> <span class='op'>=&gt;</span> <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;FoldPusher handling Event::Unchanged (no cached data)&quot;</span>),
-                }
-            },
-            <span class='ident'>Event</span>::<span class='ident'>NoOp</span> <span class='op'>=&gt;</span> {
-                <span class='macro'>debug</span><span class='macro'>!</span>(<span class='string'>&quot;FoldPusher handling Event::NoOp&quot;</span>);
-                <span class='ident'>Event</span>::<span class='ident'>NoOp</span>
+                <span class='ident'>Event</span>::<span class='ident'>Unchanged</span>
             },
             <span class='ident'>Event</span>::<span class='ident'>Exit</span> <span class='op'>=&gt;</span> {
                 <span class='macro'>debug</span><span class='macro'>!</span>(<span class='string'>&quot;FoldPusher handling Event::NoOp&quot;</span>);

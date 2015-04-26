@@ -43,7 +43,7 @@
     <section id='main' class="content mod">
 <h1 class='fqn'><span class='in-band'>Crate <a class='mod' href=''>cfrp</a><wbr></span><span class='out-of-band'><a href='stability.html'>[stability]</a> <span id='render-detail'>
             <a id="collapse-all" href="#">[-]</a>&nbsp;<a id="expand-all" href="#">[+]</a>
-        </span><a id='src-0' href='../src/cfrp/lib.rs.html#1-290'>[src]</a></span></h1>
+        </span><a id='src-0' href='../src/cfrp/lib.rs.html#1-291'>[src]</a></span></h1>
 <div class='docblock'>
 <h1 id="concurrent-function-reactive-programming" class='section-header'><a
                            href="#concurrent-function-reactive-programming">Concurrent Function Reactive Programming</a></h1>
@@ -70,7 +70,7 @@ concurrent data flow processes.</p>
  
     <span class='comment'>// Create a listener on `in_rx`.  Messages received on the channel will be</span>
     <span class='comment'>// sent to any nodes subscribed to `input`</span>
-    <span class='kw'>let</span> <span class='ident'>input</span> <span class='op'>=</span> <span class='ident'>t</span>.<span class='ident'>add</span>(<span class='ident'>t</span>.<span class='ident'>listen</span>(<span class='ident'>in_rx</span>));
+    <span class='kw'>let</span> <span class='ident'>input</span> <span class='op'>=</span> <span class='ident'>t</span>.<span class='ident'>add</span>(<span class='ident'>t</span>.<span class='ident'>listen</span>(<span class='number'>0</span>, <span class='ident'>in_rx</span>));
  
     <span class='comment'>// Basic map operation.  Since this is a pure function, it will only be</span>
     <span class='comment'>// evaluated when the value of `input` changes</span>

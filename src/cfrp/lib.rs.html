@@ -330,6 +330,7 @@
 <span id="288">288</span>
 <span id="289">289</span>
 <span id="290">290</span>
+<span id="291">291</span>
 </pre><pre class='rust '>
 <span class='doccomment'>//! # Concurrent Function Reactive Programming</span>
 <span class='doccomment'>//!</span>
@@ -357,7 +358,7 @@
 <span class='doccomment'>//! </span>
 <span class='doccomment'>//!     // Create a listener on `in_rx`.  Messages received on the channel will be</span>
 <span class='doccomment'>//!     // sent to any nodes subscribed to `input`</span>
-<span class='doccomment'>//!     let input = t.add(t.listen(in_rx));</span>
+<span class='doccomment'>//!     let input = t.add(t.listen(0, in_rx));</span>
 <span class='doccomment'>//! </span>
 <span class='doccomment'>//!     // Basic map operation.  Since this is a pure function, it will only be</span>
 <span class='doccomment'>//!     // evaluated when the value of `input` changes</span>
@@ -405,12 +406,14 @@
 <span class='kw'>use</span> <span class='ident'>primitives</span>::<span class='ident'>Lift2Signal</span>;
 <span class='kw'>use</span> <span class='ident'>primitives</span>::<span class='ident'>FoldSignal</span>;
 
+
+
+
 <span class='doccomment'>/// Container for data as it flows across the topology</span>
 <span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Clone</span>)]</span>
 <span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>Event</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span> {
     <span class='ident'>Changed</span>(<span class='ident'>A</span>),
     <span class='ident'>Unchanged</span>,
-    <span class='ident'>NoOp</span>,
     <span class='ident'>Exit</span>,
 }
 
@@ -579,46 +582,45 @@
 
 <span class='attribute'>#[<span class='ident'>cfg</span>(<span class='ident'>test</span>)]</span> 
 <span class='kw'>mod</span> <span class='ident'>test</span> {
-    <span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>log</span>;
+    <span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>env_logger</span>;
 
-    <span class='comment'>// extern crate quickcheck;</span>
     <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>sync</span>::<span class='ident'>mpsc</span>::<span class='op'>*</span>;
 
     <span class='kw'>use</span> <span class='ident'>super</span>::<span class='op'>*</span>;
 
     <span class='attribute'>#[<span class='ident'>test</span>]</span>
     <span class='kw'>fn</span> <span class='ident'>integration</span>() {
-        <span class='kw'>let</span> (<span class='ident'>in_tx</span>, <span class='ident'>in_rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
-        <span class='kw'>let</span> (<span class='ident'>out_tx</span>, <span class='ident'>out_rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
+        <span class='ident'>env_logger</span>::<span class='ident'>init</span>().<span class='ident'>unwrap</span>();
 
-        <span class='ident'>spawn_topology</span>((<span class='ident'>in_rx</span>, <span class='ident'>out_tx</span>), <span class='op'>|</span><span class='ident'>t</span>, (<span class='ident'>in_rx</span>, <span class='ident'>out_tx</span>)<span class='op'>|</span> {
+        <span class='kw'>let</span> (<span class='ident'>out_tx</span>, <span class='ident'>out_rx</span>) <span class='op'>=</span> <span class='ident'>sync_channel</span>(<span class='number'>0</span>);
 
-            <span class='kw'>let</span> <span class='ident'>input</span> <span class='op'>=</span> <span class='ident'>t</span>.<span class='ident'>add</span>(<span class='ident'>t</span>.<span class='ident'>listen</span>(<span class='ident'>in_rx</span>));
+        <span class='ident'>spawn_topology</span>(<span class='ident'>out_tx</span>, <span class='op'>|</span><span class='ident'>t</span>, <span class='ident'>out_tx</span><span class='op'>|</span> {
+
+            <span class='kw'>let</span> <span class='ident'>input</span> <span class='op'>=</span> <span class='ident'>t</span>.<span class='ident'>add</span>(<span class='ident'>t</span>.<span class='ident'>value</span>(<span class='number'>1</span>));
 
             <span class='ident'>t</span>.<span class='ident'>add</span>(<span class='ident'>input</span>.<span class='ident'>clone</span>()
                   .<span class='ident'>lift</span>(<span class='op'>|</span><span class='ident'>i</span><span class='op'>|</span> <span class='op'>-&gt;</span> <span class='ident'>usize</span> { <span class='ident'>i</span> })
                   .<span class='ident'>lift2</span>(<span class='ident'>input</span>, <span class='op'>|</span><span class='ident'>i</span>, <span class='ident'>j</span><span class='op'>|</span> <span class='op'>-&gt;</span> <span class='ident'>usize</span> {
-                      <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;lifting&quot;</span>);
                       <span class='kw'>match</span> (<span class='ident'>i</span>, <span class='ident'>j</span>) {
                           (<span class='prelude-val'>Some</span>(<span class='ident'>a</span>), <span class='prelude-val'>Some</span>(<span class='ident'>b</span>)) <span class='op'>=&gt;</span> <span class='ident'>a</span> <span class='op'>+</span> <span class='ident'>b</span>,
                           _ <span class='op'>=&gt;</span> <span class='number'>0</span>,
                       } 
                   })
-                  .<span class='ident'>fold</span>(<span class='ident'>out_tx</span>.<span class='ident'>clone</span>(), <span class='op'>|</span><span class='ident'>tx</span>, <span class='ident'>a</span><span class='op'>|</span> { <span class='ident'>tx</span>.<span class='ident'>send</span>(<span class='ident'>a</span>).<span class='ident'>unwrap</span>(); })
+                  .<span class='ident'>fold</span>(<span class='ident'>out_tx</span>, <span class='op'>|</span><span class='ident'>tx</span>, <span class='ident'>a</span><span class='op'>|</span> {
+                      <span class='kw'>match</span> <span class='ident'>tx</span>.<span class='ident'>send</span>(<span class='ident'>a</span>) {
+                          <span class='prelude-val'>Err</span>(<span class='ident'>e</span>) <span class='op'>=&gt;</span> { <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;Error sending {}&quot;</span>, <span class='ident'>e</span>); },
+                          _ <span class='op'>=&gt;</span> {},
+                      };
+                  })
                  );
         });
 
-        <span class='ident'>in_tx</span>.<span class='ident'>send</span>(<span class='number'>1usize</span>).<span class='ident'>unwrap</span>();
+        <span class='kw'>let</span> <span class='ident'>out</span> <span class='op'>=</span> <span class='kw'>match</span> <span class='ident'>out_rx</span>.<span class='ident'>recv</span>() {
+            <span class='prelude-val'>Err</span>(<span class='ident'>e</span>) <span class='op'>=&gt;</span> <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;Failed to receive: {}&quot;</span>, <span class='ident'>e</span>),
+            <span class='prelude-val'>Ok</span>(<span class='ident'>v</span>) <span class='op'>=&gt;</span> <span class='ident'>v</span>,
+        };
 
-        <span class='kw'>let</span> <span class='ident'>out</span> <span class='op'>=</span> <span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>();
         <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out</span>, <span class='number'>2</span>);
-        <span class='comment'>// println!(&quot;Received {}&quot;, out);</span>
-        <span class='comment'>/*
-
-           let out = out_rx.recv().unwrap();
-           assert_eq!(out, 3);
-           println!(&quot;Received {}&quot;, out);
-           */</span>
     }
 }
 </pre>
