@@ -4,11 +4,12 @@ use std::sync::mpsc::*;
 use std::thread;
 use std::marker::*;
 
-use super::super::Signal;
+use super::super::{Signal, SignalType, Let};
 use super::input::{RunInput, NoOp, ReceiverInput, ValueInput};
 use super::fork::{Run, Fork, Branch};
 use super::channel::Channel;
 use super::async::Async;
+use super::value::Value;
 
 /// `Builder` is used to construct topologies.  
 ///
@@ -51,17 +52,25 @@ impl Builder {
     /// b.add(fork.lift(|i| { -i }));
     /// ```
     ///
-    pub fn add<A, SA>(&self, root: SA) -> Branch<A> where
+    pub fn add<A, SA>(&self, root: SA) -> Box<Signal<A>> where // NOTE: This needs to be clone-able!
         SA: 'static + Signal<A>,
         A: 'static + Clone + Send,
     {
-        let fork_txs = Arc::new(Mutex::new(Vec::new()));
+        match root.initial() {
+            SignalType::Dynamic(v) => {
+                let fork_txs = Arc::new(Mutex::new(Vec::new()));
 
-        let fork = Fork::new(Box::new(root), fork_txs.clone());
+                let fork = Fork::new(Box::new(root), fork_txs.clone());
 
-        self.root_signals.borrow_mut().push(Box::new(fork));
+                self.root_signals.borrow_mut().push(Box::new(fork));
 
-        Branch::new(fork_txs, None)
+                Box::new(Branch::new(fork_txs, None, v))
+            }
+
+            SignalType::Constant(v) => {
+                Box::new(Value::new(v))
+            }
+        }
     }
 
     /// Listen to `input` and push received data into the topology
@@ -93,11 +102,11 @@ impl Builder {
     {
         let (tx, rx) = sync_channel(0);
 
-        let runner = ReceiverInput::new(Some(initial), input, tx);
+        let runner = ReceiverInput::new(input, tx);
 
         self.inputs.borrow_mut().push(Box::new(runner));
 
-        Channel::new(rx)
+        Channel::new(rx, initial)
     }
 
     /// Combination of adding a signal and a channel
@@ -127,43 +136,45 @@ impl Builder {
     /// );
     /// ```
     ///
-    pub fn async<A, SA>(&self, root: SA) -> Channel<A> where
+    pub fn async<A, SA>(&self, root: SA) -> Box<Signal<A>> where // NOTE: Needs to be cloneable
         SA: 'static + Signal<A>,
         A: 'static + Clone + Send,
     {
 
-        // Push data from `root` to an internal input
-        let (input_tx, input_rx) = channel();
+        match root.initial() {
+            SignalType::Dynamic(v) => {
+                // Push data from `root` to an internal input
+                let (input_tx, input_rx) = channel();
 
-        let pusher = Async::new(Box::new(root), input_tx);
+                let pusher = Async::new(Box::new(root), input_tx);
 
-        self.root_signals.borrow_mut().push(Box::new(pusher));
+                self.root_signals.borrow_mut().push(Box::new(pusher));
 
 
 
-        // Push data from internal signal to channel
-        
-        let (output_tx, output_rx) = sync_channel(0);
+                // Push data from internal signal to channel
 
-        let runner = ReceiverInput::new(None, input_rx, output_tx);
+                let (output_tx, output_rx) = sync_channel(0);
 
-        self.inputs.borrow_mut().push(Box::new(runner));
+                let runner = ReceiverInput::new(input_rx, output_tx);
 
-        Channel::new(output_rx)
+                self.inputs.borrow_mut().push(Box::new(runner));
+
+                Box::new(Channel::new(output_rx, v))
+            }
+
+            SignalType::Constant(v) => {
+                Box::new(Value::new(v))
+            }
+        }
     }
 
     /// Creats a channel with constant value `v`
     ///
-    pub fn value<T>(&self, v: T) -> Channel<T> where
+    pub fn value<T>(&self, v: T) -> Value<T> where
         T: 'static + Clone + Send,
     {
-        let (tx, rx) = sync_channel(0);
-
-        let runner = ValueInput::new(v, tx);
-
-        self.inputs.borrow_mut().push(Box::new(runner));
-
-        Channel::new(rx)
+        Value::new(v)
     }
 }
 

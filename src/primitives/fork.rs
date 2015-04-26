@@ -1,7 +1,7 @@
 use std::sync::*;
 use std::sync::mpsc::*;
 
-use super::super::{Event, Signal, Push, Lift, Lift2, Fold};
+use super::super::{Event, Signal, SignalType, Push, Lift, Lift2, Fold};
 
 pub trait Run: Send {
     fn run(mut self: Box<Self>);
@@ -100,15 +100,17 @@ pub struct Branch<A> where
 {
     fork_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>,
     source_rx: Option<Receiver<Event<A>>>,
+    initial: A,
 }
 
 impl<A> Branch<A> where
     A: 'static + Send,
 {
-    pub fn new(fork_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>, source_rx: Option<Receiver<Event<A>>>) -> Branch<A> {
+    pub fn new(fork_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>, source_rx: Option<Receiver<Event<A>>>, initial: A) -> Branch<A> {
         Branch {
             fork_txs: fork_txs,
             source_rx: source_rx,
+            initial: initial,
         }
     }
 }
@@ -117,8 +119,12 @@ impl<A> Branch<A> where
 // from it's parent fork and pushes it to its children
 //
 impl<A> Signal<A> for Branch<A> where
-    A: 'static + Send,
+    A: 'static + Send + Clone,
 {
+    fn initial(&self) -> SignalType<A> {
+        SignalType::Dynamic(self.initial.clone())
+    }
+
     fn push_to(self: Box<Self>, target: Option<Box<Push<A>>>) {
         match (target, self.source_rx) {
             (Some(mut t), Some(rx)) => {
@@ -161,19 +167,19 @@ impl<A> Signal<A> for Branch<A> where
 }
 
 impl<A> Clone for Branch<A> where
-    A: 'static + Send,
+    A: 'static + Send + Clone,
 {
     fn clone(&self) -> Branch<A> {
-        Branch { fork_txs: self.fork_txs.clone(), source_rx: None }
+        Branch { fork_txs: self.fork_txs.clone(), source_rx: None, initial: self.initial.clone() }
     }
 }
 
 impl<A> Lift<A> for Branch<A> where
-    A: 'static + Send,
+    A: 'static + Send + Clone,
 {}
 impl<A, B, SB> Lift2<A, B, SB> for Branch<A> where
-    A: 'static + Send,
+    A: 'static + Send + Clone,
 {}
 impl<A> Fold<A> for Branch<A> where
-    A: 'static + Send,
+    A: 'static + Send + Clone,
 {}

@@ -1,7 +1,7 @@
 use std::thread;
 use std::sync::mpsc::*;
 
-use super::super::{Event, Signal, Push, Lift, Lift2, Fold};
+use super::super::{Event, Signal, SignalType, Push, Lift, Lift2, Fold};
 
 /// The result of a `lift2` operation
 ///
@@ -14,6 +14,7 @@ pub struct Lift2Signal<F, A, B, C> where
     left: Box<Signal<A>>,
     right: Box<Signal<B>>,
     f: F,
+    initial: C,
 }
 
 impl<F, A, B, C> Lift2Signal<F, A, B, C> where
@@ -22,11 +23,12 @@ impl<F, A, B, C> Lift2Signal<F, A, B, C> where
     B: 'static + Send,
     C: 'static + Send + Clone,
 {
-    pub fn new(left: Box<Signal<A>>, right: Box<Signal<B>>, f: F) -> Self {
+    pub fn new(left: Box<Signal<A>>, right: Box<Signal<B>>, f: F, initial: C) -> Self {
         Lift2Signal {
             left: left,
             right: right,
             f: f,
+            initial: initial,
         }
     }
 }
@@ -37,9 +39,13 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
     B: 'static + Send + Clone,
     C: 'static + Send + Clone,
 {
+    fn initial(&self) -> SignalType<C> {
+        SignalType::Dynamic(self.initial.clone())
+    }
+
     fn push_to(self: Box<Self>, target: Option<Box<Push<C>>>) {
         let inner = *self;
-        let Lift2Signal {left, right, f} = inner;
+        let Lift2Signal {left, right, f, initial} = inner;
 
         let (left_tx, left_rx) = channel();
         thread::spawn(move || {

@@ -1,6 +1,6 @@
 use std::marker::*;
 
-use super::super::{Event, Signal, Push, Lift, Lift2, Fold};
+use super::super::{Event, Signal, SignalType, Push, Lift, Lift2, Fold};
 
 /// The result of a `fold` operation
 ///
@@ -33,6 +33,10 @@ impl<F, A, B> Signal<B> for FoldSignal<F, A, B> where
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
+    fn initial(&self) -> SignalType<B> {
+        SignalType::Dynamic(self.state.clone())
+    }
+
     fn push_to(self: Box<Self>, target: Option<Box<Push<B>>>) {
         let inner = *self;
         let FoldSignal {parent, f, state} = inner;

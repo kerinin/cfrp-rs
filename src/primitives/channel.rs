@@ -1,26 +1,32 @@
 use std::sync::mpsc::*;
 
-use super::super::{Event, Signal, Push, Lift, Lift2, Fold};
+use super::super::{Event, Signal, SignalType, Push, Lift, Lift2, Fold};
 
 pub struct Channel<A> where
-    A: 'static + Send,
+    A: 'static + Send + Clone,
 {
     source_rx: Receiver<Event<A>>,
+    initial: A,
 }
 
 impl<A> Channel<A> where
-    A: 'static + Send,
+    A: 'static + Send + Clone,
 {
-    pub fn new(source_rx: Receiver<Event<A>>) -> Channel<A> {
+    pub fn new(source_rx: Receiver<Event<A>>, initial: A) -> Channel<A> {
         Channel {
             source_rx: source_rx,
+            initial: initial,
         }
     }
 }
 
 impl<A> Signal<A> for Channel<A> where
-    A: 'static + Send,
+    A: 'static + Send + Clone,
 {
+    fn initial(&self) -> SignalType<A> {
+        SignalType::Dynamic(self.initial.clone())
+    }
+
     fn push_to(self: Box<Self>, target: Option<Box<Push<A>>>) {
         match target {
             Some(mut t) => {
@@ -56,6 +62,6 @@ impl<A> Signal<A> for Channel<A> where
     }
 }
 
-impl<A> Lift<A> for Channel<A> where A: 'static + Send, {}
-impl<A, B, SB> Lift2<A, B, SB> for Channel<A>  where A: 'static + Send {}
-impl<A> Fold<A> for Channel<A> where A: 'static + Send {}
+impl<A> Lift<A> for Channel<A> where A: 'static + Send + Clone, {}
+impl<A, B, SB> Lift2<A, B, SB> for Channel<A>  where A: 'static + Send + Clone {}
+impl<A> Fold<A> for Channel<A> where A: 'static + Send + Clone {}

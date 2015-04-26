@@ -14,15 +14,13 @@ pub trait RunInput: Send {
 }
 
 pub struct ReceiverInput<A> {
-    initial: Option<A>,
     rx: Receiver<A>,
     tx: SyncSender<Event<A>>,
 }
 
 impl<A> ReceiverInput<A> {
-    pub fn new(initial: Option<A>, rx: Receiver<A>, tx: SyncSender<Event<A>>) -> ReceiverInput<A> {
+    pub fn new(rx: Receiver<A>, tx: SyncSender<Event<A>>) -> ReceiverInput<A> {
         ReceiverInput {
-            initial: initial,
             rx: rx,
             tx: tx,
         }
@@ -38,17 +36,7 @@ impl<A> RunInput for ReceiverInput<A> where
 
     fn run(self: Box<Self>, idx: usize, txs: Arc<Mutex<Vec<Box<NoOp>>>>) {
         let inner = *self;
-        let ReceiverInput {initial, rx, tx} = inner;
-
-        match initial {
-            Some(a) => {
-                match tx.send(Event::Changed(a)) {
-                    Err(_) => return,
-                    _ => {},
-                }
-            },
-            None => {},
-        }
+        let ReceiverInput {rx, tx} = inner;
 
         loop {
             match rx.recv() {

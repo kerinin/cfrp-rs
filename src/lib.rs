@@ -71,6 +71,7 @@ use primitives::{Topology, Builder, TopologyHandle};
 use primitives::LiftSignal;
 use primitives::Lift2Signal;
 use primitives::FoldSignal;
+use primitives::Value;
 
 
 
@@ -83,14 +84,27 @@ pub enum Event<A> {
     Exit,
 }
 
+#[derive(Clone)]
+pub enum SignalType<A> {
+    Constant(A),
+    Dynamic(A),
+}
+
 /// Types which can serve as a data source
 ///
 pub trait Signal<A>: Send {
     // Called at build time when a downstream process is created for the signal
     fn init(&mut self) {}
 
+    // Returns the "initial" value of the signal
+    fn initial(&self) -> SignalType<A>;
+
     // Called at compile time when a donstream process is run
     fn push_to(self: Box<Self>, Option<Box<Push<A>>>);
+}
+
+pub trait Let<A>: Signal<A> {
+    fn clone(self: Box<Self>) -> Box<Signal<A>>; 
 }
 
 /// Types which can receive incoming data from other signals
@@ -123,15 +137,24 @@ pub trait Push<A> {
 /// ```
 ///
 pub trait Lift<A>: Signal<A> + Sized {
-    fn lift<F, B>(mut self, f: F) -> LiftSignal<F, A, B> where
+    fn lift<F, B>(mut self, f: F) -> Box<Signal<B>> where
         Self: 'static,
         F: 'static + Send + Fn(A) -> B,
         A: 'static + Send,
-        B: 'static + Send,
+        B: 'static + Send + Clone,
     {
         self.init();
 
-        LiftSignal::new(Box::new(self), f)
+        match self.initial() {
+            SignalType::Dynamic(v) => {
+                let initial = f(v);
+                Box::new(LiftSignal::new(Box::new(self), f, initial))
+            }
+            SignalType::Constant(v) => {
+                let initial = f(v);
+                Box::new(Value::new(initial))
+            }
+        }
     }
 }
 
@@ -171,7 +194,7 @@ pub trait Lift<A>: Signal<A> + Sized {
 /// ```
 ///
 pub trait Lift2<A, B, SB>: Signal<A> + Sized {
-    fn lift2<F, C>(mut self, mut right: SB, f: F) -> Lift2Signal<F, A, B, C> where
+    fn lift2<F, C>(mut self, mut right: SB, f: F) -> Box<Signal<C>> where
         Self: 'static,
         SB: 'static + Signal<B>,
         F: 'static + Send + Fn(A, B) -> C,
@@ -182,7 +205,39 @@ pub trait Lift2<A, B, SB>: Signal<A> + Sized {
         self.init();
         right.init();
 
-        Lift2Signal::new(Box::new(self), Box::new(right), f)
+        match (self.initial(), right.initial()) {
+            (SignalType::Dynamic(l), SignalType::Dynamic(r)) => {
+                let initial = f(l,r);
+                Box::new(Lift2Signal::new(Box::new(self), Box::new(right), f, initial))
+            }
+
+            (SignalType::Dynamic(l), SignalType::Constant(r)) => {
+                let initial = f(l, r.clone());
+                let signal = LiftSignal::new(
+                    Box::new(self),
+                    move |dynamic_l| -> C { f(dynamic_l, r.clone()) },
+                    initial,
+                );
+
+                Box::new(signal)
+            }
+
+            (SignalType::Constant(l), SignalType::Dynamic(r)) => {
+                let initial = f(l.clone(), r);
+                let signal = LiftSignal::new(
+                    Box::new(right),
+                    move |dynamic_r| -> C { f(l.clone(), dynamic_r) },
+                    initial,
+                );
+
+                Box::new(signal)
+            }
+
+            (SignalType::Constant(l), SignalType::Constant(r)) => {
+                let initial = f(l, r);
+                Box::new(Value::new(initial))
+            }
+        }
     }
 }
 
@@ -208,7 +263,7 @@ pub trait Lift2<A, B, SB>: Signal<A> + Sized {
 /// ```
 ///
 pub trait Fold<A>: Signal<A> + Sized {
-    fn fold<F, B>(mut self, initial: B, f: F) -> FoldSignal<F, A, B> where
+    fn fold<F, B>(mut self, mut initial: B, mut f: F) -> Box<Signal<B>> where
         Self: 'static,
         F: 'static + Send + FnMut(&mut B, A),
         A: 'static + Send + Clone,
@@ -216,7 +271,17 @@ pub trait Fold<A>: Signal<A> + Sized {
     {
         self.init();
 
-        FoldSignal::new(Box::new(self), initial, f)
+        match self.initial() {
+            SignalType::Dynamic(v) => {
+                f(&mut initial, v);
+                Box::new(FoldSignal::new(Box::new(self), initial, f))
+            }
+
+            SignalType::Constant(v) => {
+                f(&mut initial, v);
+                Box::new(Value::new(initial))
+            }
+        }
     }
 }
 
