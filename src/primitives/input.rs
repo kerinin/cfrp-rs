@@ -1,128 +1,133 @@
-use std::io;
 use std::sync::*;
-use std::thread::spawn;
 use std::sync::mpsc::*;
 
-use super::super::Event;
+use super::super::{Event};
+
+pub trait NoOp: Send {
+    fn send_no_change(&self) -> bool;
+    fn send_exit(&self);
+}
 
 pub trait RunInput: Send {
     fn run(mut self: Box<Self>, usize, Arc<Mutex<Vec<Box<NoOp>>>>);
     fn boxed_no_op(&self) -> Box<NoOp>;
 }
 
-pub trait Input<A> {
-    fn pull(&mut self) -> Option<A>;
+pub struct ReceiverInput<A> {
+    initial: Option<A>,
+    rx: Receiver<A>,
+    tx: SyncSender<Event<A>>,
 }
 
-pub trait NoOp: Send {
-    fn send_no_change(&self);
-    fn send_exit(&self);
+impl<A> ReceiverInput<A> {
+    pub fn new(initial: Option<A>, rx: Receiver<A>, tx: SyncSender<Event<A>>) -> ReceiverInput<A> {
+        ReceiverInput {
+            initial: initial,
+            rx: rx,
+            tx: tx,
+        }
+    }
 }
 
-impl<A> Input<A> for Receiver<A> where
+impl<A> RunInput for ReceiverInput<A> where
+    A: 'static + Send + Clone,
+{
+    fn boxed_no_op(&self) -> Box<NoOp> {
+        Box::new(self.tx.clone())
+    }
+
+    fn run(mut self: Box<Self>, idx: usize, txs: Arc<Mutex<Vec<Box<NoOp>>>>) {
+        let inner = *self;
+        let ReceiverInput {initial, rx, tx} = inner;
+
+        match initial {
+            Some(a) => {
+                match tx.send(Event::Changed(a)) {
+                    Err(_) => return,
+                    _ => {},
+                }
+            },
+            None => {},
+        }
+
+        loop {
+            match rx.recv() {
+                Ok(ref a) => {
+                   for (i, no_op_tx) in txs.lock().unwrap().iter().enumerate() {
+                       if i == idx {
+                           match tx.send(Event::Changed(a.clone())) {
+                               Err(_) => return,
+                               _ => {},
+                           }
+                       } else {
+                           if no_op_tx.send_no_change() { return }
+                       }
+                   }
+                },
+                Err(_) => {
+                    for no_op_tx in txs.lock().unwrap().iter() {
+                        no_op_tx.send_exit();
+                    }
+                    return
+                },
+            }
+        }
+    }
+}
+
+pub struct ValueInput<A> where
     A: Send,
 {
-    fn pull(&mut self) -> Option<A> {
-        match self.recv() {
-            Ok(a) => Some(a),
-            Err(_) => None,
+    value: A,
+    tx: SyncSender<Event<A>>,
+}
+
+impl<A> ValueInput<A> where
+    A: Send,
+{
+    pub fn new(value: A, tx: SyncSender<Event<A>>) -> ValueInput<A> {
+        ValueInput {
+            value: value,
+            tx: tx,
         }
     }
 }
 
-impl<R> Input<u8> for io::Bytes<R> where
-    R: io::Read,
-{
-    fn pull(&mut self) -> Option<u8> {
-        match self.next() {
-            Some(Ok(a)) => Some(a),
-            _ => None,
-        }
-    }
-}
-
-impl<R> Input<String> for io::Lines<R> where
-    R: io::BufRead,
-{
-    fn pull(&mut self) -> Option<String> {
-        match self.next() {
-            Some(Ok(a)) => Some(a),
-            _ => None,
-        }
-    }
-}
-
-pub struct InternalInput<A> where
-    A: 'static + Send + Clone
-{
-    pub input: Box<Input<A> + Send>,
-    pub initial: Option<A>,
-    pub sink_tx: Sender<Event<A>>,
-}
-
-impl<A> RunInput for InternalInput<A> where
-    A: 'static + Send + Clone
-{
-    fn run(mut self: Box<Self>, idx: usize, no_ops: Arc<Mutex<Vec<Box<NoOp>>>>) {
-        spawn(move || {
-            match self.initial {
-                Some(ref i) => {
-                    match self.sink_tx.send(Event::Changed(i.clone())) {
-                        Err(e) => debug!("InternalInput::run received error attempting to send initial value: {}", e),
-                        _ => {}
-                    };
-                },
-                None => {},
-            }
-
-            loop {
-                match self.input.pull() {
-                    Some(a) => {
-                        let received = Event::Changed(a);
-
-                        for (i, ref no_op) in no_ops.lock().unwrap().iter().enumerate() {
-                            if i == idx {
-                                match self.sink_tx.send(received.clone()) {
-                                    // We can't really terminate a child process, so just ignore errors...
-                                    _ => {}
-                                }
-                            } else {
-                                no_op.send_no_change();
-                            }
-                        }
-                    },
-                    None => {
-                        // NOTE: Can we be less drastic here?
-                        for (_, ref no_op) in no_ops.lock().unwrap().iter().enumerate() {
-                            no_op.send_exit()
-                        }
-
-                        return
-                    },
-                }
-            }
-        });
-    }
-
-    fn boxed_no_op(&self) -> Box<NoOp> {
-        Box::new(self.sink_tx.clone())
-    }
-}
-
-impl<A> NoOp for Sender<Event<A>> where
+impl<A> RunInput for ValueInput<A> where
     A: 'static + Send,
 {
-    fn send_no_change(&self) {
+    fn boxed_no_op(&self) -> Box<NoOp> {
+        Box::new(self.tx.clone())
+    }
+
+    fn run(mut self: Box<Self>, idx: usize, txs: Arc<Mutex<Vec<Box<NoOp>>>>) {
+        let inner = *self;
+        let ValueInput {value, tx} = inner;
+
+        tx.send(Event::Changed(value));
+
+        loop {
+            match tx.send(Event::Unchanged) {
+                Err(_) => return,
+                _ => {},
+            }
+        }
+    }
+}
+
+
+
+impl<A> NoOp for SyncSender<Event<A>> where
+    A: Send
+{
+    fn send_no_change(&self) -> bool {
         match self.send(Event::Unchanged) {
-            // We can't really terminate a child process, so just ignore errors...
-            _ => {}
+            Err(_) => true,
+            _ => false,
         }
     }
 
     fn send_exit(&self) {
-        match self.send(Event::Exit) {
-            // We can't really terminate a child process, so just ignore errors...
-            _ => {}
-        }
+        self.send(Event::Exit).unwrap();
     }
 }

@@ -5,11 +5,10 @@ use std::thread;
 use std::marker::*;
 
 use super::super::Signal;
-use super::input::{Input, RunInput, InternalInput, NoOp};
+use super::input::{RunInput, NoOp, ReceiverInput, ValueInput};
 use super::fork::{Run, Fork, Branch};
 use super::channel::Channel;
 use super::async::Async;
-use super::value::Value;
 
 /// `Builder` is used to construct topologies.  
 ///
@@ -89,18 +88,14 @@ impl Builder {
     /// let signal = b.listen(0, rx);
     /// ```
     ///
-    pub fn listen<A, T>(&self, initial: A, input: T) -> Channel<A> where
-        T: 'static + Input<A> + Send,
+    pub fn listen<A>(&self, initial: A, input: Receiver<A>) -> Channel<A> where
         A: 'static + Clone + Send,
     {
-        let (tx, rx) = channel();
-        let internal_input = InternalInput {
-            input: Box::new(input),
-            initial: Some(initial),
-            sink_tx: tx,
-        };
+        let (tx, rx) = sync_channel(0);
 
-        self.inputs.borrow_mut().push(Box::new(internal_input));
+        let runner = ReceiverInput::new(Some(initial), input, tx);
+
+        self.inputs.borrow_mut().push(Box::new(runner));
 
         Channel::new(rx)
     }
@@ -136,8 +131,6 @@ impl Builder {
         SA: 'static + Signal<A>,
         A: 'static + Clone + Send,
     {
-        // NOTE: If Async implemented RunInput we could probably avoid one of
-        // these channel steps...
 
         // Push data from `root` to an internal input
         let (input_tx, input_rx) = channel();
@@ -150,15 +143,11 @@ impl Builder {
 
         // Push data from internal signal to channel
         
-        let (output_tx, output_rx) = channel();
+        let (output_tx, output_rx) = sync_channel(0);
 
-        let internal_input = InternalInput {
-            input: Box::new(input_rx),
-            initial: None,
-            sink_tx: output_tx,
-        };
+        let runner = ReceiverInput::new(None, input_rx, output_tx);
 
-        self.inputs.borrow_mut().push(Box::new(internal_input));
+        self.inputs.borrow_mut().push(Box::new(runner));
 
         Channel::new(output_rx)
     }
@@ -168,7 +157,13 @@ impl Builder {
     pub fn value<T>(&self, v: T) -> Channel<T> where
         T: 'static + Clone + Send,
     {
-        self.listen(v.clone(), Value(v))
+        let (tx, rx) = sync_channel(0);
+
+        let runner = ValueInput::new(v, tx);
+
+        self.inputs.borrow_mut().push(Box::new(runner));
+
+        Channel::new(rx)
     }
 }
 

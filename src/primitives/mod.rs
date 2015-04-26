@@ -6,7 +6,6 @@ mod input;
 mod lift;
 mod lift2;
 mod topology;
-mod value;
 
 pub use self::topology::{Topology, Builder, TopologyHandle};
 pub use self::fold::FoldSignal;
