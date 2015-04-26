@@ -119,7 +119,7 @@ impl<F, A, B> Push<A> for FoldPusher<F, A, B> where
                 Event::Unchanged
             },
             Event::Exit => {
-                debug!("FoldPusher handling Event::NoOp");
+                debug!("FoldPusher handling Event::Exit");
                 Event::Exit
             },
         };

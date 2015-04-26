@@ -6,7 +6,7 @@ use super::super::{Event, Signal, Push, Lift, Lift2, Fold};
 /// The result of a `lift2` operation
 ///
 pub struct Lift2Signal<F, A, B, C> where
-    F: 'static + Send + Fn(Option<A>, Option<B>) -> C,
+    F: 'static + Send + Fn(A, B) -> C,
     A: 'static + Send,
     B: 'static + Send,
     C: 'static + Send + Clone,
@@ -17,7 +17,7 @@ pub struct Lift2Signal<F, A, B, C> where
 }
 
 impl<F, A, B, C> Lift2Signal<F, A, B, C> where
-    F: 'static + Send + Fn(Option<A>, Option<B>) -> C,
+    F: 'static + Send + Fn(A, B) -> C,
     A: 'static + Send,
     B: 'static + Send,
     C: 'static + Send + Clone,
@@ -32,7 +32,7 @@ impl<F, A, B, C> Lift2Signal<F, A, B, C> where
 }
 
 impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
-    F: 'static + Send + Fn(Option<A>, Option<B>) -> C,
+    F: 'static + Send + Fn(A, B) -> C,
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
     C: 'static + Send + Clone,
@@ -74,7 +74,7 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
                             cached_left = Some(l.clone());
                             cached_right = Some(r.clone());
 
-                            let c = f(Some(l), Some(r));
+                            let c = f(l, r);
                             t.push(Event::Changed(c));
                         }
 
@@ -83,19 +83,18 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
                                 Some(ref l) => {
                                     cached_right = Some(r.clone());
 
-                                    let c = f(Some(l.clone()), Some(r));
+                                    let c = f(l.clone(), r);
                                     t.push(Event::Changed(c));
                                 }
                                 None => panic!("No cached left value"),
                             }
                         }
-
                         (Ok(Event::Changed(l)), Ok(Event::Unchanged)) => {
                             match cached_right {
                                 Some(ref r) => {
                                     cached_left = Some(l.clone());
 
-                                    let c = f(Some(l), Some(r.clone()));
+                                    let c = f(l, r.clone());
                                     t.push(Event::Changed(c));
                                 }
                                 None => panic!("No cached right value"),
@@ -106,29 +105,20 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
                             t.push(Event::Unchanged);
                         }
 
-                        (Ok(Event::Exit), _) => {
-                            t.push(Event::Exit);
-                            // return
-                        }
-
-                        (_, Ok(Event::Exit)) => {
-                            t.push(Event::Exit);
-                            // return
-                        }
-
-                        (Err(_), _) => {
-                            t.push(Event::Exit);
-                        }
-
-                        (_, Err(_)) => {
-                            t.push(Event::Exit);
-                        }
+                        (Ok(Event::Exit), _) => { debug!("Lift2Pusher handling Event::Exit"); t.push(Event::Exit); return }
+                        (_, Ok(Event::Exit)) => { debug!("Lift2Pusher handling Event::Exit"); t.push(Event::Exit); return }
+                        (Err(_), _) => { debug!("Lift2Pusher handling closed channel"); t.push(Event::Exit); return }
+                        (_, Err(_)) => { debug!("Lift2Pusher handling closed channel"); t.push(Event::Exit); return }
                     }
                 }
             },
             None => {
                 loop {
                     match (left_rx.recv(), right_rx.recv()) {
+                        (Ok(Event::Exit), _) => { debug!("Lift2Pusher handling Event::Exit"); return }
+                        (_, Ok(Event::Exit)) => { debug!("Lift2Pusher handling Event::Exit"); return }
+                        (Err(_), _) => { debug!("Lift2Pusher handling closed channel"); return }
+                        (_, Err(_)) => { debug!("Lift2Pusher handling closed channel"); return }
                         _ => {}
                     }
                 }
@@ -138,19 +128,19 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
 }
 
 impl<F, A, B, C> Lift<C> for Lift2Signal<F, A, B, C> where
-    F: 'static + Send + Fn(Option<A>, Option<B>) -> C,
+    F: 'static + Send + Fn(A, B) -> C,
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
     C: 'static + Send + Clone,
 {}
 impl<F, A, B, C, D, SD> Lift2<C, D, SD> for Lift2Signal<F, A, B, C> where
-    F: 'static + Send + Fn(Option<A>, Option<B>) -> C,
+    F: 'static + Send + Fn(A, B) -> C,
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
     C: 'static + Send + Clone,
 {}
 impl<F, A, B, C> Fold<C> for Lift2Signal<F, A, B, C> where
-    F: 'static + Send + Fn(Option<A>, Option<B>) -> C,
+    F: 'static + Send + Fn(A, B) -> C,
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
     C: 'static + Send + Clone,

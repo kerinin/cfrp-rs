@@ -174,7 +174,7 @@ pub trait Lift2<A, B, SB>: Signal<A> + Sized {
     fn lift2<F, C>(mut self, mut right: SB, f: F) -> Lift2Signal<F, A, B, C> where
         Self: 'static,
         SB: 'static + Signal<B>,
-        F: 'static + Send + Fn(Option<A>, Option<B>) -> C,
+        F: 'static + Send + Fn(A, B) -> C,
         A: 'static + Send + Clone,
         B: 'static + Send + Clone,
         C: 'static + Send + Clone,
@@ -266,12 +266,7 @@ mod test {
 
             t.add(input.clone()
                   .lift(|i| -> usize { i })
-                  .lift2(input, |i, j| -> usize {
-                      match (i, j) {
-                          (Some(a), Some(b)) => a + b,
-                          _ => 0,
-                      } 
-                  })
+                  .lift2(input, |i, j| -> usize { i + j })
                   .fold(out_tx, |tx, a| {
                       match tx.send(a) {
                           Err(e) => { panic!("Error sending {}", e); },

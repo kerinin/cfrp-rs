@@ -36,7 +36,7 @@ impl<A> RunInput for ReceiverInput<A> where
         Box::new(self.tx.clone())
     }
 
-    fn run(mut self: Box<Self>, idx: usize, txs: Arc<Mutex<Vec<Box<NoOp>>>>) {
+    fn run(self: Box<Self>, idx: usize, txs: Arc<Mutex<Vec<Box<NoOp>>>>) {
         let inner = *self;
         let ReceiverInput {initial, rx, tx} = inner;
 

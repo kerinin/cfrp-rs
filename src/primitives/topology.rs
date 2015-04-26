@@ -187,6 +187,7 @@ impl Topology {
     /// Run the topology
     ///
     pub fn run(self) -> TopologyHandle {
+        debug!("----> TOPOLOGY STARTING");
         let Builder {inputs, root_signals} = self.builder;
 
         for root_signal in root_signals.into_inner().into_iter() {
@@ -203,6 +204,8 @@ impl Topology {
                 input.run(idx, no_ops_i);
             });
         }
+
+        debug!("----> TOPOLOGY RUNNING...");
 
         TopologyHandle {
             term_txs: term_txs,
@@ -221,5 +224,6 @@ impl Drop for TopologyHandle {
         for tx in self.term_txs.iter() {
             tx.send_exit();
         }
+        debug!("----> TOPOLOGY DROPPED");
     }
 }
