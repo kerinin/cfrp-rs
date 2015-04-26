@@ -1,1 +1,1 @@
-initSidebarItems({"trait":[["Input",""],["NoOp",""],["RunInput",""]]});
+initSidebarItems({"trait":[["NoOp",""],["RunInput",""]]});

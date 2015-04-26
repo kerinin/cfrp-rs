@@ -265,11 +265,6 @@
 <span id="223">223</span>
 <span id="224">224</span>
 <span id="225">225</span>
-<span id="226">226</span>
-<span id="227">227</span>
-<span id="228">228</span>
-<span id="229">229</span>
-<span id="230">230</span>
 </pre><pre class='rust '>
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>cell</span>::<span class='op'>*</span>;
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>sync</span>::<span class='op'>*</span>;
@@ -278,11 +273,10 @@
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>marker</span>::<span class='op'>*</span>;
 
 <span class='kw'>use</span> <span class='ident'>super</span>::<span class='ident'>super</span>::<span class='ident'>Signal</span>;
-<span class='kw'>use</span> <span class='ident'>super</span>::<span class='ident'>input</span>::{<span class='ident'>Input</span>, <span class='ident'>RunInput</span>, <span class='ident'>InternalInput</span>, <span class='ident'>NoOp</span>};
+<span class='kw'>use</span> <span class='ident'>super</span>::<span class='ident'>input</span>::{<span class='ident'>RunInput</span>, <span class='ident'>NoOp</span>, <span class='ident'>ReceiverInput</span>, <span class='ident'>ValueInput</span>};
 <span class='kw'>use</span> <span class='ident'>super</span>::<span class='ident'>fork</span>::{<span class='ident'>Run</span>, <span class='ident'>Fork</span>, <span class='ident'>Branch</span>};
 <span class='kw'>use</span> <span class='ident'>super</span>::<span class='ident'>channel</span>::<span class='ident'>Channel</span>;
 <span class='kw'>use</span> <span class='ident'>super</span>::<span class='ident'>async</span>::<span class='ident'>Async</span>;
-<span class='kw'>use</span> <span class='ident'>super</span>::<span class='ident'>value</span>::<span class='ident'>Value</span>;
 
 <span class='doccomment'>/// `Builder` is used to construct topologies.  </span>
 <span class='doccomment'>///</span>
@@ -362,18 +356,14 @@
     <span class='doccomment'>/// let signal = b.listen(0, rx);</span>
     <span class='doccomment'>/// ```</span>
     <span class='doccomment'>///</span>
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>listen</span><span class='op'>&lt;</span><span class='ident'>A</span>, <span class='ident'>T</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>initial</span>: <span class='ident'>A</span>, <span class='ident'>input</span>: <span class='ident'>T</span>) <span class='op'>-&gt;</span> <span class='ident'>Channel</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span> <span class='kw'>where</span>
-        <span class='ident'>T</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Input</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span> <span class='op'>+</span> <span class='ident'>Send</span>,
+    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>listen</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>initial</span>: <span class='ident'>A</span>, <span class='ident'>input</span>: <span class='ident'>Receiver</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>Channel</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span> <span class='kw'>where</span>
         <span class='ident'>A</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Clone</span> <span class='op'>+</span> <span class='ident'>Send</span>,
     {
-        <span class='kw'>let</span> (<span class='ident'>tx</span>, <span class='ident'>rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
-        <span class='kw'>let</span> <span class='ident'>internal_input</span> <span class='op'>=</span> <span class='ident'>InternalInput</span> {
-            <span class='ident'>input</span>: <span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='ident'>input</span>),
-            <span class='ident'>initial</span>: <span class='prelude-val'>Some</span>(<span class='ident'>initial</span>),
-            <span class='ident'>sink_tx</span>: <span class='ident'>tx</span>,
-        };
+        <span class='kw'>let</span> (<span class='ident'>tx</span>, <span class='ident'>rx</span>) <span class='op'>=</span> <span class='ident'>sync_channel</span>(<span class='number'>0</span>);
 
-        <span class='self'>self</span>.<span class='ident'>inputs</span>.<span class='ident'>borrow_mut</span>().<span class='ident'>push</span>(<span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='ident'>internal_input</span>));
+        <span class='kw'>let</span> <span class='ident'>runner</span> <span class='op'>=</span> <span class='ident'>ReceiverInput</span>::<span class='ident'>new</span>(<span class='prelude-val'>Some</span>(<span class='ident'>initial</span>), <span class='ident'>input</span>, <span class='ident'>tx</span>);
+
+        <span class='self'>self</span>.<span class='ident'>inputs</span>.<span class='ident'>borrow_mut</span>().<span class='ident'>push</span>(<span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='ident'>runner</span>));
 
         <span class='ident'>Channel</span>::<span class='ident'>new</span>(<span class='ident'>rx</span>)
     }
@@ -409,8 +399,6 @@
         <span class='ident'>SA</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Signal</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span>,
         <span class='ident'>A</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Clone</span> <span class='op'>+</span> <span class='ident'>Send</span>,
     {
-        <span class='comment'>// NOTE: If Async implemented RunInput we could probably avoid one of</span>
-        <span class='comment'>// these channel steps...</span>
 
         <span class='comment'>// Push data from `root` to an internal input</span>
         <span class='kw'>let</span> (<span class='ident'>input_tx</span>, <span class='ident'>input_rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
@@ -423,15 +411,11 @@
 
         <span class='comment'>// Push data from internal signal to channel</span>
         
-        <span class='kw'>let</span> (<span class='ident'>output_tx</span>, <span class='ident'>output_rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
+        <span class='kw'>let</span> (<span class='ident'>output_tx</span>, <span class='ident'>output_rx</span>) <span class='op'>=</span> <span class='ident'>sync_channel</span>(<span class='number'>0</span>);
 
-        <span class='kw'>let</span> <span class='ident'>internal_input</span> <span class='op'>=</span> <span class='ident'>InternalInput</span> {
-            <span class='ident'>input</span>: <span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='ident'>input_rx</span>),
-            <span class='ident'>initial</span>: <span class='prelude-val'>None</span>,
-            <span class='ident'>sink_tx</span>: <span class='ident'>output_tx</span>,
-        };
+        <span class='kw'>let</span> <span class='ident'>runner</span> <span class='op'>=</span> <span class='ident'>ReceiverInput</span>::<span class='ident'>new</span>(<span class='prelude-val'>None</span>, <span class='ident'>input_rx</span>, <span class='ident'>output_tx</span>);
 
-        <span class='self'>self</span>.<span class='ident'>inputs</span>.<span class='ident'>borrow_mut</span>().<span class='ident'>push</span>(<span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='ident'>internal_input</span>));
+        <span class='self'>self</span>.<span class='ident'>inputs</span>.<span class='ident'>borrow_mut</span>().<span class='ident'>push</span>(<span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='ident'>runner</span>));
 
         <span class='ident'>Channel</span>::<span class='ident'>new</span>(<span class='ident'>output_rx</span>)
     }
@@ -441,7 +425,13 @@
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>value</span><span class='op'>&lt;</span><span class='ident'>T</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>v</span>: <span class='ident'>T</span>) <span class='op'>-&gt;</span> <span class='ident'>Channel</span><span class='op'>&lt;</span><span class='ident'>T</span><span class='op'>&gt;</span> <span class='kw'>where</span>
         <span class='ident'>T</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Clone</span> <span class='op'>+</span> <span class='ident'>Send</span>,
     {
-        <span class='self'>self</span>.<span class='ident'>listen</span>(<span class='ident'>v</span>.<span class='ident'>clone</span>(), <span class='ident'>Value</span>(<span class='ident'>v</span>))
+        <span class='kw'>let</span> (<span class='ident'>tx</span>, <span class='ident'>rx</span>) <span class='op'>=</span> <span class='ident'>sync_channel</span>(<span class='number'>0</span>);
+
+        <span class='kw'>let</span> <span class='ident'>runner</span> <span class='op'>=</span> <span class='ident'>ValueInput</span>::<span class='ident'>new</span>(<span class='ident'>v</span>, <span class='ident'>tx</span>);
+
+        <span class='self'>self</span>.<span class='ident'>inputs</span>.<span class='ident'>borrow_mut</span>().<span class='ident'>push</span>(<span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='ident'>runner</span>));
+
+        <span class='ident'>Channel</span>::<span class='ident'>new</span>(<span class='ident'>rx</span>)
     }
 }
 

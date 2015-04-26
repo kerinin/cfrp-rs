@@ -43,7 +43,7 @@
     <section id='main' class="content struct">
 <h1 class='fqn'><span class='in-band'>Struct <a href='../index.html'>cfrp</a>::<wbr><a href='index.html'>primitives</a>::<wbr><a class='struct' href=''>Builder</a><wbr></span><span class='out-of-band'><span id='render-detail'>
             <a id="collapse-all" href="#">[-]</a>&nbsp;<a id="expand-all" href="#">[+]</a>
-        </span><a id='src-4670' href='../../src/cfrp/primitives/topology.rs.html#20-23'>[src]</a></span></h1>
+        </span><a id='src-4611' href='../../src/cfrp/primitives/topology.rs.html#19-22'>[src]</a></span></h1>
 <pre class='rust struct'>pub struct Builder {
     // some fields omitted
 }</pre><div class='docblock'><p><code>Builder</code> is used to construct topologies.</p>
@@ -72,7 +72,7 @@ a state type <code>T</code> and a mutable builder.  The builder can be used to c
 <span class='ident'>b</span>.<span class='ident'>add</span>(<span class='ident'>fork</span>.<span class='ident'>clone</span>().<span class='ident'>lift</span>(<span class='op'>|</span><span class='ident'>i</span><span class='op'>|</span> { <span class='ident'>i</span> <span class='op'>-</span> <span class='number'>1</span> } ));
 <span class='ident'>b</span>.<span class='ident'>add</span>(<span class='ident'>fork</span>.<span class='ident'>lift</span>(<span class='op'>|</span><span class='ident'>i</span><span class='op'>|</span> { <span class='op'>-</span><span class='ident'>i</span> }));
 </pre>
-</div><h4 id='method.listen' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.listen' class='fnname'>listen</a>&lt;A, T&gt;(&amp;self, initial: A, input: T) -&gt; Channel&lt;A&gt; <span class='where'>where T: 'static + Input&lt;A&gt; + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a>, A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a></span></code></h4>
+</div><h4 id='method.listen' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.listen' class='fnname'>listen</a>&lt;A&gt;(&amp;self, initial: A, input: <a class='struct' href='http://doc.rust-lang.org/nightly/std/sync/mpsc/struct.Receiver.html' title='std::sync::mpsc::Receiver'>Receiver</a>&lt;A&gt;) -&gt; Channel&lt;A&gt; <span class='where'>where A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a></span></code></h4>
 <div class='docblock'><p>Listen to <code>input</code> and push received data into the topology</p>
 
 <p>All data must enter the topology via a call to <code>listen</code>; this function
