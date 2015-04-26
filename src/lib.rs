@@ -24,7 +24,7 @@
 //! 
 //!     // Create a listener on `in_rx`.  Messages received on the channel will be
 //!     // sent to any nodes subscribed to `input`
-//!     let input = t.add(t.listen(in_rx));
+//!     let input = t.add(t.listen(0, in_rx));
 //! 
 //!     // Basic map operation.  Since this is a pure function, it will only be
 //!     // evaluated when the value of `input` changes
@@ -72,12 +72,14 @@ use primitives::LiftSignal;
 use primitives::Lift2Signal;
 use primitives::FoldSignal;
 
+
+
+
 /// Container for data as it flows across the topology
 #[derive(Clone)]
 pub enum Event<A> {
     Changed(A),
     Unchanged,
-    NoOp,
     Exit,
 }
 
@@ -246,45 +248,44 @@ pub fn spawn_topology<T, F>(state: T, f: F) -> TopologyHandle where
 
 #[cfg(test)] 
 mod test {
-    extern crate log;
+    extern crate env_logger;
 
-    // extern crate quickcheck;
     use std::sync::mpsc::*;
 
     use super::*;
 
     #[test]
     fn integration() {
-        let (in_tx, in_rx) = channel();
-        let (out_tx, out_rx) = channel();
+        env_logger::init().unwrap();
 
-        spawn_topology((in_rx, out_tx), |t, (in_rx, out_tx)| {
+        let (out_tx, out_rx) = sync_channel(0);
 
-            let input = t.add(t.listen(in_rx));
+        spawn_topology(out_tx, |t, out_tx| {
+
+            let input = t.add(t.value(1));
 
             t.add(input.clone()
                   .lift(|i| -> usize { i })
                   .lift2(input, |i, j| -> usize {
-                      println!("lifting");
                       match (i, j) {
                           (Some(a), Some(b)) => a + b,
                           _ => 0,
                       } 
                   })
-                  .fold(out_tx.clone(), |tx, a| { tx.send(a).unwrap(); })
+                  .fold(out_tx, |tx, a| {
+                      match tx.send(a) {
+                          Err(e) => { panic!("Error sending {}", e); },
+                          _ => {},
+                      };
+                  })
                  );
         });
 
-        in_tx.send(1usize).unwrap();
+        let out = match out_rx.recv() {
+            Err(e) => panic!("Failed to receive: {}", e),
+            Ok(v) => v,
+        };
 
-        let out = out_rx.recv().unwrap();
         assert_eq!(out, 2);
-        // println!("Received {}", out);
-        /*
-
-           let out = out_rx.recv().unwrap();
-           assert_eq!(out, 3);
-           println!("Received {}", out);
-           */
     }
 }

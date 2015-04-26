@@ -103,10 +103,6 @@ impl<F, A, B> Push<A> for LiftPusher<F, A, B> where
                 debug!("LiftPusher handling Event::Unchanged");
                 Event::Unchanged
             },
-            Event::NoOp => {
-                debug!("LiftPusher handling Event::NoOp");
-                Event::NoOp
-            },
             Event::Exit => {
                 debug!("LiftPusher handling Event::NoOp");
                 Event::Exit

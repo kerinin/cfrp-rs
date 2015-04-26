@@ -82,20 +82,21 @@ impl Builder {
     /// 
     /// let (tx, rx): (Sender<usize>, Receiver<usize>) = channel();
     ///
-    /// // Receive data on `rx` and expose it as a signal.  This is necessary
-    /// // because the topology must maintain consistency between threads, so
-    /// // any message sent to any input is propagated to all other inputs as
-    /// // "no-op" messages.
-    /// let signal = b.listen(rx);
+    /// // Receive data on `rx` and expose it as a signal with initial value 
+    /// //`initial`.  This is necessary because the topology must maintain 
+    /// // consistency between threads, so any message sent to any input is 
+    /// // propagated to all other inputs as "no-change" messages.
+    /// let signal = b.listen(0, rx);
     /// ```
     ///
-    pub fn listen<A, T>(&self, input: T) -> Channel<A> where
+    pub fn listen<A, T>(&self, initial: A, input: T) -> Channel<A> where
         T: 'static + Input<A> + Send,
         A: 'static + Clone + Send,
     {
         let (tx, rx) = channel();
         let internal_input = InternalInput {
             input: Box::new(input),
+            initial: Some(initial),
             sink_tx: tx,
         };
 
@@ -135,13 +136,31 @@ impl Builder {
         SA: 'static + Signal<A>,
         A: 'static + Clone + Send,
     {
-        let (tx, rx) = channel();
+        // NOTE: If Async implemented RunInput we could probably avoid one of
+        // these channel steps...
 
-        let pusher = Async::new(Box::new(root), tx);
+        // Push data from `root` to an internal input
+        let (input_tx, input_rx) = channel();
+
+        let pusher = Async::new(Box::new(root), input_tx);
 
         self.root_signals.borrow_mut().push(Box::new(pusher));
 
-        self.listen(rx)
+
+
+        // Push data from internal signal to channel
+        
+        let (output_tx, output_rx) = channel();
+
+        let internal_input = InternalInput {
+            input: Box::new(input_rx),
+            initial: None,
+            sink_tx: output_tx,
+        };
+
+        self.inputs.borrow_mut().push(Box::new(internal_input));
+
+        Channel::new(output_rx)
     }
 
     /// Creats a channel with constant value `v`
@@ -149,7 +168,7 @@ impl Builder {
     pub fn value<T>(&self, v: T) -> Channel<T> where
         T: 'static + Clone + Send,
     {
-        self.listen(Value(v))
+        self.listen(v.clone(), Value(v))
     }
 }
 

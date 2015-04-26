@@ -21,5 +21,6 @@ concurrency (and because I'm a Rust newb).  Simplification suggestions welcome!
 
 ## TODO
 
-* publish, travis, post
+* Fix 'value' so it doesn't spam the network
+* TEST COVERAGE!!!
 * Try to eliminate constraints

@@ -48,7 +48,7 @@ impl<F, A, B> Signal<B> for FoldSignal<F, A, B> where
                                 child: Some(t),
                                 f: f,
                                 state: state,
-                                cache: None,
+                                marker: PhantomData,
                             }
                         )
                     )
@@ -64,7 +64,7 @@ impl<F, A, B> Signal<B> for FoldSignal<F, A, B> where
                                 child: None,
                                 f: f,
                                 state: state,
-                                cache: None,
+                                marker: PhantomData,
                             }
                         )
                     )
@@ -99,7 +99,7 @@ struct FoldPusher<F, A, B> where
     child: Option<Box<Push<B>>>,
     f: F,
     state: B,
-    cache: Option<A>,
+    marker: PhantomData<A>,
 }
 
 impl<F, A, B> Push<A> for FoldPusher<F, A, B> where
@@ -111,24 +111,12 @@ impl<F, A, B> Push<A> for FoldPusher<F, A, B> where
         let out = match event {
             Event::Changed(a) => { 
                 debug!("FoldPusher handling Event::Changed");
-                self.cache = Some(a.clone());
                 (self.f)(&mut self.state, a);
                 Event::Changed(self.state.clone())
             },
             Event::Unchanged => {
                 debug!("FoldPusher handling Event::Unchanged");
-
-                match self.cache {
-                    Some(ref a) => {
-                        (self.f)(&mut self.state, a.clone());
-                        Event::Changed(self.state.clone())
-                    },
-                    None => panic!("FoldPusher handling Event::Unchanged (no cached data)"),
-                }
-            },
-            Event::NoOp => {
-                debug!("FoldPusher handling Event::NoOp");
-                Event::NoOp
+                Event::Unchanged
             },
             Event::Exit => {
                 debug!("FoldPusher handling Event::NoOp");

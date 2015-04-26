@@ -106,41 +106,22 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
                             t.push(Event::Unchanged);
                         }
 
-                        (Ok(Event::Changed(l)), Ok(Event::NoOp)) => {
-                            cached_left = Some(l.clone());
-
-                            let c = f(Some(l), None);
-                            t.push(Event::Changed(c));
+                        (Ok(Event::Exit), _) => {
+                            t.push(Event::Exit);
+                            // return
                         }
 
-                        (Ok(Event::NoOp), Ok(Event::Changed(r))) => {
-                            cached_right = Some(r.clone());
-
-                            let c = f(None, Some(r));
-                            t.push(Event::Changed(c));
+                        (_, Ok(Event::Exit)) => {
+                            t.push(Event::Exit);
+                            // return
                         }
 
-                        (Ok(Event::Unchanged), Ok(Event::NoOp)) => {
-                            match cached_left {
-                                Some(ref l) => {
-                                    let c = f(Some(l.clone()), None);
-                                    t.push(Event::Changed(c));
-                                }
-                                None => panic!("No cached right value"),
-                            }
+                        (Err(_), _) => {
+                            t.push(Event::Exit);
                         }
 
-                        (Ok(Event::NoOp), Ok(Event::Unchanged)) => {
-                            match cached_right {
-                                Some(ref r) => {
-                                    let c = f(None, Some(r.clone()));
-                                    t.push(Event::Changed(c));
-                                }
-                                None => panic!("No cached right value"),
-                            }
-                        }
-
-                        (_, _) => {
+                        (_, Err(_)) => {
+                            t.push(Event::Exit);
                         }
                     }
                 }

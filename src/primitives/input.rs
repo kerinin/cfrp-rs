@@ -56,6 +56,7 @@ pub struct InternalInput<A> where
     A: 'static + Send + Clone
 {
     pub input: Box<Input<A> + Send>,
+    pub initial: Option<A>,
     pub sink_tx: Sender<Event<A>>,
 }
 
@@ -64,6 +65,16 @@ impl<A> RunInput for InternalInput<A> where
 {
     fn run(mut self: Box<Self>, idx: usize, no_ops: Arc<Mutex<Vec<Box<NoOp>>>>) {
         spawn(move || {
+            match self.initial {
+                Some(ref i) => {
+                    match self.sink_tx.send(Event::Changed(i.clone())) {
+                        Err(e) => debug!("InternalInput::run received error attempting to send initial value: {}", e),
+                        _ => {}
+                    };
+                },
+                None => {},
+            }
+
             loop {
                 match self.input.pull() {
                     Some(a) => {
@@ -102,7 +113,7 @@ impl<A> NoOp for Sender<Event<A>> where
     A: 'static + Send,
 {
     fn send_no_change(&self) {
-        match self.send(Event::NoOp) {
+        match self.send(Event::Unchanged) {
             // We can't really terminate a child process, so just ignore errors...
             _ => {}
         }
