@@ -65,12 +65,11 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
             right.push_to(Some(Box::new(pusher)));
         });
 
+        let mut cached_left = None;
+        let mut cached_right = None;
         match target {
             Some(mut t) => {
                 debug!("SETUP: pushing to target Some");
-                let mut cached_left = None;
-                let mut cached_right = None;
-
                 loop {
 
                     // NOTE: There's probably a better way of doing this...
@@ -127,11 +126,45 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
                 debug!("SETUP: pushing to target None");
                 loop {
                     match (left_rx.recv(), right_rx.recv()) {
+                        (Ok(Event::Changed(l)), Ok(Event::Changed(r))) => {
+                            debug!("Lift2Pusher handling Event::Changed/Event::Changed");
+                            cached_left = Some(l.clone());
+                            cached_right = Some(r.clone());
+
+                            f(l, r);
+                        }
+
+                        (Ok(Event::Unchanged), Ok(Event::Changed(r))) => {
+                            debug!("Lift2Pusher handling Event::Unchanged/Event::Changed");
+                            match cached_left {
+                                Some(ref l) => {
+                                    cached_right = Some(r.clone());
+
+                                    f(l.clone(), r);
+                                }
+                                None => panic!("No cached left value"),
+                            }
+                        }
+                        (Ok(Event::Changed(l)), Ok(Event::Unchanged)) => {
+                            debug!("Lift2Pusher handling Event::Changed/Event::Unchanged");
+                            match cached_right {
+                                Some(ref r) => {
+                                    cached_left = Some(l.clone());
+
+                                    f(l, r.clone());
+                                }
+                                None => panic!("No cached right value"),
+                            }
+                        }
+
+                        (Ok(Event::Unchanged), Ok(Event::Unchanged)) => {
+                            debug!("Lift2Pusher handling Event::Unchanged/Event::Unchanged");
+                        }
+
                         (Ok(Event::Exit), _) => { debug!("Lift2Pusher handling Event::Exit"); return }
                         (_, Ok(Event::Exit)) => { debug!("Lift2Pusher handling Event::Exit"); return }
                         (Err(_), _) => { debug!("Lift2Pusher handling closed channel"); return }
                         (_, Err(_)) => { debug!("Lift2Pusher handling closed channel"); return }
-                        _ => {}
                     }
                 }
             }
