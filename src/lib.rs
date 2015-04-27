@@ -64,12 +64,8 @@
 extern crate log;
 
 pub mod primitives;
-mod signal_ext;
 
-pub use signal_ext::SignalExt;
-use primitives::{Topology, Builder, TopologyHandle};
-
-
+use primitives::*;
 
 
 /// Container for data as it flows across the topology
@@ -88,7 +84,9 @@ pub enum SignalType<A> {
 
 /// Types which can serve as a data source
 ///
-pub trait Signal<A>: Send {
+pub trait Signal<A>: Send where
+A: 'static + Send + Clone,
+{
     // Called at build time when a downstream process is created for the signal
     fn init(&mut self) {}
 
@@ -97,6 +95,168 @@ pub trait Signal<A>: Send {
 
     // Called at compile time when a donstream process is run
     fn push_to(self: Box<Self>, Option<Box<Push<A>>>);
+
+    /// Apply a pure function `F` to a data source `Signal<A>`, generating a 
+    /// transformed output data source `Signal<B>`.
+    ///
+    /// Other names for this operation include "map" or "collect".  `f` will be
+    /// run in `self`'s thread
+    ///
+    /// Because `F` is assumed to be pure, it will only be evaluated for
+    /// new data that has changed since the last observation.  If side-effects are
+    /// desired, use `fold` instead.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cfrp::*;
+    /// use cfrp::primitives::*;
+    ///
+    /// // Create a constant-valued channel with value 1 and return a channel with
+    /// // value 2.  The value will only be calculated with `i` changes (which in 
+    /// // this case is never)
+    /// Builder::new().value(1)
+    ///     .lift(|i| { i + 1 });
+    /// ```
+    ///
+    fn lift<F, B>(mut self: Box<Self>, f: F) -> Box<Signal<B>> where
+    Self: 'static + Sized,
+    F: 'static + Send + Fn(A) -> B + Sized,
+    B: 'static + Send + Clone + Sized,
+    {
+        self.init();
+
+        match self.initial() {
+            SignalType::Dynamic(v) => {
+                let initial = f(v);
+                Box::new(LiftSignal::new(self, f, initial))
+            }
+            SignalType::Constant(v) => {
+                let initial = f(v);
+                Box::new(Value::new(initial))
+            }
+        }
+    }
+
+    /// Apply a pure function `F` to a two data sources `Signal<A>`, and `Signal<B>`,
+    /// generating a transformed output data source `Signal<C>`.
+    ///
+    /// Other names for this operation include "map" or "collect".  `f` will be
+    /// run in `self`'s thread
+    ///
+    /// Because `F` is assumed to be pure, it will only be evaluated for
+    /// new data that has changed since the last observation.  If side-effects are
+    /// desired, use `fold` instead.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cfrp::*;
+    /// use cfrp::primitives::*;
+    ///
+    /// let b = Builder::new();
+    ///
+    /// // Create two constant-valued channels with value 1 and return a channel with
+    /// // their sum.  The value will only be calculated with `i` or `j` changes 
+    /// // (which in this case is never)
+    /// b.value(1).lift2(b.value(1), |i, j| { 
+    ///
+    ///     // All data entering the topology is processed by every node in the 
+    ///     // topology, this means that data entering a given channel will be `None`
+    ///     // downstream of other channels.
+    ///     match (i, j) {
+    ///         (Some(i), Some(j))  => { i + j },
+    ///         (Some(i), None)     => i,
+    ///         (None, Some(j))     => j,
+    ///         (None, None)        => 0,
+    ///     }
+    /// });
+    /// ```
+    ///
+    fn lift2<F, B, SB, C>(mut self: Box<Self>, mut right: Box<Signal<B>>, f: F) -> Box<Signal<C>> where
+    Self: 'static + Sized,
+    F: 'static + Send + Fn(A, B) -> C + Sized,
+    B: 'static + Send + Clone + Sized,
+    C: 'static + Send + Clone + Sized,
+    {
+        self.init();
+        right.init();
+
+        match (self.initial(), right.initial()) {
+            (SignalType::Dynamic(l), SignalType::Dynamic(r)) => {
+                let initial = f(l,r);
+                Box::new(Lift2Signal::new(self, right, f, initial))
+            }
+
+            (SignalType::Dynamic(l), SignalType::Constant(r)) => {
+                let initial = f(l, r.clone());
+                let signal = LiftSignal::new(
+                    self,
+                    move |dynamic_l| -> C { f(dynamic_l, r.clone()) },
+                    initial,
+                    );
+
+                Box::new(signal)
+            }
+
+            (SignalType::Constant(l), SignalType::Dynamic(r)) => {
+                let initial = f(l.clone(), r);
+                let signal = LiftSignal::new(
+                    right,
+                    move |dynamic_r| -> C { f(l.clone(), dynamic_r) },
+                    initial,
+                    );
+
+                Box::new(signal)
+            }
+
+            (SignalType::Constant(l), SignalType::Constant(r)) => {
+                let initial = f(l, r);
+                Box::new(Value::new(initial))
+            }
+        }
+    }
+
+    /// Apply a function `F` which uses a data source `Signal<A>` to 
+    /// mutate an instance of `B`, generating an output data source `Signal<B>`
+    /// containing the mutated value
+    ///
+    /// Other names for this operation include "reduce" or "inject".  `f` will
+    /// be run in `self`'s thread
+    ///
+    /// Fold is assumed to be impure, therefore the function will be called with
+    /// all data upstream of the fold, even if there are no changes in the stream.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use cfrp::*;
+    /// use cfrp::primitives::*;
+    ///
+    /// // Create a constant-valued channel with value 1 and fold it into a summation
+    /// Builder::new().value(1)
+    ///     .fold(0, |sum, i| { *sum += i });
+    /// ```
+    ///
+    fn fold<F, B>(mut self: Box<Self>, mut initial: B, mut f: F) -> Box<Signal<B>> where
+    Self: 'static + Sized,
+    F: 'static + Send + FnMut(&mut B, A) + Sized,
+    B: 'static + Send + Clone + Sized,
+    {
+        self.init();
+
+        match self.initial() {
+            SignalType::Dynamic(v) => {
+                f(&mut initial, v);
+                Box::new(FoldSignal::new(self, initial, f))
+            }
+
+            SignalType::Constant(v) => {
+                f(&mut initial, v);
+                Box::new(Value::new(initial))
+            }
+        }
+    }
 }
 
 pub trait Let<A>: Signal<A> {

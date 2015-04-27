@@ -5,7 +5,7 @@ use std::thread;
 use std::marker::*;
 
 use super::super::{Signal, SignalType, Let};
-use super::input::{RunInput, NoOp, ReceiverInput, ValueInput};
+use super::input::{RunInput, NoOp, ReceiverInput};
 use super::fork::{Run, Fork, Branch};
 use super::channel::Channel;
 use super::async::Async;

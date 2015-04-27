@@ -63,47 +63,6 @@ impl<A> RunInput for ReceiverInput<A> where
     }
 }
 
-pub struct ValueInput<A> where
-    A: Send,
-{
-    value: A,
-    tx: SyncSender<Event<A>>,
-}
-
-impl<A> ValueInput<A> where
-    A: Send,
-{
-    pub fn new(value: A, tx: SyncSender<Event<A>>) -> ValueInput<A> {
-        ValueInput {
-            value: value,
-            tx: tx,
-        }
-    }
-}
-
-impl<A> RunInput for ValueInput<A> where
-    A: 'static + Send,
-{
-    fn boxed_no_op(&self) -> Box<NoOp> {
-        Box::new(self.tx.clone())
-    }
-
-    fn run(mut self: Box<Self>, idx: usize, txs: Arc<Mutex<Vec<Box<NoOp>>>>) {
-        let inner = *self;
-        let ValueInput {value, tx} = inner;
-
-        tx.send(Event::Changed(value));
-
-        loop {
-            match tx.send(Event::Unchanged) {
-                Err(_) => return,
-                _ => {},
-            }
-        }
-    }
-}
-
-
 
 impl<A> NoOp for SyncSender<Event<A>> where
     A: Send

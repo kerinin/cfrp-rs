@@ -6,7 +6,7 @@ use super::super::{Event, Signal, SignalType, Push};
 ///
 pub struct LiftSignal<F, A, B> where
     F: 'static + Send + Fn(A) -> B,
-    A: 'static + Send,
+    A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
     parent: Box<Signal<A>>,
@@ -16,7 +16,7 @@ pub struct LiftSignal<F, A, B> where
 
 impl<F, A, B> LiftSignal<F, A, B> where
     F: 'static + Send + Fn(A) -> B,
-    A: 'static + Send,
+    A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
     pub fn new(parent: Box<Signal<A>>, f: F, initial: B) -> Self {
@@ -30,7 +30,7 @@ impl<F, A, B> LiftSignal<F, A, B> where
 
 impl<F, A, B> Signal<B> for LiftSignal<F, A, B> where
     F: 'static + Send + Fn(A) -> B,
-    A: 'static + Send,
+    A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
     fn initial(&self) -> SignalType<B> {
@@ -39,7 +39,7 @@ impl<F, A, B> Signal<B> for LiftSignal<F, A, B> where
 
     fn push_to(self: Box<Self>, target: Option<Box<Push<B>>>) {
         let inner = *self;
-        let LiftSignal { parent, f, initial } = inner;
+        let LiftSignal { parent, f, initial: _ } = inner;
 
         match target {
             Some(t) => {
@@ -68,7 +68,7 @@ impl<F, A, B> Signal<B> for LiftSignal<F, A, B> where
 
 struct LiftPusher<F, A, B> where
     F: 'static + Send + Fn(A) -> B,
-    A: 'static + Send,
+    A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
     child: Box<Push<B>>,
@@ -78,7 +78,7 @@ struct LiftPusher<F, A, B> where
 
 impl<F, A, B> Push<A> for LiftPusher<F, A, B> where
     F: 'static + Send + Fn(A) -> B,
-    A: 'static + Send,
+    A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
     fn push(&mut self, event: Event<A>) {

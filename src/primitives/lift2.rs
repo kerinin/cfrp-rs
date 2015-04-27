@@ -45,7 +45,7 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
 
     fn push_to(self: Box<Self>, target: Option<Box<Push<C>>>) {
         let inner = *self;
-        let Lift2Signal {left, right, f, initial} = inner;
+        let Lift2Signal {left, right, f, initial: _} = inner;
 
         let (left_tx, left_rx) = channel();
         thread::spawn(move || {
