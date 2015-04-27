@@ -108,6 +108,14 @@ impl Builder {
         Box::new(Channel::new(rx, initial))
     }
 
+    /// Creats a channel with constant value `v`
+    ///
+    pub fn value<T>(&self, v: T) -> Box<Signal<T>> where
+        T: 'static + Clone + Send,
+    {
+        Box::new(Value::new(v))
+    }
+
     /// Combination of adding a signal and a channel
     ///
     /// Async allows signals to be processed downstream out of order.  Internally,
@@ -152,14 +160,6 @@ impl Builder {
                 Box::new(Value::new(v))
             }
         }
-    }
-
-    /// Creats a channel with constant value `v`
-    ///
-    pub fn value<T>(&self, v: T) -> Box<Signal<T>> where
-        T: 'static + Clone + Send,
-    {
-        Box::new(Value::new(v))
     }
 }
 

@@ -13,3 +13,4 @@ pub use self::fold::FoldSignal;
 pub use self::lift::LiftSignal;
 pub use self::lift2::Lift2Signal;
 pub use self::value::Value;
+pub use self::fork::Branch;

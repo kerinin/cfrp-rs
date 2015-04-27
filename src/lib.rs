@@ -66,7 +66,7 @@ extern crate log;
 pub mod primitives;
 mod signal_ext;
 
-// use primitives::*;
+use primitives::*;
 pub use signal_ext::SignalExt;
 
 
@@ -110,7 +110,6 @@ pub trait Push<A> {
     fn push(&mut self, Event<A>);
 }
 
-/*
 /// Construct a new topology and run it
 ///
 /// `f` will be called with a `Builder`, which exposes methods for adding
@@ -129,47 +128,145 @@ pub trait Push<A> {
 /// });
 /// ```
 ///
-pub fn spawn_topology<T, F>(state: T, f: F) -> TopologyHandle where
-    F: Fn(&Builder, T),
+pub fn spawn_topology<F>(f: F) where
+    F: FnOnce(&Builder),
 {
     let builder = Builder::new();
-    f(&builder, state);
+    f(&builder);
     Topology::new(builder).run()
 }
-*/
 
 #[cfg(test)] 
 mod test {
-    extern crate env_logger;
-
     use std::sync::mpsc::*;
-    use std::thread;
 
-    use super::Signal;
-    use super::signal_ext::SignalExt;
-    use super::primitives::*;
+    use super::*;
 
     #[test]
     fn lift_channel() {
-        let b = Builder::new();
-
         let (in_tx, in_rx) = sync_channel(0);
         let (out_tx, out_rx) = channel();
 
-        let ch1: Box<Signal<usize>> = b.listen(0, in_rx);
+        spawn_topology(move |t| {
+            t.listen(0, in_rx)
+                .lift(move |i| { out_tx.send(i | (1 << 1)).unwrap(); })
+                .add_to(t);
+        });
 
-        b.add(
-            ch1
-            .lift(|i| { info!("lifting {}", i); i | (1 << 1) })
-            .fold(out_tx, |tx, i| { tx.send(i).unwrap(); })
-        );
-
-        Topology::new(b).run();
+        // Initial value
         assert_eq!(out_rx.recv().unwrap(), 0b00000010);
 
+        // Lifted value
         in_tx.send(1).unwrap();
         assert_eq!(out_rx.recv().unwrap(), 0b00000011);
+    }
 
-        thread::sleep_ms(1000);
+    #[test]
+    fn lift_value() {
+        let (out_tx, out_rx) = channel();
+
+        spawn_topology(move |t| {
+            t.value(0)
+                .lift(move |i| { out_tx.send(i | (1 << 1)).unwrap(); })
+                .add_to(t);
+        });
+
+        // Initial value
+        assert_eq!(out_rx.recv().unwrap(), 0b00000010);
+    }
+
+    #[test]
+    fn fold_channel() {
+        let (in_tx, in_rx) = sync_channel(0);
+        let (out_tx, out_rx) = channel();
+
+        spawn_topology(move |t| {
+            t.listen(0, in_rx)
+                .fold(out_tx, |tx, i| { tx.send(i | (1 << 1)).unwrap(); })
+                .add_to(t);
+        });
+
+        // Initial value
+        assert_eq!(out_rx.recv().unwrap(), 0b00000010);
+
+        // Lifted value
+        in_tx.send(1).unwrap();
+        assert_eq!(out_rx.recv().unwrap(), 0b00000011);
+    }
+
+    #[test]
+    fn fold_value() {
+        let (out_tx, out_rx) = channel();
+
+        spawn_topology(move |t| {
+            t.value(0)
+                .fold(out_tx, |tx, i| { tx.send(i | (1 << 1)).unwrap(); })
+                .add_to(t);
+        });
+
+        // Initial value
+        assert_eq!(out_rx.recv().unwrap(), 0b00000010);
+    }
+
+    #[test]
+    fn lift2_channel_channel() {
+        let (l_tx, l_rx) = sync_channel(0);
+        let (r_tx, r_rx) = sync_channel(0);
+        let (out_tx, out_rx) = channel();
+
+        spawn_topology(move |t| {
+            t.listen(1 << 0, l_rx)
+                .lift2(t.listen(1 << 1, r_rx), move |i,j| { out_tx.send(i | j).unwrap() })
+                .add_to(t);
+        });
+
+        // Initial value
+        assert_eq!(out_rx.recv().unwrap(), (1 << 0) | (1 << 1));
+
+        l_tx.send(1 << 2).unwrap();
+        assert_eq!(out_rx.recv().unwrap(), (1 << 2) | (1 << 1));
+
+        r_tx.send(1 << 3).unwrap();
+        assert_eq!(out_rx.recv().unwrap(), (1 << 2) | (1 << 3));
+    }
+
+    #[test]
+    fn lift2_channel_value() {
+        let (tx, rx) = sync_channel(0);
+        let (out_tx, out_rx) = channel();
+
+        spawn_topology(move |t| {
+            t.listen(1 << 0, rx)
+                .lift2(t.value(1 << 1), move |i,j| { out_tx.send(i | j).unwrap() })
+                .add_to(t);
+        });
+
+        // Initial value
+        assert_eq!(out_rx.recv().unwrap(), (1 << 0) | (1 << 1));
+
+        tx.send(1 << 2).unwrap();
+        assert_eq!(out_rx.recv().unwrap(), (1 << 2) | (1 << 1));
+    }
+
+    #[test]
+    fn lift2_value_value() {
+        let (out_tx, out_rx) = channel();
+
+        spawn_topology(move |t| {
+            t.value(1 << 0)
+                .lift2(t.value(1 << 1), move |i,j| { out_tx.send(i | j).unwrap() })
+                .add_to(t);
+        });
+
+        // Initial value
+        assert_eq!(out_rx.recv().unwrap(), (1 << 0) | (1 << 1));
+    }
+
+    #[test]
+    fn async() {
+    }
+
+    #[test]
+    fn branch() {
     }
 }

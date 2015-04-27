@@ -47,6 +47,15 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
         let inner = *self;
         let Lift2Signal {left, right, f, initial: _} = inner;
 
+        let mut cached_left = match left.initial() {
+            SignalType::Dynamic(l) => l,
+            SignalType::Constant(l) => l,
+        };
+        let mut cached_right = match right.initial() {
+            SignalType::Dynamic(r) => r,
+            SignalType::Constant(r) => r,
+        };
+
         debug!("SETUP: spawning listener left");
         let (left_tx, left_rx) = sync_channel(0);
         thread::spawn(move || {
@@ -65,8 +74,6 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
             right.push_to(Some(Box::new(pusher)));
         });
 
-        let mut cached_left = None;
-        let mut cached_right = None;
         match target {
             Some(mut t) => {
                 debug!("SETUP: pushing to target Some");
@@ -78,8 +85,8 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
                     match (left_rx.recv(), right_rx.recv()) {
                         (Ok(Event::Changed(l)), Ok(Event::Changed(r))) => {
                             debug!("Lift2Pusher handling Event::Changed/Event::Changed");
-                            cached_left = Some(l.clone());
-                            cached_right = Some(r.clone());
+                            cached_left = l.clone();
+                            cached_right = r.clone();
 
                             let c = f(l, r);
                             t.push(Event::Changed(c));
@@ -87,27 +94,17 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
 
                         (Ok(Event::Unchanged), Ok(Event::Changed(r))) => {
                             debug!("Lift2Pusher handling Event::Unchanged/Event::Changed");
-                            match cached_left {
-                                Some(ref l) => {
-                                    cached_right = Some(r.clone());
+                            cached_right = r.clone();
 
-                                    let c = f(l.clone(), r);
-                                    t.push(Event::Changed(c));
-                                }
-                                None => panic!("No cached left value"),
-                            }
+                            let c = f(cached_left.clone(), r);
+                            t.push(Event::Changed(c));
                         }
                         (Ok(Event::Changed(l)), Ok(Event::Unchanged)) => {
                             debug!("Lift2Pusher handling Event::Changed/Event::Unchanged");
-                            match cached_right {
-                                Some(ref r) => {
-                                    cached_left = Some(l.clone());
+                            cached_left = l.clone();
 
-                                    let c = f(l, r.clone());
-                                    t.push(Event::Changed(c));
-                                }
-                                None => panic!("No cached right value"),
-                            }
+                            let c = f(l, cached_right.clone());
+                            t.push(Event::Changed(c));
                         }
 
                         (Ok(Event::Unchanged), Ok(Event::Unchanged)) => {
@@ -128,33 +125,24 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
                     match (left_rx.recv(), right_rx.recv()) {
                         (Ok(Event::Changed(l)), Ok(Event::Changed(r))) => {
                             debug!("Lift2Pusher handling Event::Changed/Event::Changed");
-                            cached_left = Some(l.clone());
-                            cached_right = Some(r.clone());
+                            cached_left = l.clone();
+                            cached_right = r.clone();
 
                             f(l, r);
                         }
 
                         (Ok(Event::Unchanged), Ok(Event::Changed(r))) => {
                             debug!("Lift2Pusher handling Event::Unchanged/Event::Changed");
-                            match cached_left {
-                                Some(ref l) => {
-                                    cached_right = Some(r.clone());
+                            cached_right = r.clone();
 
-                                    f(l.clone(), r);
-                                }
-                                None => panic!("No cached left value"),
-                            }
+                            f(cached_left.clone(), r);
                         }
+
                         (Ok(Event::Changed(l)), Ok(Event::Unchanged)) => {
                             debug!("Lift2Pusher handling Event::Changed/Event::Unchanged");
-                            match cached_right {
-                                Some(ref r) => {
-                                    cached_left = Some(l.clone());
+                            cached_left = l.clone();
 
-                                    f(l, r.clone());
-                                }
-                                None => panic!("No cached right value"),
-                            }
+                            f(l, cached_right.clone());
                         }
 
                         (Ok(Event::Unchanged), Ok(Event::Unchanged)) => {
