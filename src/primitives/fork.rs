@@ -22,13 +22,13 @@ pub struct Fork<A> where
     A: 'static + Send,
 {
     parent: Box<Signal<A>>,
-    sink_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>,
+    sink_txs: Arc<Mutex<Vec<SyncSender<Event<A>>>>>,
 }
 
 impl<A> Fork<A> where
     A: 'static + Clone + Send,
 {
-    pub fn new(parent: Box<Signal<A>>, sink_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>) -> Fork<A> {
+    pub fn new(parent: Box<Signal<A>>, sink_txs: Arc<Mutex<Vec<SyncSender<Event<A>>>>>) -> Fork<A> {
         Fork {
             parent: parent,
             sink_txs: sink_txs,
@@ -70,7 +70,7 @@ impl<A> Run for Fork<A> where
 }
 
 struct ForkPusher<A> {
-    sink_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>,
+    sink_txs: Arc<Mutex<Vec<SyncSender<Event<A>>>>>,
 }
 
 impl<A> Push<A> for ForkPusher<A> where
@@ -98,7 +98,7 @@ impl<A> Push<A> for ForkPusher<A> where
 pub struct Branch<A> where
     A: 'static + Send,
 {
-    fork_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>,
+    fork_txs: Arc<Mutex<Vec<SyncSender<Event<A>>>>>,
     source_rx: Option<Receiver<Event<A>>>,
     initial: A,
 }
@@ -106,7 +106,7 @@ pub struct Branch<A> where
 impl<A> Branch<A> where
     A: 'static + Send,
 {
-    pub fn new(fork_txs: Arc<Mutex<Vec<Sender<Event<A>>>>>, source_rx: Option<Receiver<Event<A>>>, initial: A) -> Branch<A> {
+    pub fn new(fork_txs: Arc<Mutex<Vec<SyncSender<Event<A>>>>>, source_rx: Option<Receiver<Event<A>>>, initial: A) -> Branch<A> {
         Branch {
             fork_txs: fork_txs,
             source_rx: source_rx,
@@ -160,7 +160,7 @@ impl<A> Signal<A> for Branch<A> where
     }
 
     fn init(&mut self) {
-        let (tx, rx) = channel();
+        let (tx, rx) = sync_channel(0);
         self.fork_txs.lock().unwrap().push(tx);
         self.source_rx = Some(rx);
     }

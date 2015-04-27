@@ -43,13 +43,12 @@ impl<F, A, B> Signal<B> for LiftSignal<F, A, B> where
 
         match target {
             Some(t) => {
-                debug!("Lift::push_to Some");
-
+                debug!("SETUP: Sending to target Some");
                 parent.push_to(
                     Some(
                         Box::new(
                             LiftPusher {
-                                child: t,
+                                child: Some(t),
                                 f: f,
                                 marker: PhantomData,
                             }
@@ -58,9 +57,18 @@ impl<F, A, B> Signal<B> for LiftSignal<F, A, B> where
                 );
             },
             None => {
-                debug!("Lift::push_to None");
-
-                parent.push_to(None)
+                debug!("SETUP: Sending to target None");
+                parent.push_to(
+                    Some(
+                        Box::new(
+                            LiftPusher {
+                                child: None,
+                                f: f,
+                                marker: PhantomData,
+                            }
+                        )
+                    )
+                );
             },
         }
     }
@@ -71,7 +79,7 @@ struct LiftPusher<F, A, B> where
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
-    child: Box<Push<B>>,
+    child: Option<Box<Push<B>>>,
     f: F,
     marker: PhantomData<A>,
 }
@@ -84,20 +92,75 @@ impl<F, A, B> Push<A> for LiftPusher<F, A, B> where
     fn push(&mut self, event: Event<A>) {
         let out = match event {
             Event::Changed(a) => {
-                debug!("LiftPusher handling Event::Changed");
+                info!("RUN: LiftPusher handling Event::Changed");
                 let b = (self.f)(a);
                 Event::Changed(b)
             },
             Event::Unchanged => {
-                debug!("LiftPusher handling Event::Unchanged");
+                info!("RUN: LiftPusher handling Event::Unchanged");
                 Event::Unchanged
             },
             Event::Exit => {
-                debug!("LiftPusher handling Event::Exit");
+                info!("RUN: LiftPusher handling Event::Exit");
                 Event::Exit
             },
         };
 
-        self.child.push(out);
+        match self.child {
+            Some(ref mut t) => t.push(out),
+            None => {},
+        }
     }
 }
+
+    /*
+#[cfg(test)] 
+mod test {
+    extern crate env_logger;
+
+    use std::sync::mpsc::*;
+
+    use super::super::super::{Signal, SignalExt};
+    use super::super::channel::Channel;
+    use super::super::value::Value;
+    use super::super::lift::LiftSignal;
+
+    // env_logger::init().unwrap();
+
+    #[test]
+    fn lift_constructs_from_value() {
+        let v = Value::new(0);
+        let l = LiftSignal::new(Box::new(v), |i| -> usize { i + 1 }, 0);
+
+        assert!(true);
+    }
+
+    #[test]
+    fn lift_constructs_from_channel() {
+        let (tx, rx) = channel();
+        let c = Channel::new(rx, 0);
+        let l = LiftSignal::new(Box::new(c), |i| { i + 1 }, 0);
+
+        assert!(true);
+    }
+
+    #[test]
+    fn lift_lifts_from_value() {
+        let v = Value::new(0);
+        let l = Box::new(LiftSignal::new(Box::new(v), |i| { i + 1 }, 0));
+        let l2 = l.lift(|i| { i + 1 });
+
+        assert!(true);
+    }
+
+    #[test]
+    fn lift_lifts_from_channel() {
+        let (tx, rx) = channel();
+        let c: Box<Signal<usize>> = Box::new(Channel::new(rx, 0));
+        let l: Box<Signal<usize>> = Box::new(LiftSignal::new(c, |i| { i + 1 }, 0));
+        let l2 = l.lift(|i| { i + 1 });
+
+        assert!(true);
+    }
+}
+    */

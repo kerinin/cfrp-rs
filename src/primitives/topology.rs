@@ -52,15 +52,14 @@ impl Builder {
     /// b.add(fork.lift(|i| { -i }));
     /// ```
     ///
-    pub fn add<A, SA>(&self, root: SA) -> Box<Signal<A>> where // NOTE: This needs to be clone-able!
-        SA: 'static + Signal<A>,
+    pub fn add<A>(&self, root: Box<Signal<A>>) -> Box<Signal<A>> where // NOTE: This needs to be clone-able!
         A: 'static + Clone + Send,
     {
         match root.initial() {
             SignalType::Dynamic(v) => {
                 let fork_txs = Arc::new(Mutex::new(Vec::new()));
 
-                let fork = Fork::new(Box::new(root), fork_txs.clone());
+                let fork = Fork::new(root, fork_txs.clone());
 
                 self.root_signals.borrow_mut().push(Box::new(fork));
 
@@ -136,15 +135,14 @@ impl Builder {
     /// );
     /// ```
     ///
-    pub fn async<A, SA>(&self, root: SA) -> Box<Signal<A>> where // NOTE: Needs to be cloneable
-        SA: 'static + Signal<A>,
+    pub fn async<A>(&self, root: Box<Signal<A>>) -> Box<Signal<A>> where // NOTE: Needs to be cloneable
         A: 'static + Clone + Send,
     {
 
         match root.initial() {
             SignalType::Dynamic(v) => {
-                let (tx, rx) = channel();
-                let pusher = Async::new(Box::new(root), tx);
+                let (tx, rx) = sync_channel(0);
+                let pusher = Async::new(root, tx);
                 self.root_signals.borrow_mut().push(Box::new(pusher));
 
                 self.listen(v, rx)
@@ -158,10 +156,10 @@ impl Builder {
 
     /// Creats a channel with constant value `v`
     ///
-    pub fn value<T>(&self, v: T) -> Value<T> where
+    pub fn value<T>(&self, v: T) -> Box<Signal<T>> where
         T: 'static + Clone + Send,
     {
-        Value::new(v)
+        Box::new(Value::new(v))
     }
 }
 
@@ -184,8 +182,9 @@ impl Topology {
 
     /// Run the topology
     ///
-    pub fn run(self) -> TopologyHandle {
-        debug!("----> TOPOLOGY STARTING");
+    // pub fn run(self) -> TopologyHandle {
+    pub fn run(self) {
+        info!("----> TOPOLOGY STARTING");
         let Builder {inputs, root_signals} = self.builder;
 
         for root_signal in root_signals.into_inner().into_iter() {
@@ -195,7 +194,7 @@ impl Topology {
         }
 
         let no_ops = Arc::new(Mutex::new(inputs.borrow().iter().map(|i| i.boxed_no_op()).collect::<Vec<Box<NoOp>>>()));
-        let term_txs = inputs.borrow().iter().map(|i| i.boxed_no_op()).collect::<Vec<Box<NoOp>>>();
+        // let term_txs = inputs.borrow().iter().map(|i| i.boxed_no_op()).collect::<Vec<Box<NoOp>>>();
         for (idx, input) in inputs.into_inner().into_iter().enumerate() {
             let no_ops_i = no_ops.clone();
             thread::spawn(move || {
@@ -203,11 +202,11 @@ impl Topology {
             });
         }
 
-        debug!("----> TOPOLOGY RUNNING...");
-
-        TopologyHandle {
-            term_txs: term_txs,
-        }
+        info!("----> TOPOLOGY RUNNING...");
+        //
+        // TopologyHandle {
+        //     term_txs: term_txs,
+        // }
     }
 }
 

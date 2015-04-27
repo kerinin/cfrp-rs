@@ -35,24 +35,27 @@ impl<A> RunInput for ReceiverInput<A> where
     }
 
     fn run(self: Box<Self>, idx: usize, txs: Arc<Mutex<Vec<Box<NoOp>>>>) {
+        debug!("SETUP: running ReceiverInput");
         let inner = *self;
         let ReceiverInput {rx, tx} = inner;
 
         loop {
             match rx.recv() {
                 Ok(ref a) => {
-                   for (i, no_op_tx) in txs.lock().unwrap().iter().enumerate() {
-                       if i == idx {
-                           match tx.send(Event::Changed(a.clone())) {
-                               Err(_) => return,
-                               _ => {},
-                           }
-                       } else {
-                           if no_op_tx.send_no_change() { return }
-                       }
-                   }
+                    info!("RUN: ReceiverInput received data, sending");
+                    for (i, no_op_tx) in txs.lock().unwrap().iter().enumerate() {
+                        if i == idx {
+                            match tx.send(Event::Changed(a.clone())) {
+                                Err(_) => return,
+                                _ => {},
+                            }
+                        } else {
+                            if no_op_tx.send_no_change() { return }
+                        }
+                    }
                 },
-                Err(_) => {
+                Err(e) => {
+                    info!("RUN: ReceiverInput sending error {}, exiting", e);
                     for no_op_tx in txs.lock().unwrap().iter() {
                         no_op_tx.send_exit();
                     }
@@ -65,9 +68,10 @@ impl<A> RunInput for ReceiverInput<A> where
 
 
 impl<A> NoOp for SyncSender<Event<A>> where
-    A: Send
+A: Send
 {
     fn send_no_change(&self) -> bool {
+        info!("RUN: SyncSender sending Unchanged");
         match self.send(Event::Unchanged) {
             Err(_) => true,
             _ => false,
@@ -75,6 +79,9 @@ impl<A> NoOp for SyncSender<Event<A>> where
     }
 
     fn send_exit(&self) {
-        self.send(Event::Exit).unwrap();
+        info!("RUN: SyncSender sending Exit");
+        match self.send(Event::Exit) {
+            _ => {}
+        }
     }
 }

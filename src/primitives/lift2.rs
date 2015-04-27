@@ -47,26 +47,27 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
         let inner = *self;
         let Lift2Signal {left, right, f, initial: _} = inner;
 
-        let (left_tx, left_rx) = channel();
+        debug!("SETUP: spawning listener left");
+        let (left_tx, left_rx) = sync_channel(0);
         thread::spawn(move || {
             let pusher = InputPusher {
                 tx: left_tx,
             };
-            debug!("Pushing Lift2::InputPusher left");
             left.push_to(Some(Box::new(pusher)));
         });
 
-        let (right_tx, right_rx) = channel();
+        debug!("SETUP: spawning listener right");
+        let (right_tx, right_rx) = sync_channel(0);
         thread::spawn(move || {
             let pusher = InputPusher {
                 tx: right_tx,
             };
-            debug!("Pushing Lift2::InputPusher right");
             right.push_to(Some(Box::new(pusher)));
         });
 
         match target {
             Some(mut t) => {
+                debug!("SETUP: pushing to target Some");
                 let mut cached_left = None;
                 let mut cached_right = None;
 
@@ -77,6 +78,7 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
                     // repeated NoOps and only computing f if there's a change.
                     match (left_rx.recv(), right_rx.recv()) {
                         (Ok(Event::Changed(l)), Ok(Event::Changed(r))) => {
+                            debug!("Lift2Pusher handling Event::Changed/Event::Changed");
                             cached_left = Some(l.clone());
                             cached_right = Some(r.clone());
 
@@ -85,6 +87,7 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
                         }
 
                         (Ok(Event::Unchanged), Ok(Event::Changed(r))) => {
+                            debug!("Lift2Pusher handling Event::Unchanged/Event::Changed");
                             match cached_left {
                                 Some(ref l) => {
                                     cached_right = Some(r.clone());
@@ -96,6 +99,7 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
                             }
                         }
                         (Ok(Event::Changed(l)), Ok(Event::Unchanged)) => {
+                            debug!("Lift2Pusher handling Event::Changed/Event::Unchanged");
                             match cached_right {
                                 Some(ref r) => {
                                     cached_left = Some(l.clone());
@@ -108,6 +112,7 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
                         }
 
                         (Ok(Event::Unchanged), Ok(Event::Unchanged)) => {
+                            debug!("Lift2Pusher handling Event::Unchanged/Event::Unchanged");
                             t.push(Event::Unchanged);
                         }
 
@@ -119,6 +124,7 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
                 }
             },
             None => {
+                debug!("SETUP: pushing to target None");
                 loop {
                     match (left_rx.recv(), right_rx.recv()) {
                         (Ok(Event::Exit), _) => { debug!("Lift2Pusher handling Event::Exit"); return }
@@ -135,7 +141,7 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
 
 // Passed up the 'push_to' chain, finalizes by sending to a channel
 struct InputPusher<A> {
-    tx: Sender<Event<A>>,
+    tx: SyncSender<Event<A>>,
 }
 
 impl<A> Push<A> for InputPusher<A> where
@@ -150,3 +156,65 @@ impl<A> Push<A> for InputPusher<A> where
         }
     }
 }
+
+/*
+#[cfg(test)] 
+mod test {
+    extern crate env_logger;
+
+    use std::sync::mpsc::*;
+
+    use super::super::super::Signal;
+    use super::super::channel::Channel;
+    use super::super::value::Value;
+    use super::super::lift2::Lift2Signal;
+
+    // env_logger::init().unwrap();
+
+    #[test]
+    fn lift2_constructs_from_values() {
+        let v1 = Value::new(0);
+        let v2 = Value::new(0);
+        let l = Lift2Signal::new(Box::new(v1), Box::new(v2), |i, j| -> usize { i + j }, 0);
+
+        assert!(true);
+    }
+
+    #[test]
+    fn lift2_constructs_from_channel_and_value() {
+        let (tx, rx) = channel();
+        let c = Channel::new(rx, 0);
+        let v = Value::new(0);
+        let l = Lift2Signal::new(Box::new(c), Box::new(v), |i,j| { i + j }, 0);
+
+        assert!(true);
+    }
+
+    #[test]
+    fn lift2_constructs_from_channels() {
+        let (tx1, rx1) = channel();
+        let (tx2, rx2) = channel();
+        let c1 = Channel::new(rx1, 0);
+        let c2 = Channel::new(rx2, 0);
+
+        let l = Lift2Signal::new(Box::new(c1), Box::new(c2), |i,j| { i + j }, 0);
+
+        assert!(true);
+    }
+
+    #[test]
+    fn lift2_lifts_from_channels() {
+        let (tx1, rx1) = channel();
+        let (tx2, rx2) = channel();
+        let (tx3, rx3) = channel();
+        let c1: Box<Signal<usize>> = Box::new(Channel::new(rx1, 0usize));
+        let c2: Box<Signal<usize>> = Box::new(Channel::new(rx2, 0usize));
+        let c3: Box<Signal<usize>> = Box::new(Channel::new(rx3, 0usize));
+
+        // let l: Box<Signal<usize>> = Box::new(Lift2Signal::new(c1, c2, |i,j| -> usize { i + j }, 0));
+        // let l2: Box<Signal<usize>> = l.lift2(c3, |i,j| -> usize { i + j });
+        //
+        assert!(true);
+    }
+}
+*/

@@ -43,8 +43,6 @@ impl<F, A, B> Signal<B> for FoldSignal<F, A, B> where
 
         match target {
             Some(t) => {
-                debug!("Fold::push_to Some");
-
                 parent.push_to(
                     Some(
                         Box::new(
@@ -59,8 +57,6 @@ impl<F, A, B> Signal<B> for FoldSignal<F, A, B> where
                 );
             },
             None => {
-                debug!("Fold::push_to None");
-
                 parent.push_to(
                     Some(
                         Box::new(
@@ -117,3 +113,54 @@ impl<F, A, B> Push<A> for FoldPusher<F, A, B> where
         }
     }
 }
+
+/*
+#[cfg(test)] 
+mod test {
+    extern crate env_logger;
+
+    use std::sync::mpsc::*;
+
+    use super::super::super::{Signal, SignalExt};
+    use super::super::channel::Channel;
+    use super::super::value::Value;
+    use super::super::fold::FoldSignal;
+
+    // env_logger::init().unwrap();
+
+    #[test]
+    fn fold_constructs_from_value() {
+        let v = Value::new(0);
+        let f = FoldSignal::new(Box::new(v), 0, |s, i| { *s += i });
+
+        assert!(true);
+    }
+
+    #[test]
+    fn fold_constructs_from_channel() {
+        let (tx, rx) = channel();
+        let c = Channel::new(rx, 0);
+        let f = FoldSignal::new(Box::new(c), 0, |s, i| { *s += i });
+
+        assert!(true);
+    }
+
+    #[test]
+    fn fold_impls_fold() {
+        let v = Value::new(0);
+        let f = Box::new(FoldSignal::new(Box::new(v), 0, |s, i| { *s += i }));
+        let f2 = f.fold(0, |s, i| { *s += i });
+
+        assert!(true);
+    }
+
+    #[test]
+    fn fold_impls_lift() {
+        let v = Value::new(0);
+        let f = Box::new(FoldSignal::new(Box::new(v), 0, |s, i| { *s += i }));
+        let f2 = f.lift(|i| { i + 1 });
+
+        assert!(true);
+    }
+}
+*/
