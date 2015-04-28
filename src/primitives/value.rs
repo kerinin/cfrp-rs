@@ -1,4 +1,4 @@
-use super::super::{Signal, SignalType, Push};
+use super::super::{Signal, SignalExt, SignalType, Push};
 
 #[derive(Clone)]
 pub struct Value<A> where
@@ -26,3 +26,6 @@ impl<A> Signal<A> for Value<A> where
         panic!("Constant-typed signal asked to push - stack overflows ahoy!")
     }
 }
+impl<A> SignalExt<A> for Value<A> where
+    A: 'static + Send + Clone,
+{}

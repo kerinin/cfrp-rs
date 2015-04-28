@@ -1,6 +1,6 @@
 use std::marker::*;
 
-use super::super::{Event, Signal, SignalType, Push};
+use super::super::{Event, Signal, SignalExt, SignalType, Push};
 
 /// The result of a `lift` operation
 ///
@@ -79,6 +79,11 @@ impl<F, A, B> Signal<B> for LiftSignal<F, A, B> where
         }
     }
 }
+impl<F, A, B> SignalExt<B> for LiftSignal<F, A, B> where
+    F: 'static + Send + Fn(A) -> B,
+    A: 'static + Send + Clone,
+    B: 'static + Send + Clone,
+{}
 
 struct LiftPusher<F, A, B> where
     F: 'static + Send + Fn(A) -> B,

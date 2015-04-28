@@ -1,6 +1,6 @@
 use std::sync::mpsc::*;
 
-use super::super::{Event, Signal, SignalType, Push};
+use super::super::{Event, Signal, SignalExt, SignalType, Push};
 
 pub struct Channel<A> where
     A: 'static + Send + Clone,
@@ -64,6 +64,7 @@ impl<A> Signal<A> for Channel<A> where
         }
     }
 }
+impl<A> SignalExt<A> for Channel<A> where A: 'static + Send + Clone {}
 
 /*
 #[cfg(test)] 

@@ -85,6 +85,15 @@ pub enum SignalType<A> {
     Dynamic(A),
 }
 
+impl<A> SignalType<A> {
+    fn unwrap(self) -> A {
+        match self {
+            SignalType::Constant(v) => v,
+            SignalType::Dynamic(v) => v,
+        }
+    }
+}
+
 /// Types which can serve as a data source
 ///
 pub trait Signal<A>: Send where
@@ -98,10 +107,6 @@ A: 'static + Send + Clone,
 
     // Called at compile time when a donstream process is run
     fn push_to(self: Box<Self>, Option<Box<Push<A>>>);
-}
-
-pub trait Let<A>: Signal<A> {
-    fn clone(self: Box<Self>) -> Box<Signal<A>>; 
 }
 
 /// Types which can receive incoming data from other signals

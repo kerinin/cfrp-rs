@@ -1,6 +1,6 @@
 use std::marker::*;
 
-use super::super::{Event, Signal, SignalType, Push};
+use super::super::{Event, Signal, SignalExt, SignalType, Push};
 
 /// The result of a `fold` operation
 ///
@@ -89,6 +89,11 @@ impl<F, A, B> Signal<B> for FoldSignal<F, A, B> where
         }
     }
 }
+impl<F, A, B> SignalExt<B> for FoldSignal<F, A, B> where
+    F: 'static + Send + FnMut(&mut B, A),
+    A: 'static + Send + Clone,
+    B: 'static + Send + Clone,
+{}
 
 struct FoldPusher<F, A, B> where
     F: 'static + Send + FnMut(&mut B, A),
