@@ -15,11 +15,11 @@ pub trait RunInput: Send {
 
 pub struct ReceiverInput<A> {
     rx: Receiver<A>,
-    tx: SyncSender<Event<A>>,
+    tx: Sender<Event<A>>,
 }
 
 impl<A> ReceiverInput<A> {
-    pub fn new(rx: Receiver<A>, tx: SyncSender<Event<A>>) -> ReceiverInput<A> {
+    pub fn new(rx: Receiver<A>, tx: Sender<Event<A>>) -> ReceiverInput<A> {
         ReceiverInput {
             rx: rx,
             tx: tx,
@@ -67,11 +67,11 @@ impl<A> RunInput for ReceiverInput<A> where
 }
 
 
-impl<A> NoOp for SyncSender<Event<A>> where
+impl<A> NoOp for Sender<Event<A>> where
 A: Send
 {
     fn send_no_change(&self) -> bool {
-        info!("RUN: SyncSender sending Unchanged");
+        info!("RUN: Sender sending Unchanged");
         match self.send(Event::Unchanged) {
             Err(_) => true,
             _ => false,
@@ -79,7 +79,7 @@ A: Send
     }
 
     fn send_exit(&self) {
-        info!("RUN: SyncSender sending Exit");
+        info!("RUN: Sender sending Exit");
         match self.send(Event::Exit) {
             _ => {}
         }

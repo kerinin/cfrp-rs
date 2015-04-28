@@ -47,4 +47,8 @@ A: 'static + Send + Clone,
     fn add_to(self, builder: &Builder) -> Branch<A> {
         builder.add(self)
     }
+
+    fn async(self, builder: &Builder) -> Branch<A> {
+        builder.async(self)
+    }
 }

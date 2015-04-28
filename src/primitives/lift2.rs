@@ -65,8 +65,8 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
         let inner = *self;
         let Lift2Signal {left, right, f, initial: _} = inner;
 
-        let (left_tx, left_rx) = sync_channel(0);
-        let (right_tx, right_rx) = sync_channel(0);
+        let (left_tx, left_rx) = channel();
+        let (right_tx, right_rx) = channel();
         let left_initial = left.initial();
         let right_initial = right.initial();
 
@@ -99,15 +99,22 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
         };
 
         loop {
+            let mut any_changed = false;
+
             let l = match left_initial {
                 SignalType::Constant(ref l) => l.clone(),
                 SignalType::Dynamic(_) => {
                     match left_rx.recv() {
                         Ok(Event::Changed(l)) => {
+                            info!("RUN: Lift2 using changed Left value");
+                            any_changed = true;
                             last_l = l.clone();
                             l
                         },
-                        Ok(Event::Unchanged) => last_l.clone(),
+                        Ok(Event::Unchanged) => {
+                            info!("RUN: Lift2 using cached Left value");
+                            last_l.clone()
+                        },
                         Ok(Event::Exit) => return,
                         Err(_) => return,
                     }
@@ -119,20 +126,29 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
                 SignalType::Dynamic(_) => {
                     match right_rx.recv() {
                         Ok(Event::Changed(r)) => {
+                            info!("RUN: Lift2 using changed Right value");
+                            any_changed = true;
                             last_r = r.clone();
                             r
                         },
-                        Ok(Event::Unchanged) => last_r.clone(),
+                        Ok(Event::Unchanged) => {
+                            info!("RUN: Lift2 using cached Right value");
+                            last_r.clone()
+                        },
                         Ok(Event::Exit) => return,
                         Err(_) => return,
                     }
                 }
             };
 
-            let c = f(l,r);
+            let c = if any_changed {
+                Event::Changed(f(l,r))
+            } else {
+                Event::Unchanged
+            };
 
             match target {
-                Some(ref mut t) => t.push(Event::Changed(c)),
+                Some(ref mut t) => t.push(c),
                 None => {},
             }
         }
@@ -147,7 +163,7 @@ impl<F, A, B, C> SignalExt<C> for Lift2Signal<F, A, B, C> where
 
 // Passed up the 'push_to' chain, finalizes by sending to a channel
 struct InputPusher<A> {
-    tx: SyncSender<Event<A>>,
+    tx: Sender<Event<A>>,
 }
 
 impl<A> Push<A> for InputPusher<A> where

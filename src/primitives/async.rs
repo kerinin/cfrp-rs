@@ -4,11 +4,11 @@ use super::super::{Event, Signal, SignalType, Push, Run};
 
 pub struct Async<A> {
     parent: Box<Signal<A>>,
-    tx: SyncSender<A>,
+    tx: Sender<A>,
 }
 
 impl<A> Async<A> {
-    pub fn new(parent: Box<Signal<A>>, tx: SyncSender<A>) -> Async<A> {
+    pub fn new(parent: Box<Signal<A>>, tx: Sender<A>) -> Async<A> {
         Async {
             parent: parent,
             tx: tx,
@@ -35,7 +35,7 @@ impl<A> Run for Async<A> where
 }
 
 struct AsyncPusher<A> {
-    tx: SyncSender<A>,
+    tx: Sender<A>,
 }
 
 impl<A> Push<A> for AsyncPusher<A> where
@@ -45,14 +45,14 @@ impl<A> Push<A> for AsyncPusher<A> where
 
         match event {
             Event::Changed(a) => {
-                debug!("Async handling Event Changed");
+                debug!("Async handling Event Changed - pushing to channel");
                 match self.tx.send(a) {
                     // We can't really terminate a child process, so just ignore errors...
                     _ => {},
                 }
             },
             Event::Unchanged => {
-                debug!("Async handling Event Unchanged");
+                debug!("Async handling Event Unchanged - doing nothing");
                 // No change, so no point in pushing...
             },
             Event::Exit => {

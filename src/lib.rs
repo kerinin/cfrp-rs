@@ -66,10 +66,11 @@ extern crate log;
 pub mod primitives;
 mod signal_ext;
 mod topology;
+mod builder;
 
-use primitives::*;
 pub use signal_ext::SignalExt;
-pub use topology::{Topology, Builder};
+pub use topology::{Topology, TopologyHandle};
+pub use builder::Builder;
 
 
 /// Container for data as it flows across the topology
@@ -116,7 +117,7 @@ pub trait Push<A> {
     fn push(&mut self, Event<A>);
 }
 
-trait Run: Send {
+pub trait Run: Send {
     fn run(mut self: Box<Self>);
 }
 
@@ -138,17 +139,20 @@ trait Run: Send {
 /// });
 /// ```
 ///
-pub fn spawn_topology<F>(f: F) where
+pub fn spawn_topology<F>(f: F) -> TopologyHandle where
     F: FnOnce(&Builder),
 {
     let builder = Builder::new();
     f(&builder);
-    Topology::new(builder).run()
+    Topology::new(builder.inputs.into_inner(), builder.runners.into_inner()).run()
 }
 
 #[cfg(test)] 
 mod test {
+    extern crate env_logger;
+
     use std::sync::mpsc::*;
+    use std::thread;
 
     use super::*;
 
@@ -273,10 +277,77 @@ mod test {
     }
 
     #[test]
-    fn async() {
+    fn async_sends() {
+        let (tx, rx) = sync_channel(0);
+        let (out_tx, out_rx) = channel();
+
+        spawn_topology(move |t| {
+            t.async(
+                t.listen(1 << 0, rx)
+                .lift(move |i| { out_tx.send(i).unwrap(); })
+            );
+        });
+
+        assert_eq!(out_rx.recv().unwrap(), (1 << 0));
+
+        tx.send(1 << 1).unwrap();
+        assert_eq!(out_rx.recv().unwrap(), (1 << 1)); // Should receive fast output first
+    }
+
+    #[test]
+    fn async_sends_async() {
+        env_logger::init().unwrap();
+
+        let (slow_tx, slow_rx) = channel();
+        let (fast_tx, fast_rx) = channel();
+        let (out_tx, out_rx) = channel();
+
+        spawn_topology(move |t| {
+            let slow = t.listen(1 << 0, slow_rx)
+                .lift(|i| -> usize { 
+                    if i > 1 { // allow the initial value to be computed quickly
+                        thread::sleep_ms(100);
+                    }
+
+                    i 
+                }).async(t);
+
+            let fast = t.listen(1 << 1, fast_rx);
+
+            slow.lift2(fast, move |i,j| { out_tx.send(i | j).unwrap() })
+            .add_to(t);
+        });
+
+        // Initial value
+        assert_eq!(out_rx.recv().unwrap(), (1 << 0) | (1 << 1));
+
+        slow_tx.send(1 << 2).unwrap();
+        fast_tx.send(1 << 3).unwrap();
+
+        // Should receive the 'fast' value first...
+        assert_eq!(out_rx.recv().unwrap(), (1 << 0) | (1 << 3));
+        // ...then the slow one
+        assert_eq!(out_rx.recv().unwrap(), (1 << 2) | (1 << 3));
     }
 
     #[test]
     fn branch() {
+        let (tx, rx) = channel();
+        let (out_tx1, out_rx1) = channel();
+        let (out_tx2, out_rx2) = channel();
+
+        spawn_topology(move |t| {
+            let a = t.listen(1 << 0, rx);
+
+            t.add(a.clone().lift(move |i| { out_tx1.send(i).unwrap(); }));
+            t.add(a.clone().lift(move |i| { out_tx2.send(i).unwrap(); }));
+        });
+
+        assert_eq!(out_rx1.recv().unwrap(), (1 << 0));
+        assert_eq!(out_rx2.recv().unwrap(), (1 << 0));
+
+        tx.send(1 << 1).unwrap();
+        assert_eq!(out_rx1.recv().unwrap(), (1 << 1));
+        assert_eq!(out_rx2.recv().unwrap(), (1 << 1));
     }
 }
