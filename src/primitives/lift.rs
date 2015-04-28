@@ -11,7 +11,7 @@ pub struct LiftSignal<F, A, B> where
 {
     parent: Box<Signal<A>>,
     f: F,
-    initial: B,
+    initial: SignalType<B>,
 }
 
 impl<F, A, B> LiftSignal<F, A, B> where
@@ -19,7 +19,12 @@ impl<F, A, B> LiftSignal<F, A, B> where
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
-    pub fn new(parent: Box<Signal<A>>, f: F, initial: B) -> Self {
+    pub fn new(parent: Box<Signal<A>>, f: F) -> Self {
+        let initial = match parent.initial() {
+            SignalType::Constant(a) => SignalType::Constant(f(a)),
+            SignalType::Dynamic(a) => SignalType::Dynamic(f(a)),
+        };
+
         LiftSignal {
             parent: parent, 
             f: f,
@@ -34,7 +39,7 @@ impl<F, A, B> Signal<B> for LiftSignal<F, A, B> where
     B: 'static + Send + Clone,
 {
     fn initial(&self) -> SignalType<B> {
-        SignalType::Dynamic(self.initial.clone())
+        self.initial.clone()
     }
 
     fn push_to(self: Box<Self>, target: Option<Box<Push<B>>>) {
@@ -55,7 +60,8 @@ impl<F, A, B> Signal<B> for LiftSignal<F, A, B> where
                         )
                     )
                 );
-            },
+            }
+
             None => {
                 debug!("SETUP: Sending to target None");
                 parent.push_to(
@@ -69,7 +75,7 @@ impl<F, A, B> Signal<B> for LiftSignal<F, A, B> where
                         )
                     )
                 );
-            },
+            }
         }
     }
 }

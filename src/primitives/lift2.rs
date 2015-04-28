@@ -7,23 +7,41 @@ use super::super::{Event, Signal, SignalType, Push};
 ///
 pub struct Lift2Signal<F, A, B, C> where
     F: 'static + Send + Fn(A, B) -> C,
-    A: 'static + Send,
-    B: 'static + Send,
+    A: 'static + Send + Clone,
+    B: 'static + Send + Clone,
     C: 'static + Send + Clone,
 {
     left: Box<Signal<A>>,
     right: Box<Signal<B>>,
     f: F,
-    initial: C,
+    initial: SignalType<C>,
 }
 
 impl<F, A, B, C> Lift2Signal<F, A, B, C> where
     F: 'static + Send + Fn(A, B) -> C,
-    A: 'static + Send,
-    B: 'static + Send,
+    A: 'static + Send + Clone,
+    B: 'static + Send + Clone,
     C: 'static + Send + Clone,
 {
-    pub fn new(left: Box<Signal<A>>, right: Box<Signal<B>>, f: F, initial: C) -> Self {
+    pub fn new(left: Box<Signal<A>>, right: Box<Signal<B>>, f: F) -> Self {
+        let initial = match (left.initial(), right.initial()) {
+            (SignalType::Constant(l), SignalType::Constant(r)) => {
+                SignalType::Constant(f(l, r))
+            }
+
+            (SignalType::Dynamic(l), SignalType::Constant(r)) => {
+                SignalType::Dynamic(f(l, r))
+            }
+
+            (SignalType::Constant(l), SignalType::Dynamic(r)) => {
+                SignalType::Dynamic(f(l, r))
+            }
+
+            (SignalType::Dynamic(l), SignalType::Dynamic(r)) => {
+                SignalType::Dynamic(f(l, r))
+            }
+        };
+
         Lift2Signal {
             left: left,
             right: right,
@@ -40,121 +58,82 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
     C: 'static + Send + Clone,
 {
     fn initial(&self) -> SignalType<C> {
-        SignalType::Dynamic(self.initial.clone())
+        self.initial.clone()
     }
 
-    fn push_to(self: Box<Self>, target: Option<Box<Push<C>>>) {
+    fn push_to(self: Box<Self>, mut target: Option<Box<Push<C>>>) {
         let inner = *self;
         let Lift2Signal {left, right, f, initial: _} = inner;
 
-        let mut cached_left = match left.initial() {
-            SignalType::Dynamic(l) => l,
-            SignalType::Constant(l) => l,
-        };
-        let mut cached_right = match right.initial() {
-            SignalType::Dynamic(r) => r,
-            SignalType::Constant(r) => r,
-        };
-
-        debug!("SETUP: spawning listener left");
         let (left_tx, left_rx) = sync_channel(0);
-        thread::spawn(move || {
-            let pusher = InputPusher {
-                tx: left_tx,
-            };
-            left.push_to(Some(Box::new(pusher)));
-        });
-
-        debug!("SETUP: spawning listener right");
         let (right_tx, right_rx) = sync_channel(0);
-        thread::spawn(move || {
-            let pusher = InputPusher {
-                tx: right_tx,
-            };
-            right.push_to(Some(Box::new(pusher)));
-        });
+        let left_initial = left.initial();
+        let right_initial = right.initial();
 
-        match target {
-            Some(mut t) => {
-                debug!("SETUP: pushing to target Some");
-                loop {
+        let mut last_l = match left.initial() {
+            SignalType::Constant(l) => l,
+            SignalType::Dynamic(l) => {
+                thread::spawn(move || {
+                    let pusher = InputPusher {
+                        tx: left_tx,
+                    };
+                    left.push_to(Some(Box::new(pusher)));
+                });
 
-                    // NOTE: There's probably a better way of doing this...
-                    // Also, we can eliminate _some_ computation by detecting
-                    // repeated NoOps and only computing f if there's a change.
-                    match (left_rx.recv(), right_rx.recv()) {
-                        (Ok(Event::Changed(l)), Ok(Event::Changed(r))) => {
-                            debug!("Lift2Pusher handling Event::Changed/Event::Changed");
-                            cached_left = l.clone();
-                            cached_right = r.clone();
-
-                            let c = f(l, r);
-                            t.push(Event::Changed(c));
-                        }
-
-                        (Ok(Event::Unchanged), Ok(Event::Changed(r))) => {
-                            debug!("Lift2Pusher handling Event::Unchanged/Event::Changed");
-                            cached_right = r.clone();
-
-                            let c = f(cached_left.clone(), r);
-                            t.push(Event::Changed(c));
-                        }
-                        (Ok(Event::Changed(l)), Ok(Event::Unchanged)) => {
-                            debug!("Lift2Pusher handling Event::Changed/Event::Unchanged");
-                            cached_left = l.clone();
-
-                            let c = f(l, cached_right.clone());
-                            t.push(Event::Changed(c));
-                        }
-
-                        (Ok(Event::Unchanged), Ok(Event::Unchanged)) => {
-                            debug!("Lift2Pusher handling Event::Unchanged/Event::Unchanged");
-                            t.push(Event::Unchanged);
-                        }
-
-                        (Ok(Event::Exit), _) => { debug!("Lift2Pusher handling Event::Exit"); t.push(Event::Exit); return }
-                        (_, Ok(Event::Exit)) => { debug!("Lift2Pusher handling Event::Exit"); t.push(Event::Exit); return }
-                        (Err(_), _) => { debug!("Lift2Pusher handling closed channel"); t.push(Event::Exit); return }
-                        (_, Err(_)) => { debug!("Lift2Pusher handling closed channel"); t.push(Event::Exit); return }
-                    }
-                }
+                l
             },
-            None => {
-                debug!("SETUP: pushing to target None");
-                loop {
-                    match (left_rx.recv(), right_rx.recv()) {
-                        (Ok(Event::Changed(l)), Ok(Event::Changed(r))) => {
-                            debug!("Lift2Pusher handling Event::Changed/Event::Changed");
-                            cached_left = l.clone();
-                            cached_right = r.clone();
+        };
 
-                            f(l, r);
-                        }
+        let mut last_r = match right.initial().clone() {
+            SignalType::Constant(r) => r,
+            SignalType::Dynamic(r) => {
+                thread::spawn(move || {
+                    let pusher = InputPusher {
+                        tx: right_tx,
+                    };
+                    right.push_to(Some(Box::new(pusher)));
+                });
 
-                        (Ok(Event::Unchanged), Ok(Event::Changed(r))) => {
-                            debug!("Lift2Pusher handling Event::Unchanged/Event::Changed");
-                            cached_right = r.clone();
+                r
+            },
+        };
 
-                            f(cached_left.clone(), r);
-                        }
-
-                        (Ok(Event::Changed(l)), Ok(Event::Unchanged)) => {
-                            debug!("Lift2Pusher handling Event::Changed/Event::Unchanged");
-                            cached_left = l.clone();
-
-                            f(l, cached_right.clone());
-                        }
-
-                        (Ok(Event::Unchanged), Ok(Event::Unchanged)) => {
-                            debug!("Lift2Pusher handling Event::Unchanged/Event::Unchanged");
-                        }
-
-                        (Ok(Event::Exit), _) => { debug!("Lift2Pusher handling Event::Exit"); return }
-                        (_, Ok(Event::Exit)) => { debug!("Lift2Pusher handling Event::Exit"); return }
-                        (Err(_), _) => { debug!("Lift2Pusher handling closed channel"); return }
-                        (_, Err(_)) => { debug!("Lift2Pusher handling closed channel"); return }
+        loop {
+            let l = match left_initial {
+                SignalType::Constant(ref l) => l.clone(),
+                SignalType::Dynamic(_) => {
+                    match left_rx.recv() {
+                        Ok(Event::Changed(l)) => {
+                            last_l = l.clone();
+                            l
+                        },
+                        Ok(Event::Unchanged) => last_l.clone(),
+                        Ok(Event::Exit) => return,
+                        Err(_) => return,
                     }
                 }
+            };
+
+            let r = match right_initial {
+                SignalType::Constant(ref r) => r.clone(),
+                SignalType::Dynamic(_) => {
+                    match right_rx.recv() {
+                        Ok(Event::Changed(r)) => {
+                            last_r = r.clone();
+                            r
+                        },
+                        Ok(Event::Unchanged) => last_r.clone(),
+                        Ok(Event::Exit) => return,
+                        Err(_) => return,
+                    }
+                }
+            };
+
+            let c = f(l,r);
+
+            match target {
+                Some(ref mut t) => t.push(Event::Changed(c)),
+                None => {},
             }
         }
     }

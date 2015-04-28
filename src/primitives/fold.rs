@@ -6,24 +6,35 @@ use super::super::{Event, Signal, SignalType, Push};
 ///
 pub struct FoldSignal<F, A, B> where
     F: 'static + Send + FnMut(&mut B, A),
-    A: 'static + Send,
+    A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
     parent: Box<Signal<A>>,
     f: F,
-    state: B,
+    state: SignalType<B>,
 }
 
 impl<F, A, B> FoldSignal<F, A, B> where
     F: 'static + Send + FnMut(&mut B, A),
-    A: 'static + Send,
+    A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
-    pub fn new(parent: Box<Signal<A>>, initial: B, f: F) -> Self {
+    pub fn new(parent: Box<Signal<A>>, mut initial: B, mut f: F) -> Self {
+        let state = match parent.initial() {
+            SignalType::Constant(a) => {
+                f(&mut initial, a);
+                SignalType::Constant(initial)
+            },
+            SignalType::Dynamic(a) => {
+                f(&mut initial, a);
+                SignalType::Dynamic(initial)
+            },
+        };
+
         FoldSignal {
             parent: parent, 
             f: f,
-            state: initial,
+            state: state,
         }
     }
 }
@@ -34,12 +45,17 @@ impl<F, A, B> Signal<B> for FoldSignal<F, A, B> where
     B: 'static + Send + Clone,
 {
     fn initial(&self) -> SignalType<B> {
-        SignalType::Dynamic(self.state.clone())
+        self.state.clone()
     }
 
     fn push_to(self: Box<Self>, target: Option<Box<Push<B>>>) {
         let inner = *self;
         let FoldSignal {parent, f, state} = inner;
+
+        let s = match state {
+            SignalType::Constant(s) => s,
+            SignalType::Dynamic(s) => s,
+        };
 
         match target {
             Some(t) => {
@@ -49,7 +65,7 @@ impl<F, A, B> Signal<B> for FoldSignal<F, A, B> where
                             FoldPusher {
                                 child: Some(t),
                                 f: f,
-                                state: state,
+                                state: s,
                                 marker: PhantomData,
                             }
                         )
@@ -63,7 +79,7 @@ impl<F, A, B> Signal<B> for FoldSignal<F, A, B> where
                             FoldPusher {
                                 child: None,
                                 f: f,
-                                state: state,
+                                state: s,
                                 marker: PhantomData,
                             }
                         )
@@ -76,7 +92,7 @@ impl<F, A, B> Signal<B> for FoldSignal<F, A, B> where
 
 struct FoldPusher<F, A, B> where
     F: 'static + Send + FnMut(&mut B, A),
-    A: 'static + Send,
+    A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
     child: Option<Box<Push<B>>>,

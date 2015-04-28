@@ -43,27 +43,32 @@ impl<A> Run for Fork<A> where
     A: 'static + Clone + Send,
 {
     fn run(self: Box<Self>) {
-        let has_branches = !self.sink_txs.lock().unwrap().is_empty();
+        match self.parent.initial() {
+            SignalType::Constant(_) => return,
+            SignalType::Dynamic(_) => {
+                let has_branches = !self.sink_txs.lock().unwrap().is_empty();
 
-        if has_branches {
-            debug!("Fork::run with branches");
+                if has_branches {
+                    debug!("Fork::run with branches");
 
-            let inner = *self;
-            let Fork { parent, sink_txs } = inner;
+                    let inner = *self;
+                    let Fork { parent, sink_txs } = inner;
 
-            parent.push_to(
-                Some(
-                    Box::new(
-                        ForkPusher {
-                            sink_txs: sink_txs,
-                        }
-                    )
-                )
-            )
-        } else {
-            debug!("Fork::run without branches");
+                    parent.push_to(
+                        Some(
+                            Box::new(
+                                ForkPusher {
+                                    sink_txs: sink_txs,
+                                }
+                                )
+                            )
+                        )
+                } else {
+                    debug!("Fork::run without branches");
 
-            self.parent.push_to(None);
+                    self.parent.push_to(None);
+                }
+            }
         }
                 
     }

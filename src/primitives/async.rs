@@ -1,6 +1,6 @@
 use std::sync::mpsc::*;
 
-use super::super::{Event, Signal, Push};
+use super::super::{Event, Signal, SignalType, Push};
 use super::fork::Run;
 
 pub struct Async<A> {
@@ -26,7 +26,12 @@ impl<A> Run for Async<A> where
         let inner = *self;
         let Async { parent, tx } = inner;
 
-        parent.push_to(Some(Box::new(AsyncPusher {tx: tx})));
+        match parent.initial() {
+            SignalType::Constant(_) => return,
+            SignalType::Dynamic(_) => {
+                parent.push_to(Some(Box::new(AsyncPusher {tx: tx})));
+            },
+        }
     }
 }
 
