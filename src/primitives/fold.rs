@@ -1,6 +1,6 @@
 use std::marker::*;
 
-use super::super::{Event, Signal, SignalExt, SignalType, Push};
+use super::super::{Event, Signal, SignalExt, SignalType, Push, Config};
 
 /// The result of a `fold` operation
 ///
@@ -9,6 +9,7 @@ pub struct FoldSignal<F, A, B> where
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
+    config: Config,
     parent: Box<Signal<A>>,
     f: F,
     state: SignalType<B>,
@@ -19,7 +20,7 @@ impl<F, A, B> FoldSignal<F, A, B> where
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
-    pub fn new(parent: Box<Signal<A>>, mut initial: B, mut f: F) -> Self {
+    pub fn new(config: Config, parent: Box<Signal<A>>, mut initial: B, mut f: F) -> Self {
         let state = match parent.initial() {
             SignalType::Constant(a) => {
                 f(&mut initial, a);
@@ -32,6 +33,7 @@ impl<F, A, B> FoldSignal<F, A, B> where
         };
 
         FoldSignal {
+            config: config,
             parent: parent, 
             f: f,
             state: state,
@@ -44,13 +46,17 @@ impl<F, A, B> Signal<B> for FoldSignal<F, A, B> where
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
+    fn config(&self) -> Config {
+        self.config.clone()
+    }
+
     fn initial(&self) -> SignalType<B> {
         self.state.clone()
     }
 
     fn push_to(self: Box<Self>, target: Option<Box<Push<B>>>) {
         let inner = *self;
-        let FoldSignal {parent, f, state} = inner;
+        let FoldSignal {config: _, parent, f, state} = inner;
 
         let s = match state {
             SignalType::Constant(s) => s,
@@ -134,54 +140,3 @@ impl<F, A, B> Push<A> for FoldPusher<F, A, B> where
         }
     }
 }
-
-/*
-#[cfg(test)] 
-mod test {
-    extern crate env_logger;
-
-    use std::sync::mpsc::*;
-
-    use super::super::super::{Signal, SignalExt};
-    use super::super::channel::Channel;
-    use super::super::value::Value;
-    use super::super::fold::FoldSignal;
-
-    // env_logger::init().unwrap();
-
-    #[test]
-    fn fold_constructs_from_value() {
-        let v = Value::new(0);
-        let f = FoldSignal::new(Box::new(v), 0, |s, i| { *s += i });
-
-        assert!(true);
-    }
-
-    #[test]
-    fn fold_constructs_from_channel() {
-        let (tx, rx) = channel();
-        let c = Channel::new(rx, 0);
-        let f = FoldSignal::new(Box::new(c), 0, |s, i| { *s += i });
-
-        assert!(true);
-    }
-
-    #[test]
-    fn fold_impls_fold() {
-        let v = Value::new(0);
-        let f = Box::new(FoldSignal::new(Box::new(v), 0, |s, i| { *s += i }));
-        let f2 = f.fold(0, |s, i| { *s += i });
-
-        assert!(true);
-    }
-
-    #[test]
-    fn fold_impls_lift() {
-        let v = Value::new(0);
-        let f = Box::new(FoldSignal::new(Box::new(v), 0, |s, i| { *s += i }));
-        let f2 = f.lift(|i| { i + 1 });
-
-        assert!(true);
-    }
-}
-*/

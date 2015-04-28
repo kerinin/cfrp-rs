@@ -21,8 +21,8 @@ concurrency (and because I'm a Rust newb).  Simplification suggestions welcome!
 
 ## TODO
 
-* configure buffer
-* docs
 * SignalExt helper methods (map, zip, enumerate, etc)
 * Try to eliminate constraints
 * Timers, counters, rngs
+* docs
+* implement Display/Debug

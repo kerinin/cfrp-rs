@@ -20,7 +20,7 @@ A: 'static + Send + Clone,
     {
         self.init();
 
-        LiftSignal::new(Box::new(self), f)
+        LiftSignal::new(self.config(), Box::new(self), f)
     }
 
     fn lift2<F, SB, B, C>(mut self, mut right: SB, f: F) -> Lift2Signal<F, A, B, C> where
@@ -32,7 +32,7 @@ A: 'static + Send + Clone,
         self.init();
         right.init();
 
-        Lift2Signal::new(Box::new(self), Box::new(right), f)
+        Lift2Signal::new(self.config(), Box::new(self), Box::new(right), f)
     }
 
     fn fold<F, B>(mut self, initial: B, f: F) -> FoldSignal<F, A, B> where
@@ -41,7 +41,7 @@ A: 'static + Send + Clone,
     {
         self.init();
 
-        FoldSignal::new(Box::new(self), initial, f)
+        FoldSignal::new(self.config(), Box::new(self), initial, f)
     }
 
     fn add_to(self, builder: &Builder) -> Branch<A> {

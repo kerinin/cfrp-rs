@@ -1,6 +1,6 @@
 use std::marker::*;
 
-use super::super::{Event, Signal, SignalExt, SignalType, Push};
+use super::super::{Event, Signal, SignalExt, SignalType, Push, Config};
 
 /// The result of a `lift` operation
 ///
@@ -9,6 +9,7 @@ pub struct LiftSignal<F, A, B> where
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
+    config: Config,
     parent: Box<Signal<A>>,
     f: F,
     initial: SignalType<B>,
@@ -19,13 +20,14 @@ impl<F, A, B> LiftSignal<F, A, B> where
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
-    pub fn new(parent: Box<Signal<A>>, f: F) -> Self {
+    pub fn new(config: Config, parent: Box<Signal<A>>, f: F) -> Self {
         let initial = match parent.initial() {
             SignalType::Constant(a) => SignalType::Constant(f(a)),
             SignalType::Dynamic(a) => SignalType::Dynamic(f(a)),
         };
 
         LiftSignal {
+            config: config,
             parent: parent, 
             f: f,
             initial: initial,
@@ -38,13 +40,17 @@ impl<F, A, B> Signal<B> for LiftSignal<F, A, B> where
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
+    fn config(&self) -> Config {
+        self.config.clone()
+    }
+
     fn initial(&self) -> SignalType<B> {
         self.initial.clone()
     }
 
     fn push_to(self: Box<Self>, target: Option<Box<Push<B>>>) {
         let inner = *self;
-        let LiftSignal { parent, f, initial: _ } = inner;
+        let LiftSignal { config: _, parent, f, initial: _ } = inner;
 
         match target {
             Some(t) => {
@@ -123,55 +129,3 @@ impl<F, A, B> Push<A> for LiftPusher<F, A, B> where
         }
     }
 }
-
-    /*
-#[cfg(test)] 
-mod test {
-    extern crate env_logger;
-
-    use std::sync::mpsc::*;
-
-    use super::super::super::{Signal, SignalExt};
-    use super::super::channel::Channel;
-    use super::super::value::Value;
-    use super::super::lift::LiftSignal;
-
-    // env_logger::init().unwrap();
-
-    #[test]
-    fn lift_constructs_from_value() {
-        let v = Value::new(0);
-        let l = LiftSignal::new(Box::new(v), |i| -> usize { i + 1 }, 0);
-
-        assert!(true);
-    }
-
-    #[test]
-    fn lift_constructs_from_channel() {
-        let (tx, rx) = channel();
-        let c = Channel::new(rx, 0);
-        let l = LiftSignal::new(Box::new(c), |i| { i + 1 }, 0);
-
-        assert!(true);
-    }
-
-    #[test]
-    fn lift_lifts_from_value() {
-        let v = Value::new(0);
-        let l = Box::new(LiftSignal::new(Box::new(v), |i| { i + 1 }, 0));
-        let l2 = l.lift(|i| { i + 1 });
-
-        assert!(true);
-    }
-
-    #[test]
-    fn lift_lifts_from_channel() {
-        let (tx, rx) = channel();
-        let c: Box<Signal<usize>> = Box::new(Channel::new(rx, 0));
-        let l: Box<Signal<usize>> = Box::new(LiftSignal::new(c, |i| { i + 1 }, 0));
-        let l2 = l.lift(|i| { i + 1 });
-
-        assert!(true);
-    }
-}
-    */

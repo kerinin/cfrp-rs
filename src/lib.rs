@@ -67,10 +67,12 @@ pub mod primitives;
 mod signal_ext;
 mod topology;
 mod builder;
+mod config;
 
 pub use signal_ext::SignalExt;
 pub use topology::{Topology, TopologyHandle};
 pub use builder::Builder;
+pub use config::Config;
 
 
 /// Container for data as it flows across the topology
@@ -101,6 +103,9 @@ impl<A> SignalType<A> {
 pub trait Signal<A>: Send where
 A: 'static + Send + Clone,
 {
+    // Returns a copy of the signal's Config 
+    fn config(&self) -> Config;
+
     // Called at build time when a downstream process is created for the signal
     fn init(&mut self) {}
 
@@ -139,10 +144,10 @@ pub trait Run: Send {
 /// });
 /// ```
 ///
-pub fn spawn_topology<F>(f: F) -> TopologyHandle where
+pub fn spawn_topology<F>(config: Config, f: F) -> TopologyHandle where
     F: FnOnce(&Builder),
 {
-    let builder = Builder::new();
+    let builder = Builder::new(config);
     f(&builder);
     Topology::new(builder.inputs.into_inner(), builder.runners.into_inner()).run()
 }
@@ -151,6 +156,7 @@ pub fn spawn_topology<F>(f: F) -> TopologyHandle where
 mod test {
     extern crate env_logger;
 
+    use std::default::Default;
     use std::sync::mpsc::*;
     use std::thread;
 
@@ -161,7 +167,7 @@ mod test {
         let (in_tx, in_rx) = sync_channel(0);
         let (out_tx, out_rx) = channel();
 
-        spawn_topology(move |t| {
+        spawn_topology(Default::default(), move |t| {
             t.listen(0, in_rx)
                 .lift(move |i| { out_tx.send(i | (1 << 1)).unwrap(); })
                 .add_to(t);
@@ -179,7 +185,7 @@ mod test {
     fn lift_value() {
         let (out_tx, out_rx) = channel();
 
-        spawn_topology(move |t| {
+        spawn_topology(Default::default(), move |t| {
             t.value(0)
                 .lift(move |i| { out_tx.send(i | (1 << 1)).unwrap(); })
                 .add_to(t);
@@ -194,7 +200,7 @@ mod test {
         let (in_tx, in_rx) = sync_channel(0);
         let (out_tx, out_rx) = channel();
 
-        spawn_topology(move |t| {
+        spawn_topology(Default::default(), move |t| {
             t.listen(0, in_rx)
                 .fold(out_tx, |tx, i| { tx.send(i | (1 << 1)).unwrap(); })
                 .add_to(t);
@@ -212,7 +218,7 @@ mod test {
     fn fold_value() {
         let (out_tx, out_rx) = channel();
 
-        spawn_topology(move |t| {
+        spawn_topology(Default::default(), move |t| {
             t.value(0)
                 .fold(out_tx, |tx, i| { tx.send(i | (1 << 1)).unwrap(); })
                 .add_to(t);
@@ -228,7 +234,7 @@ mod test {
         let (r_tx, r_rx) = sync_channel(0);
         let (out_tx, out_rx) = channel();
 
-        spawn_topology(move |t| {
+        spawn_topology(Default::default(), move |t| {
             t.listen(1 << 0, l_rx)
                 .lift2(t.listen(1 << 1, r_rx), move |i,j| { out_tx.send(i | j).unwrap() })
                 .add_to(t);
@@ -249,7 +255,7 @@ mod test {
         let (tx, rx) = sync_channel(0);
         let (out_tx, out_rx) = channel();
 
-        spawn_topology(move |t| {
+        spawn_topology(Default::default(), move |t| {
             t.listen(1 << 0, rx)
                 .lift2(t.value(1 << 1), move |i,j| { out_tx.send(i | j).unwrap() })
                 .add_to(t);
@@ -266,7 +272,7 @@ mod test {
     fn lift2_value_value() {
         let (out_tx, out_rx) = channel();
 
-        spawn_topology(move |t| {
+        spawn_topology(Default::default(), move |t| {
             t.value(1 << 0)
                 .lift2(t.value(1 << 1), move |i,j| { out_tx.send(i | j).unwrap() })
                 .add_to(t);
@@ -281,7 +287,7 @@ mod test {
         let (tx, rx) = sync_channel(0);
         let (out_tx, out_rx) = channel();
 
-        spawn_topology(move |t| {
+        spawn_topology(Default::default(), move |t| {
             t.async(
                 t.listen(1 << 0, rx)
                 .lift(move |i| { out_tx.send(i).unwrap(); })
@@ -302,7 +308,7 @@ mod test {
         let (fast_tx, fast_rx) = channel();
         let (out_tx, out_rx) = channel();
 
-        spawn_topology(move |t| {
+        spawn_topology(Default::default(), move |t| {
             let slow = t.listen(1 << 0, slow_rx)
                 .lift(|i| -> usize { 
                     if i > 1 { // allow the initial value to be computed quickly
@@ -336,7 +342,7 @@ mod test {
         let (out_tx1, out_rx1) = channel();
         let (out_tx2, out_rx2) = channel();
 
-        spawn_topology(move |t| {
+        spawn_topology(Default::default(), move |t| {
             let a = t.listen(1 << 0, rx);
 
             t.add(a.clone().lift(move |i| { out_tx1.send(i).unwrap(); }));

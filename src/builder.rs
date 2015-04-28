@@ -3,7 +3,7 @@ use std::sync::*;
 use std::sync::mpsc::*;
 use std::marker::*;
 
-use super::{Signal, Run};
+use super::{Signal, Run, Config};
 use primitives::input::{RunInput, ReceiverInput};
 use primitives::fork::{Fork, Branch};
 use primitives::channel::Channel;
@@ -17,6 +17,7 @@ use primitives::value::Value;
 /// `Channel`s and to `add` nodes to the topology
 ///
 pub struct Builder {
+    config: Config,
     pub inputs: RefCell<Vec<Box<RunInput>>>,
     pub runners: RefCell<Vec<Box<Run>>>,
 }
@@ -24,8 +25,9 @@ pub struct Builder {
 impl Builder {
     /// Create a new Builder
     ///
-    pub fn new() -> Self {
+    pub fn new(config: Config) -> Self {
         Builder {
+            config: config,
             runners: RefCell::new(Vec::new()),
             inputs: RefCell::new(Vec::new()),
         }
@@ -63,7 +65,7 @@ impl Builder {
 
         self.runners.borrow_mut().push(Box::new(fork));
 
-        Branch::new(fork_txs, None, v)
+        Branch::new(self.config.clone(), fork_txs, None, v)
     }
 
     /// Listen to `input` and push received data into the topology
@@ -93,13 +95,13 @@ impl Builder {
     pub fn listen<A>(&self, initial: A, input: Receiver<A>) -> Branch<A> where
         A: 'static + Clone + Send,
     {
-        let (tx, rx) = channel();
+        let (tx, rx) = sync_channel(self.config.buffer_size.clone());
 
         let runner = ReceiverInput::new(input, tx);
 
         self.inputs.borrow_mut().push(Box::new(runner));
 
-        self.add(Channel::new(rx, initial))
+        self.add(Channel::new(self.config.clone(), rx, initial))
     }
 
     /// Creats a channel with constant value `v`
@@ -107,7 +109,7 @@ impl Builder {
     pub fn value<T>(&self, v: T) -> Value<T> where
         T: 'static + Clone + Send,
     {
-        Value::new(v)
+        Value::new(self.config.clone(), v)
     }
 
     /// Combination of adding a signal and a channel
@@ -142,7 +144,7 @@ impl Builder {
         A: 'static + Clone + Send,
     {
         let v = root.initial();
-        let (tx, rx) = channel();
+        let (tx, rx) = sync_channel(self.config.buffer_size.clone());
         let pusher = Async::new(Box::new(root), tx);
         self.runners.borrow_mut().push(Box::new(pusher));
 

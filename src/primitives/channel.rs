@@ -1,10 +1,11 @@
 use std::sync::mpsc::*;
 
-use super::super::{Event, Signal, SignalExt, SignalType, Push};
+use super::super::{Event, Signal, SignalExt, SignalType, Push, Config};
 
 pub struct Channel<A> where
     A: 'static + Send + Clone,
 {
+    config: Config,
     source_rx: Receiver<Event<A>>,
     initial: A,
 }
@@ -12,8 +13,9 @@ pub struct Channel<A> where
 impl<A> Channel<A> where
     A: 'static + Send + Clone,
 {
-    pub fn new(source_rx: Receiver<Event<A>>, initial: A) -> Channel<A> {
+    pub fn new(config: Config, source_rx: Receiver<Event<A>>, initial: A) -> Channel<A> {
         Channel {
+            config: config,
             source_rx: source_rx,
             initial: initial,
         }
@@ -23,6 +25,10 @@ impl<A> Channel<A> where
 impl<A> Signal<A> for Channel<A> where
     A: 'static + Send + Clone,
 {
+    fn config(&self) -> Config {
+        self.config.clone()
+    }
+
     fn initial(&self) -> SignalType<A> {
         SignalType::Dynamic(self.initial.clone())
     }
@@ -65,42 +71,3 @@ impl<A> Signal<A> for Channel<A> where
     }
 }
 impl<A> SignalExt<A> for Channel<A> where A: 'static + Send + Clone {}
-
-/*
-#[cfg(test)] 
-mod test {
-    extern crate env_logger;
-
-    use std::sync::mpsc::*;
-
-    use super::super::topology::{Topology, Builder};
-
-    // env_logger::init().unwrap();
-
-    #[test]
-    fn channel_runs() {
-        let b = Builder::new();
-        b.value(1usize);
-
-        Topology::new(b).run();
-
-        assert!(true);
-    }
-
-    #[test]
-    fn channel_receives_data() {
-        let(tx, rx): (SyncSender<usize>, Receiver<usize>) = sync_channel(0);
-
-        let b = Builder::new();
-        let input = b.listen(0, rx);
-
-        let t = Topology::new(b);
-        t.run();
-
-        println!("Ran topology");
-        tx.send(0).unwrap();
-
-        assert!(true);
-    }
-}
-*/
