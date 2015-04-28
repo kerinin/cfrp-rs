@@ -65,10 +65,11 @@ extern crate log;
 
 pub mod primitives;
 mod signal_ext;
+mod topology;
 
 use primitives::*;
 pub use signal_ext::SignalExt;
-
+pub use topology::{Topology, Builder};
 
 
 /// Container for data as it flows across the topology
@@ -113,6 +114,10 @@ A: 'static + Send + Clone,
 ///
 pub trait Push<A> {
     fn push(&mut self, Event<A>);
+}
+
+trait Run: Send {
+    fn run(mut self: Box<Self>);
 }
 
 /// Construct a new topology and run it

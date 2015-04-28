@@ -1,5 +1,8 @@
-use super::{Signal};
-use primitives::{LiftSignal, Lift2Signal, FoldSignal, Builder, Branch};
+use super::{Signal, Builder};
+use primitives::lift::LiftSignal;
+use primitives::lift2::Lift2Signal;
+use primitives::fold::FoldSignal;
+use primitives::fork::Branch;
 
 pub trait AsSignal<A> where
 A: 'static + Send + Clone
@@ -7,30 +10,6 @@ A: 'static + Send + Clone
     fn as_signal(self) -> Box<Signal<A>>;
 }
 
-//
-// * We don't know the return value of some functions so we must return a trait object
-// * Some functions should accept both a "signal" and a "signals"
-//
-// # Type Object approach
-//
-// * Return Signal/Signals (so we can return multiple types)
-// * Implement AsSignal for Signal/Signals (so we can accept both Signal and Signals)
-// * Implement SignalExt for Signal/Signals (so we can call both Signal and Signals)
-// * Use trait objects as method args
-//
-//
-// # Concrete type approach
-//
-// * Return enumerations (so we can return multiple types)
-// * Implement Signal for return types
-// * Implement SignalExt for Signal
-// * Use typed objects as method args
-//
-// Upside is this is less complex conceptually.  Donwnside is that it makes Liftn
-// harder (enumeration variants increases exponenially with N).  Alternately, 
-// we can push the constant-value optimization into LiftN itself, rather than
-// changing the return type.
-//
 pub trait SignalExt<A>: Signal<A> + Sized where
 Self: 'static,
 A: 'static + Send + Clone,

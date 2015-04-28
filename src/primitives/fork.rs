@@ -1,11 +1,7 @@
 use std::sync::*;
 use std::sync::mpsc::*;
 
-use super::super::{Event, Signal, SignalExt, SignalType, Push};
-
-pub trait Run: Send {
-    fn run(mut self: Box<Self>);
-}
+use super::super::{Event, Signal, SignalExt, SignalType, Push, Run};
 
 // A Fork is created internally when Builder#add is called.  The purpose of Fork is
 // to distribute incoming data to some number of child Branch instances.

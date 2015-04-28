@@ -4,12 +4,12 @@ use std::sync::mpsc::*;
 use std::thread;
 use std::marker::*;
 
-use super::super::{Signal, SignalType};
-use super::input::{RunInput, NoOp, ReceiverInput};
-use super::fork::{Run, Fork, Branch};
-use super::channel::Channel;
-use super::async::Async;
-use super::value::Value;
+use super::{Signal, SignalType, Run};
+use primitives::input::{RunInput, NoOp, ReceiverInput};
+use primitives::fork::{Fork, Branch};
+use primitives::channel::Channel;
+use primitives::async::Async;
+use primitives::value::Value;
 
 /// `Builder` is used to construct topologies.  
 ///

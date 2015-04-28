@@ -1,7 +1,6 @@
 use std::sync::mpsc::*;
 
-use super::super::{Event, Signal, SignalType, Push};
-use super::fork::Run;
+use super::super::{Event, Signal, SignalType, Push, Run};
 
 pub struct Async<A> {
     parent: Box<Signal<A>>,
@@ -35,7 +34,7 @@ impl<A> Run for Async<A> where
     }
 }
 
-pub struct AsyncPusher<A> {
+struct AsyncPusher<A> {
     tx: SyncSender<A>,
 }
 
