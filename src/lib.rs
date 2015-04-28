@@ -356,4 +356,21 @@ mod test {
         assert_eq!(out_rx1.recv().unwrap(), (1 << 1));
         assert_eq!(out_rx2.recv().unwrap(), (1 << 1));
     }
+
+    #[test]
+    fn tick() {
+        let(tx, rx) = channel();
+        let(out_tx, out_rx) = channel();
+
+        spawn_topology(Default::default(), move |t| {
+            t.add(t.tick(1).lift(move |i| { out_tx.send(i).unwrap(); }));
+            t.add(t.listen(0, rx));
+        });
+
+        // Initial
+        assert_eq!(out_rx.recv().unwrap(), 1);
+
+        tx.send(1).unwrap();
+        assert_eq!(out_rx.recv().unwrap(), 1);
+    }
 }

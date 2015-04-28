@@ -21,8 +21,8 @@ concurrency (and because I'm a Rust newb).  Simplification suggestions welcome!
 
 ## TODO
 
-* SignalExt helper methods (map, zip, enumerate, etc)
-* Try to eliminate constraints
 * Timers, counters, rngs
-* docs
+* SignalExt helper methods (map, zip, enumerate, etc)
 * implement Display/Debug
+* docs / logs
+* Try to eliminate constraints

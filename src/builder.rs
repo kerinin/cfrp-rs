@@ -4,7 +4,7 @@ use std::sync::mpsc::*;
 use std::marker::*;
 
 use super::{Signal, Run, Config};
-use primitives::input::{RunInput, ReceiverInput};
+use primitives::input::{RunInput, ReceiverInput, TickInput};
 use primitives::fork::{Fork, Branch};
 use primitives::channel::Channel;
 use primitives::async::Async;
@@ -110,6 +110,21 @@ impl Builder {
         T: 'static + Clone + Send,
     {
         Value::new(self.config.clone(), v)
+    }
+
+    /// Creates a channel which pushes `Event::Changed(initial)` when any input
+    /// pushes data
+    ///
+    pub fn tick<A>(&self, initial: A) -> Branch<A> where
+        A: 'static + Clone + Send,
+    {
+        let (tx, rx) = sync_channel(self.config.buffer_size.clone());
+
+        let runner = TickInput::new(initial.clone(), tx);
+
+        self.inputs.borrow_mut().push(Box::new(runner));
+
+        self.add(Channel::new(self.config.clone(), rx, initial))
     }
 
     /// Combination of adding a signal and a channel
