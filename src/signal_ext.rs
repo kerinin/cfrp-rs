@@ -4,12 +4,6 @@ use primitives::lift2::Lift2Signal;
 use primitives::fold::FoldSignal;
 use primitives::fork::Branch;
 
-pub trait AsSignal<A> where
-A: 'static + Send + Clone
-{
-    fn as_signal(self) -> Box<Signal<A>>;
-}
-
 pub trait SignalExt<A>: Signal<A> + Sized where
 Self: 'static,
 A: 'static + Send + Clone,

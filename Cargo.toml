@@ -11,5 +11,7 @@ keywords        = ["FRP", "concurrency", "threading", "gui"]
 license         = "MIT"
 
 [dependencies]
+time = "*"
 log = "*"
+rand = "0.3.0"
 env_logger = "*"

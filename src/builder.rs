@@ -2,9 +2,13 @@ use std::cell::*;
 use std::sync::*;
 use std::sync::mpsc::*;
 use std::marker::*;
+use std::ops::Add;
 
-use super::{Signal, Run, Config};
-use primitives::input::{RunInput, ReceiverInput, TickInput};
+use rand;
+use time;
+
+use super::{Signal, SignalExt, Run, Config};
+use primitives::input::{RunInput, ReceiverInput, TickInput, RngInput};
 use primitives::fork::{Fork, Branch};
 use primitives::channel::Channel;
 use primitives::async::Async;
@@ -164,5 +168,36 @@ impl Builder {
         self.runners.borrow_mut().push(Box::new(pusher));
 
         self.listen(v.unwrap(), rx)
+    }
+
+    pub fn counter<A>(&self, initial: A, by: A) -> Branch<A> where
+    A: 'static + Clone + Send + Add<Output=A>,
+    {
+        self.add(
+            self.tick(by)
+            .fold(initial, |c, incr| { *c = c.clone() + incr })
+        )
+    }
+
+    pub fn timestamp(&self) -> Branch<time::Tm>
+    {
+        self.add(
+            self.tick(())
+            .lift(|_| -> time::Tm { time::now() })
+        )
+    }
+
+    pub fn random<R, A>(&self, mut rng: R) -> Branch<A> where
+    R: 'static + rand::Rng + Clone + Send,
+    A: 'static + Send + Clone + rand::Rand,
+    {
+        let (tx, rx) = sync_channel(self.config.buffer_size.clone());
+
+        let initial = rng.gen();
+        let runner = RngInput::new(rng, tx);
+
+        self.inputs.borrow_mut().push(Box::new(runner));
+
+        self.add(Channel::new(self.config.clone(), rx, initial))
     }
 }

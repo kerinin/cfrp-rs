@@ -62,6 +62,8 @@
 //!
 #[macro_use]
 extern crate log;
+extern crate time;
+extern crate rand;
 
 pub mod primitives;
 mod signal_ext;
@@ -159,6 +161,8 @@ mod test {
     use std::default::Default;
     use std::sync::mpsc::*;
     use std::thread;
+
+    use rand;
 
     use super::*;
 
@@ -372,5 +376,23 @@ mod test {
 
         tx.send(1).unwrap();
         assert_eq!(out_rx.recv().unwrap(), 1);
+    }
+
+    #[test]
+    fn rand() {
+        let(tx, rx) = channel();
+        let(out_tx, out_rx) = channel();
+
+        spawn_topology(Default::default(), move |t| {
+            let rng = rand::StdRng::new().unwrap();
+            t.add(t.listen(0, rx));
+            t.add(t.random(rng).lift(move |i: usize| { out_tx.send(i).unwrap() }));
+        });
+
+        // Just testing to make sure this doesn't explode somehow
+        let first = out_rx.recv().unwrap();
+        tx.send(0).unwrap();
+        let second = out_rx.recv().unwrap();
+        assert!(first != second);
     }
 }
