@@ -1,3 +1,4 @@
+use std::thread;
 use std::cell::*;
 use std::sync::*;
 use std::sync::mpsc::*;
@@ -8,7 +9,7 @@ use rand;
 use time;
 
 use super::{Signal, SignalExt, Run, Config};
-use primitives::input::{RunInput, ReceiverInput, TickInput, RngInput};
+use primitives::input::{RunInput, ReceiverInput, AckInput, RngInput};
 use primitives::fork::{Fork, Branch};
 use primitives::channel::Channel;
 use primitives::async::Async;
@@ -31,49 +32,6 @@ impl Builder {
             runners: RefCell::new(Vec::new()),
             inputs: RefCell::new(Vec::new()),
         }
-    }
-
-    /// Add a signal to the topology
-    ///
-    /// Returns a `Branch<A>`, allowing `root` to be used as input more than once
-    /// `SignalExt<A>` also provides `add_to(&Builder)` so `Builder::add` can be
-    /// used with method-chaining syntax
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use std::default::*;
-    /// use cfrp::*;
-    ///
-    /// let b = Builder::new(Default::default());
-    /// 
-    /// // Topologies only execute transformations which have been added to a builder.
-    /// let fork = b.add(b.value(1).lift(|i| { i + 1} ));
-    ///
-    /// // `add` returns a signal that can be used more than once
-    /// fork
-    ///     .clone()
-    ///     .lift(|i| { i - 1 } )
-    ///     .add_to(&b);
-    ///
-    /// fork
-    ///     .lift(|i| { -i })
-    ///     .add_to(&b);
-    /// ```
-    ///
-    pub fn add<SA, A>(&self, root: SA) -> Branch<A> where // NOTE: This needs to be clone-able!
-        SA: 'static + Signal<A>,
-        A: 'static + Clone + Send,
-    {
-        let v = root.initial();
-
-        let fork_txs = Arc::new(Mutex::new(Vec::new()));
-
-        let fork = Fork::new(Box::new(root), fork_txs.clone());
-
-        self.runners.borrow_mut().push(Box::new(fork));
-
-        Branch::new(self.config.clone(), fork_txs, None, v)
     }
 
     /// Listen to `input` and push received data into the topology
@@ -145,11 +103,40 @@ impl Builder {
         Value::new(self.config.clone(), v)
     }
 
-    /// Creates a channel which pushes `Event::Changed(initial)` when any input
-    /// pushes data
+    /// Returns a signal which generates the current time at least once every
+    /// `interval`.
+    ///
+    /// The actual interval between events may be longer than `interval` if
+    /// writing to the topology blocks or the scheduling thread is pre-empted
+    /// by other threads.
+    /// 
+    // NOTE: Given that 'time' is sort of ambiguous across the topology, consider
+    // emitting an accumulated time value (time::now() + n * interval) for all
+    // times between start and now, and schedule it the same way.  The idea 
+    // would be that we're emitting precise clicks, even if they're generated
+    // and arrive at slightly different times...
+    pub fn every(&self, interval: time::Duration) -> Branch<time::Tm>
+    {
+        let (tx, rx) = sync_channel(0);
+
+        thread::spawn(move || {
+            loop {
+                thread::sleep_ms(interval.num_milliseconds() as u32);
+                match tx.send(time::now()) {
+                    Ok(_) => {},
+                    Err(_) => return,
+                }
+            }
+        });
+
+        self.listen(time::now(), rx)
+    }
+
+    /// Creates a channel which pushes `Event::Changed(initial)` when any 
+    /// other receives changes
     ///
     /// Signals created with `listen` only cause nodes directly downstream of 
-    /// themselves to be recomputed. By contract, signals created by `tick` will
+    /// themselves to be recomputed. By contract, signals created by `ack_*` will
     /// emit a value when any input signal's value changes.  
     ///
     /// # Example
@@ -161,7 +148,7 @@ impl Builder {
     /// let(out_tx, out_rx) = channel();
     ///
     /// spawn_topology(Default::default(), move |t| {
-    ///     t.add(t.tick(1).lift(move |i| { out_tx.send(i).unwrap(); }));
+    ///     t.add(t.ack_value(1).lift(move |i| { out_tx.send(i).unwrap(); }));
     ///     t.add(t.listen(0, rx));
     /// });
     ///
@@ -172,16 +159,115 @@ impl Builder {
     /// assert_eq!(out_rx.recv().unwrap(), 1);
     /// ```
     ///
-    pub fn tick<A>(&self, initial: A) -> Branch<A> where
+    pub fn ack_value<A>(&self, initial: A) -> Branch<A> where
         A: 'static + Clone + Send,
     {
         let (tx, rx) = sync_channel(self.config.buffer_size.clone());
 
-        let runner = TickInput::new(initial.clone(), tx);
+        let runner = AckInput::new(initial.clone(), tx);
 
         self.inputs.borrow_mut().push(Box::new(runner));
 
         self.add(Channel::new(self.config.clone(), rx, initial))
+    }
+
+    /// Return a signal that increments each time the topology receives data
+    ///
+    /// Signals created with `listen` only cause nodes directly downstream of 
+    /// themselves to be recomputed. By contract, signals created by `ack_*` will
+    /// emit a value when any input signal's value changes.  
+    ///
+    pub fn ack_counter<A, B>(&self, initial: A, by: A) -> Branch<A> where
+    A: 'static + Clone + Send + Add<Output=A>,
+    {
+        self.add(
+            self.ack_value(by)
+            .fold(initial, |c, incr| { c + incr })
+        )
+    }
+
+    /// Return a signal with the 'current' time each time the topology receives
+    /// data
+    ///
+    /// Signals created with `listen` only cause nodes directly downstream of 
+    /// themselves to be recomputed. By contract, signals created by `ack_*` will
+    /// emit a value when any input signal's value changes.  
+    ///
+    pub fn ack_timestamp(&self) -> Branch<time::Tm>
+    {
+        self.add(
+            self.ack_value(())
+            .lift(|_| -> time::Tm { time::now() })
+        )
+    }
+
+    /// Return a signal which generates a random value each time the topology
+    /// receives data
+    ///
+    /// If randomness is needed, `ack_random` is probably a better way of generating it
+    /// than creating a Rng inside a handler becasue it exposes the generated 
+    /// value as a 'fact' about the system's history rather than embedding it
+    /// in a non-deterministic function.  
+    ///
+    /// Signals created with `listen` only cause nodes directly downstream of 
+    /// themselves to be recomputed. By contract, signals created by `ack_*` will
+    /// emit a value when any input signal's value changes.  
+    ///
+    pub fn ack_random<R, A>(&self, mut rng: R) -> Branch<A> where
+    R: 'static + rand::Rng + Clone + Send,
+    A: 'static + Send + Clone + rand::Rand,
+    {
+        let (tx, rx) = sync_channel(self.config.buffer_size.clone());
+
+        let initial = rng.gen();
+        let runner = RngInput::new(rng, tx);
+
+        self.inputs.borrow_mut().push(Box::new(runner));
+
+        self.add(Channel::new(self.config.clone(), rx, initial))
+    }
+
+    /// Add a signal to the topology
+    ///
+    /// Returns a `Branch<A>`, allowing `root` to be used as input more than once
+    /// `SignalExt<A>` also provides `add_to(&Builder)` so `Builder::add` can be
+    /// used with method-chaining syntax
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use std::default::*;
+    /// use cfrp::*;
+    ///
+    /// let b = Builder::new(Default::default());
+    /// 
+    /// // Topologies only execute transformations which have been added to a builder.
+    /// let fork = b.add(b.value(1).lift(|i| { i + 1} ));
+    ///
+    /// // `add` returns a signal that can be used more than once
+    /// fork
+    ///     .clone()
+    ///     .lift(|i| { i - 1 } )
+    ///     .add_to(&b);
+    ///
+    /// fork
+    ///     .lift(|i| { -i })
+    ///     .add_to(&b);
+    /// ```
+    ///
+    pub fn add<SA, A>(&self, root: SA) -> Branch<A> where // NOTE: This needs to be clone-able!
+        SA: 'static + Signal<A>,
+        A: 'static + Clone + Send,
+    {
+        let v = root.initial();
+
+        let fork_txs = Arc::new(Mutex::new(Vec::new()));
+
+        let fork = Fork::new(Box::new(root), fork_txs.clone());
+
+        self.runners.borrow_mut().push(Box::new(fork));
+
+        Branch::new(self.config.clone(), fork_txs, None, v)
     }
 
     /// Combination of adding a signal and a channel
@@ -240,51 +326,4 @@ impl Builder {
         self.listen(v.unwrap(), rx)
     }
 
-    /// Return a signal that increments each time the topology receives data
-    ///
-    /// Like `tick`, counters cause downstream nodes to be recomputed when any
-    /// other input's value changes.
-    ///
-    pub fn counter<A>(&self, initial: A, by: A) -> Branch<A> where
-    A: 'static + Clone + Send + Add<Output=A>,
-    {
-        self.add(
-            self.tick(by)
-            .fold(initial, |c, incr| { c + incr })
-        )
-    }
-
-    /// Return a signal with the 'current' time each time the topology receives
-    /// data
-    ///
-    /// Like `tick`, timestamps cause downstream nodes to be recomputed when any
-    /// other input's value changes.
-    ///
-    pub fn timestamp(&self) -> Branch<time::Tm>
-    {
-        self.add(
-            self.tick(())
-            .lift(|_| -> time::Tm { time::now() })
-        )
-    }
-
-    /// Return a signal which generates a random value each time the topology
-    /// receives data
-    ///
-    /// Like `tick`, timestamps cause downstream nodes to be recomputed when any
-    /// other input's value changes.
-    ///
-    pub fn random<R, A>(&self, mut rng: R) -> Branch<A> where
-    R: 'static + rand::Rng + Clone + Send,
-    A: 'static + Send + Clone + rand::Rand,
-    {
-        let (tx, rx) = sync_channel(self.config.buffer_size.clone());
-
-        let initial = rng.gen();
-        let runner = RngInput::new(rng, tx);
-
-        self.inputs.borrow_mut().push(Box::new(runner));
-
-        self.add(Channel::new(self.config.clone(), rx, initial))
-    }
 }

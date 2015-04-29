@@ -88,22 +88,22 @@ A: Send
 }
 
 #[derive(Clone)]
-pub struct TickInput<A> where
+pub struct AckInput<A> where
 A: Send + Clone,
 {
     initial: A,
     tx: SyncSender<Event<A>>,
 }
 
-impl<A> TickInput<A> where 
+impl<A> AckInput<A> where 
     A: Send + Clone
 {
     pub fn new(v: A, tx: SyncSender<Event<A>>) -> Self {
-        TickInput { initial: v, tx: tx}
+        AckInput { initial: v, tx: tx}
     }
 }
 
-impl<A> RunInput for TickInput<A> where
+impl<A> RunInput for AckInput<A> where
 A: 'static + Send + Clone,
 {
     fn run(self: Box<Self>, _: usize, _: Arc<Mutex<Vec<Box<NoOp>>>>) {
@@ -115,11 +115,11 @@ A: 'static + Send + Clone,
     }
 }
 
-impl<A> NoOp for TickInput<A> where
+impl<A> NoOp for AckInput<A> where
 A: Send + Clone
 {
     fn send_no_change(&mut self) -> bool {
-        info!("RUN: Tick sending value");
+        info!("RUN: Ack sending value");
         match self.tx.send(Event::Changed(self.initial.clone())) {
             Err(_) => true,
             _ => false,
@@ -127,7 +127,7 @@ A: Send + Clone
     }
 
     fn send_exit(&self) {
-        info!("RUN: Tick sending Exit");
+        info!("RUN: Ack sending Exit");
         match self.tx.send(Event::Exit) {
             _ => {}
         }

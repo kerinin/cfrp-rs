@@ -329,7 +329,7 @@ mod test {
         spawn_topology(Default::default(), move |t| {
             let rng = rand::StdRng::new().unwrap();
             t.add(t.listen(0, rx));
-            t.add(t.random(rng).lift(move |i: usize| { out_tx.send(i).unwrap() }));
+            t.add(t.ack_random(rng).lift(move |i: usize| { out_tx.send(i).unwrap() }));
         });
 
         // Just testing to make sure this doesn't explode somehow
