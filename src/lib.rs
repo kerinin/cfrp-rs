@@ -7,6 +7,7 @@
 //! # Examples
 //!
 //! ```
+//! use std::default::*;
 //! use std::sync::mpsc::*;
 //! use cfrp::*;
 //!
@@ -20,35 +21,27 @@
 //! // 
 //! // You can pass some state in (here we're passing `(in_rx, out_rx)`) if you need
 //! // to.
-//! spawn_topology( in_rx, |t, in_rx| {
+//! spawn_topology(Default::default(), |t| {
 //! 
-//!     // Create a listener on `in_rx`.  Messages received on the channel will be
-//!     // sent to any nodes subscribed to `input`
-//!     let input = t.add(t.listen(0, in_rx));
+//!     // Create a listener on `in_rx` with initial value `0`.  Messages 
+//!     // received on the channel will be sent to any nodes subscribed to `input`
+//!     let input = t.listen(0usize, in_rx).add_to(t);
 //! 
 //!     // Basic map operation.  Since this is a pure function, it will only be
 //!     // evaluated when the value of `input` changes
-//!     let plus_one = t.add(input.lift(|i| -> usize { i + 1 }));
+//!     let plus_one = input.lift(|i| { i + 1 }).add_to(t);
 //! 
-//!     // The return value of `add` implements `Clone`, and can be used to
+//!     // The return value of `add` & `add_to` implements `clone`, and can be used to
 //!     // 'fan-out' data
-//!     let plus_two = plus_one.clone().lift(|i| -> usize { i + 2 });
+//!     let plus_two = plus_one.clone().lift(|i| { i + 2 });
 //! 
 //!     // We can combine signals too.  Since it's possible to receive input on one
 //!     // side but not the other, `lift2` always passes `Option<T>` to its
 //!     // function.  Like `lift`, this function is only called when needed
-//!     let combined = plus_one.lift2(plus_two, |i, j| -> usize {
-//!         println!("lifting");
-//!         match (i, j) {
-//!             (Some(a), Some(b)) => a + b,
-//!             _ => 0,
-//!         } 
-//!     });
+//!     let combined = plus_one.lift2(plus_two, |i, j| { i + j });
 //! 
-//!     // `fold` allows us to track state across events.  Since this is assumed to
-//!     // be impure, it is called any time a signal is received upstream of
-//!     // `combined`.
-//!     let accumulated = combined.fold(0, |sum, i| { *sum += i; });
+//!     // `fold` allows us to track state across events.  
+//!     let accumulated = combined.fold(0, |sum, i| { sum + i });
 //! 
 //!     // Make sure to add transformations to the topology - if it's not added it
 //!     // won't be run...
@@ -160,12 +153,11 @@ pub trait Run: Send {
 /// # Example
 ///
 /// ```
+/// use std::default::*;
 /// use cfrp::*;
 ///
-/// let handle = spawn_topology((0, 1), |t, (init, incr)| {
-///     t.add(
-///         t.value(incr).fold(init, |sum, i| { *sum += i })
-///     );
+/// let handle = spawn_topology(Default::default(), |t| {
+///     t.value(0usize).add_to(t);
 /// });
 /// ```
 ///
@@ -329,8 +321,6 @@ mod test {
 
     #[test]
     fn async_sends_async() {
-        env_logger::init().unwrap();
-
         let (slow_tx, slow_rx) = channel();
         let (fast_tx, fast_rx) = channel();
         let (out_tx, out_rx) = channel();
@@ -357,7 +347,7 @@ mod test {
         slow_tx.send(1 << 2).unwrap();
         fast_tx.send(1 << 3).unwrap();
 
-        // Should receive the 'fast' value first...
+        // Will receive the 'fast' value first...
         assert_eq!(out_rx.recv().unwrap(), (1 << 0) | (1 << 3));
         // ...then the slow one
         assert_eq!(out_rx.recv().unwrap(), (1 << 2) | (1 << 3));
@@ -382,23 +372,6 @@ mod test {
         tx.send(1 << 1).unwrap();
         assert_eq!(out_rx1.recv().unwrap(), (1 << 1));
         assert_eq!(out_rx2.recv().unwrap(), (1 << 1));
-    }
-
-    #[test]
-    fn tick() {
-        let(tx, rx) = channel();
-        let(out_tx, out_rx) = channel();
-
-        spawn_topology(Default::default(), move |t| {
-            t.add(t.tick(1).lift(move |i| { out_tx.send(i).unwrap(); }));
-            t.add(t.listen(0, rx));
-        });
-
-        // Initial
-        assert_eq!(out_rx.recv().unwrap(), 1);
-
-        tx.send(1).unwrap();
-        assert_eq!(out_rx.recv().unwrap(), 1);
     }
 
     #[test]
@@ -500,5 +473,23 @@ mod test {
 
         in_tx.send(2).unwrap();
         assert_eq!(out_rx.recv().unwrap(), Some(2));
+    }
+
+    #[test]
+    fn shit() {
+        use std::sync::mpsc::*;
+        use super::*;
+
+        let (in_tx, in_rx) = channel();
+        spawn_topology(Default::default(), |t| {
+            let input = t.listen(0usize, in_rx).add_to(t);
+            let plus_one = input.lift(|i| { i + 1 }).add_to(t);
+            let plus_two = plus_one.clone().lift(|i| { i + 2 });
+            let combined = plus_one.lift2(plus_two, |i, j| { i + j });
+            let accumulated = combined.fold(0, |sum, i| { sum + i });
+            t.add(accumulated);
+        });
+
+        in_tx.send(1usize).unwrap();
     }
 }

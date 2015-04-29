@@ -21,6 +21,7 @@ concurrency (and because I'm a Rust newb).  Simplification suggestions welcome!
 
 ## TODO
 
-* implement Display/Debug
+* timers!
 * docs / logs
+* implement Display/Debug
 * Try to eliminate constraints

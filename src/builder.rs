@@ -14,11 +14,7 @@ use primitives::channel::Channel;
 use primitives::async::Async;
 use primitives::value::Value;
 
-/// `Builder` is used to construct topologies.  
-///
-/// Basic builder pattern - `Topology::build` accepts a function which takes
-/// a state type `T` and a mutable builder.  The builder can be used to create
-/// `Channel`s and to `add` nodes to the topology
+/// `Builder` provides helpers for building topologies
 ///
 pub struct Builder {
     config: Config,
@@ -40,21 +36,29 @@ impl Builder {
     /// Add a signal to the topology
     ///
     /// Returns a `Branch<A>`, allowing `root` to be used as input more than once
+    /// `SignalExt<A>` also provides `add_to(&Builder)` so `Builder::add` can be
+    /// used with method-chaining syntax
     ///
     /// # Example
     ///
     /// ```
+    /// use std::default::*;
     /// use cfrp::*;
-    /// use cfrp::primitives::*;
     ///
-    /// let b = Builder::new();
+    /// let b = Builder::new(Default::default());
     /// 
     /// // Topologies only execute transformations which have been added to a builder.
     /// let fork = b.add(b.value(1).lift(|i| { i + 1} ));
     ///
     /// // `add` returns a signal that can be used more than once
-    /// b.add(fork.clone().lift(|i| { i - 1 } ));
-    /// b.add(fork.lift(|i| { -i }));
+    /// fork
+    ///     .clone()
+    ///     .lift(|i| { i - 1 } )
+    ///     .add_to(&b);
+    ///
+    /// fork
+    ///     .lift(|i| { -i })
+    ///     .add_to(&b);
     /// ```
     ///
     pub fn add<SA, A>(&self, root: SA) -> Branch<A> where // NOTE: This needs to be clone-able!
@@ -81,11 +85,11 @@ impl Builder {
     /// # Example
     ///
     /// ```
+    /// use std::default::*;
     /// use std::sync::mpsc::*;
     /// use cfrp::*;
-    /// use cfrp::primitives::*;
     ///
-    /// let b = Builder::new();
+    /// let b = Builder::new(Default::default());
     /// 
     /// let (tx, rx): (Sender<usize>, Receiver<usize>) = channel();
     ///
@@ -109,6 +113,31 @@ impl Builder {
     }
 
     /// Creats a channel with constant value `v`
+    /// 
+    /// Nodes downstream of values will be executed once on initialization and
+    /// never again.  Constant values can be combined with dynamic values via
+    /// `lift2`, in which case nodes will be executed when their dynamic parents
+    /// change values.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use std::default::*;
+    /// use std::sync::mpsc::*;
+    /// use cfrp::*;
+    ///
+    /// let b = Builder::new(Default::default());
+    /// let (tx, rx): (Sender<usize>, Receiver<usize>) = channel();
+    ///
+    /// let v = b.value(0);
+    /// let ch = b.listen(0, rx);
+    ///
+    /// // Only ever computed once
+    /// let l1 = v.lift(|i| { i + 1 });
+    ///
+    /// // Computed any time `ch` receives data, `static` will always be `0`
+    /// let l2 = l1.lift2(ch, |st, dy| { st + dy });
+    /// ```
     ///
     pub fn value<T>(&self, v: T) -> Value<T> where
         T: 'static + Clone + Send,
@@ -118,6 +147,30 @@ impl Builder {
 
     /// Creates a channel which pushes `Event::Changed(initial)` when any input
     /// pushes data
+    ///
+    /// Signals created with `listen` only cause nodes directly downstream of 
+    /// themselves to be recomputed. By contract, signals created by `tick` will
+    /// emit a value when any input signal's value changes.  
+    ///
+    /// # Example
+    /// ```
+    /// use std::sync::mpsc::*;
+    /// use cfrp::*;
+    ///
+    /// let(tx, rx) = channel();
+    /// let(out_tx, out_rx) = channel();
+    ///
+    /// spawn_topology(Default::default(), move |t| {
+    ///     t.add(t.tick(1).lift(move |i| { out_tx.send(i).unwrap(); }));
+    ///     t.add(t.listen(0, rx));
+    /// });
+    ///
+    /// // Initial
+    /// assert_eq!(out_rx.recv().unwrap(), 1);
+    ///
+    /// tx.send(1).unwrap();
+    /// assert_eq!(out_rx.recv().unwrap(), 1);
+    /// ```
     ///
     pub fn tick<A>(&self, initial: A) -> Branch<A> where
         A: 'static + Clone + Send,
@@ -139,23 +192,40 @@ impl Builder {
     /// process, and the result can be handled when it's available.
     ///
     /// ```
+    /// use std::thread;
     /// use std::sync::mpsc::*;
     /// use cfrp::*;
-    /// use cfrp::primitives::*;
     ///
-    /// let b = Builder::new();
-    /// 
-    /// // This will now happen without blocking the rest of the topology
-    /// let result = b.async(
-    ///     b.value(0).fold(0, |i, j| {
-    ///         // Some very expensive code in here...
-    ///     })
-    /// );
+    /// let (slow_tx, slow_rx) = channel();
+    /// let (fast_tx, fast_rx) = channel();
+    /// let (out_tx, out_rx) = channel();
     ///
-    /// // ...and `result` will receive the output value when it's done
-    /// b.add(
-    ///     b.value(0).lift2(result, |i, j| { (i, j) })
-    /// );
+    /// spawn_topology(Default::default(), move |t| {
+    ///     let slow = t.listen(1 << 0, slow_rx)
+    ///         .lift(|i| -> usize { 
+    ///             if i > 1 { // allow the initial value to be computed quickly
+    ///                 thread::sleep_ms(100);
+    ///             }
+    ///
+    ///             i 
+    ///         }).async(t);
+    ///
+    ///     let fast = t.listen(1 << 1, fast_rx);
+    ///
+    ///     slow.lift2(fast, move |i,j| { out_tx.send(i | j).unwrap() })
+    ///     .add_to(t);
+    /// });
+    ///
+    /// // Initial value
+    /// assert_eq!(out_rx.recv().unwrap(), (1 << 0) | (1 << 1));
+    ///
+    /// slow_tx.send(1 << 2).unwrap();
+    /// fast_tx.send(1 << 3).unwrap();
+    ///
+    /// // Will receive the 'fast' value first...
+    /// assert_eq!(out_rx.recv().unwrap(), (1 << 0) | (1 << 3));
+    /// // ...then the slow one
+    /// assert_eq!(out_rx.recv().unwrap(), (1 << 2) | (1 << 3));
     /// ```
     ///
     pub fn async<SA, A>(&self, root: SA) -> Branch<A> where // NOTE: Needs to be cloneable
@@ -170,6 +240,11 @@ impl Builder {
         self.listen(v.unwrap(), rx)
     }
 
+    /// Return a signal that increments each time the topology receives data
+    ///
+    /// Like `tick`, counters cause downstream nodes to be recomputed when any
+    /// other input's value changes.
+    ///
     pub fn counter<A>(&self, initial: A, by: A) -> Branch<A> where
     A: 'static + Clone + Send + Add<Output=A>,
     {
@@ -179,6 +254,12 @@ impl Builder {
         )
     }
 
+    /// Return a signal with the 'current' time each time the topology receives
+    /// data
+    ///
+    /// Like `tick`, timestamps cause downstream nodes to be recomputed when any
+    /// other input's value changes.
+    ///
     pub fn timestamp(&self) -> Branch<time::Tm>
     {
         self.add(
@@ -187,6 +268,12 @@ impl Builder {
         )
     }
 
+    /// Return a signal which generates a random value each time the topology
+    /// receives data
+    ///
+    /// Like `tick`, timestamps cause downstream nodes to be recomputed when any
+    /// other input's value changes.
+    ///
     pub fn random<R, A>(&self, mut rng: R) -> Branch<A> where
     R: 'static + rand::Rng + Clone + Send,
     A: 'static + Send + Clone + rand::Rand,
