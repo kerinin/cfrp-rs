@@ -118,6 +118,29 @@ A: 'static + Send + Clone,
     fn push_to(self: Box<Self>, Option<Box<Push<A>>>);
 }
 
+impl<A> Signal<A> for Box<Signal<A>> where
+A: 'static + Send + Clone,
+{
+    fn config(&self) -> Config {
+        (**self).config()
+    }
+
+    fn init(&mut self) {
+        (**self).init()
+    }
+
+    fn initial(&self) -> SignalType<A> {
+        (**self).initial()
+    }
+
+    fn push_to(self: Box<Self>, target: Option<Box<Push<A>>>) {
+        (*self).push_to(target)
+    }
+}
+impl<A> SignalExt<A> for Box<Signal<A>> where
+A: 'static + Send + Clone,
+{}
+
 /// Types which can receive incoming data from other signals
 ///
 pub trait Push<A> {
@@ -394,5 +417,88 @@ mod test {
         tx.send(0).unwrap();
         let second = out_rx.recv().unwrap();
         assert!(first != second);
+    }
+
+    #[test]
+    fn map() {
+        let (in_tx, in_rx) = sync_channel(0);
+        let (out_tx, out_rx) = channel();
+
+        spawn_topology(Default::default(), move |t| {
+            t.listen(0, in_rx)
+                .map(move |i| { out_tx.send(i | (1 << 1)).unwrap(); })
+                .add_to(t);
+        });
+
+        // Initial value
+        assert_eq!(out_rx.recv().unwrap(), 0b00000010);
+
+        // Lifted value
+        in_tx.send(1).unwrap();
+        assert_eq!(out_rx.recv().unwrap(), 0b00000011);
+    }
+
+    #[test]
+    fn zip() {
+        let (l_tx, l_rx): (SyncSender<usize>, Receiver<usize>) = sync_channel(0);
+        let (r_tx, r_rx): (SyncSender<usize>, Receiver<usize>) = sync_channel(0);
+        let (out_tx, out_rx) = channel();
+
+        spawn_topology(Default::default(), move |t| {
+            t.listen(0, l_rx)
+                .zip(t.listen(0, r_rx))
+                .lift(move |i| { out_tx.send(i).unwrap(); })
+                .add_to(t);
+        });
+
+        // Initial value
+        assert_eq!(out_rx.recv().unwrap(), (0, 0));
+
+        l_tx.send(1).unwrap();
+        assert_eq!(out_rx.recv().unwrap(), (1, 0));
+
+        r_tx.send(1).unwrap();
+        assert_eq!(out_rx.recv().unwrap(), (1, 1));
+    }
+
+    #[test]
+    fn enumerate() {
+        let (in_tx, in_rx) = sync_channel(0);
+        let (out_tx, out_rx) = channel();
+
+        spawn_topology(Default::default(), move |t| {
+            t.listen(0, in_rx)
+                .enumerate()
+                .lift(move |i| { out_tx.send(i).unwrap(); })
+                .add_to(t);
+        });
+
+        // Initial value
+        assert_eq!(out_rx.recv().unwrap(), (1, 0));
+
+        in_tx.send(1).unwrap();
+        assert_eq!(out_rx.recv().unwrap(), (2, 1));
+    }
+
+    #[test]
+    fn filter() {
+        let (in_tx, in_rx) = sync_channel(0);
+        let (out_tx, out_rx) = channel();
+
+        spawn_topology(Default::default(), move |t| {
+            t.listen(0, in_rx)
+                .filter(|i| { i % 2 == 0 })
+                .lift(move |i| { out_tx.send(i).unwrap(); })
+                .add_to(t);
+        });
+
+        // Initial value
+        assert_eq!(out_rx.recv().unwrap(), Some(0));
+
+        in_tx.send(1).unwrap();
+        assert_eq!(out_rx.recv().unwrap(), None);
+
+        in_tx.send(2).unwrap();
+        assert_eq!(out_rx.recv().unwrap(), Some(2));
     }
 }

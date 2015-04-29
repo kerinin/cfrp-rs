@@ -21,7 +21,6 @@ concurrency (and because I'm a Rust newb).  Simplification suggestions welcome!
 
 ## TODO
 
-* Timers, counters, rngs
 * SignalExt helper methods (map, zip, enumerate, etc)
 * implement Display/Debug
 * docs / logs

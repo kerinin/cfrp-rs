@@ -45,4 +45,59 @@ A: 'static + Send + Clone,
     fn async(self, builder: &Builder) -> Branch<A> {
         builder.async(self)
     }
+
+    fn map<F, B>(self, f: F) -> LiftSignal<F, A, B> where
+    F: 'static + Send + Fn(A) -> B,
+    B: 'static + Send + Clone,
+    {
+        self.lift(f)
+    }
+
+    fn zip<SB, B>(self, right: SB) -> Box<Signal<(A, B)>> where
+    SB: 'static + Signal<B>,
+    B: 'static + Send + Clone,
+    {
+        Box::new(
+            self.lift2(
+                right,
+                |l: A, r: B| -> (A, B) { (l,r) }
+            )
+        )
+    }
+
+    fn enumerate(self) -> Box<Signal<(usize, A)>>
+    {
+        let initial = self.initial().unwrap();
+        Box::new(
+            self.fold(
+                (0, initial),
+                |state: &mut (usize, A), i: A| { *state = (state.0 + 1, i) },
+            )
+        )
+    }
+
+    fn filter<F>(self, f: F) -> Box<Signal<Option<A>>> where
+    F: 'static + Send + Fn(&A) -> bool,
+    {
+        Box::new(
+            self.lift(move |i| {
+                if f(&i) {
+                    Some(i)
+                } else {
+                    None
+                }
+            })
+        )
+    }
+
+    fn inspect(self, f: F)
+    F: 'static + Send + Fn(&A) -> bool,
+    {
+        Box::new(
+            self.lift(move |i| {
+                f(i);
+                i
+            })
+        }
+    }
 }
