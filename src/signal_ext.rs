@@ -111,21 +111,7 @@ pub trait SignalExt<A>: Signal<A> + Sized where
     /// // Lifted value
     /// in_tx.send(1).unwrap();
     /// assert_eq!(out_rx.recv().unwrap(), 0b00000011);
-    /// let (in_tx, in_rx) = sync_channel(0);
-    /// let (out_tx, out_rx) = channel();
-    ///
-    /// spawn_topology(Default::default(), move |t| {
-    ///     t.listen(0, in_rx)
-    ///         .fold(out_tx, |tx, i| { tx.send(i | (1 << 1)).unwrap(); tx })
-    ///         .add_to(t);
-    /// });
-    ///
-    /// // Initial value
-    /// assert_eq!(out_rx.recv().unwrap(), 0b00000010);
-    ///
-    /// // Lifted value
-    /// in_tx.send(1).unwrap();
-    /// assert_eq!(out_rx.recv().unwrap(), 0b00000011);
+    /// ```
     ///
     fn fold<F, B>(mut self, initial: B, f: F) -> FoldSignal<F, A, B> where
     F: 'static + Send + Fn(B, A) -> B,
