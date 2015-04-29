@@ -20,7 +20,6 @@ Other Options (that I know of):
 
 ## TODO
 
-* timers!
 * docs / logs
 * implement Display/Debug
 * Try to eliminate constraints

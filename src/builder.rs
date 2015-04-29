@@ -119,21 +119,22 @@ impl Builder {
         let mut last_tick = initial.clone();
         thread::spawn(move || {
             loop {
-                thread::sleep_ms(interval.num_milliseconds() as u32);
-
-                let ticks = iter::repeat(interval)
-                    .scan(last_tick.clone(), |tm, d| { 
+                let tm = iter::repeat(interval)
+                    .scan(last_tick.clone(), |tm, d| {
                         *tm = *tm + d;
-                        Some(tm.clone())
+                        Some(*tm)
                     })
-                    .take_while(|tm| { *tm < time::now() });
-                
-                for tick in ticks {
-                    match tx.send(tick) {
-                        Ok(_) => { last_tick = tick },
-                        Err(_) => return,
-                    }
-                }
+                    .inspect(|tm| { 
+                        match tx.send(tm.clone()) {
+                            Ok(_) => { last_tick = *tm; },
+                            Err(_) => return,
+                        }
+                    })
+                    .take_while(|tm| { *tm < time::now() })
+                    .last();
+
+                let sleep_duration = time::now() - tm.unwrap();
+                thread::sleep_ms(sleep_duration.num_milliseconds() as u32);
             }
         });
 
