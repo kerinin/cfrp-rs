@@ -4,6 +4,8 @@ use primitives::lift2::Lift2Signal;
 use primitives::fold::FoldSignal;
 use primitives::fork::Branch;
 
+/// Methods for manipulating signals
+/// 
 pub trait SignalExt<A>: Signal<A> + Sized where
     Self: 'static,
     A: 'static + Send + Clone,
@@ -202,6 +204,36 @@ pub trait SignalExt<A>: Signal<A> + Sized where
         )
     }
 
+    /// Same as `Iterator::enumerate`.  
+    ///
+    /// The counter only increments when upstream data changes.  To track 
+    /// the aggregate number of messages processed by a topology consider 
+    /// `Builder::counter()`
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use std::default::Default;
+    /// use std::sync::mpsc::*;
+    /// use cfrp::*;
+    ///
+    /// let (in_tx, in_rx) = sync_channel(0);
+    /// let (out_tx, out_rx) = channel();
+    ///
+    /// spawn_topology(Default::default(), move |t| {
+    ///     t.listen(0, in_rx)
+    ///         .enumerate()
+    ///         .lift(move |i| { out_tx.send(i).unwrap(); })
+    ///         .add_to(t);
+    /// });
+    ///
+    /// // Initial value
+    /// assert_eq!(out_rx.recv().unwrap(), (1, 0));
+    ///
+    /// in_tx.send(1).unwrap();
+    /// assert_eq!(out_rx.recv().unwrap(), (2, 1));
+    /// ```
+    ///
     fn enumerate(self) -> Box<Signal<(usize, A)>>
     {
         let initial = self.initial().unwrap();
@@ -213,6 +245,37 @@ pub trait SignalExt<A>: Signal<A> + Sized where
         )
     }
 
+    /// Filter an input stream by a predicate function `F`.  
+    ///
+    /// In this case 'filtered' is reflected by a value of `None`
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use std::default::Default;
+    /// use std::sync::mpsc::*;
+    /// use cfrp::*;
+    ///
+    /// let (in_tx, in_rx) = sync_channel(0);
+    /// let (out_tx, out_rx) = channel();
+    ///
+    /// spawn_topology(Default::default(), move |t| {
+    ///     t.listen(0, in_rx)
+    ///         .filter(|i| { i % 2 == 0 })
+    ///         .lift(move |i| { out_tx.send(i).unwrap(); })
+    ///         .add_to(t);
+    /// });
+    ///
+    /// // Initial value
+    /// assert_eq!(out_rx.recv().unwrap(), Some(0));
+    ///
+    /// in_tx.send(1).unwrap();
+    /// assert_eq!(out_rx.recv().unwrap(), None);
+    ///
+    /// in_tx.send(2).unwrap();
+    /// assert_eq!(out_rx.recv().unwrap(), Some(2));
+    /// ```
+    ///
     fn filter<F>(self, f: F) -> Box<Signal<Option<A>>> where
     F: 'static + Send + Fn(&A) -> bool,
     {
@@ -227,6 +290,9 @@ pub trait SignalExt<A>: Signal<A> + Sized where
         )
     }
 
+    /// Pass each value in a signal to `F` before sending it to an output 
+    /// signal.  
+    ///
     fn inspect<F>(self, f: F) -> Box<Signal<A>> where
     F: 'static + Send + Fn(&A) -> bool,
     {

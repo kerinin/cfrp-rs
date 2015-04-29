@@ -78,6 +78,7 @@ pub enum Event<A> {
     Exit,
 }
 
+/// Tag to distinguish unchanging signals from dynamic signals
 #[derive(Clone)]
 pub enum SignalType<A> {
     Constant(A),
@@ -140,6 +141,12 @@ pub trait Push<A> {
     fn push(&mut self, Event<A>);
 }
 
+/// Types which can initiate a chain of transformations
+///
+/// Linear transformations are combined into thread-local function
+/// compositions - concurrency only applies to forking/merging transformations.
+/// `Run` is required for the 'tip' of each linear transformation.
+///
 pub trait Run: Send {
     fn run(mut self: Box<Self>);
 }
@@ -349,64 +356,5 @@ mod test {
         // Lifted value
         in_tx.send(1).unwrap();
         assert_eq!(out_rx.recv().unwrap(), 0b00000011);
-    }
-
-    #[test]
-    fn enumerate() {
-        let (in_tx, in_rx) = sync_channel(0);
-        let (out_tx, out_rx) = channel();
-
-        spawn_topology(Default::default(), move |t| {
-            t.listen(0, in_rx)
-                .enumerate()
-                .lift(move |i| { out_tx.send(i).unwrap(); })
-                .add_to(t);
-        });
-
-        // Initial value
-        assert_eq!(out_rx.recv().unwrap(), (1, 0));
-
-        in_tx.send(1).unwrap();
-        assert_eq!(out_rx.recv().unwrap(), (2, 1));
-    }
-
-    #[test]
-    fn filter() {
-        let (in_tx, in_rx) = sync_channel(0);
-        let (out_tx, out_rx) = channel();
-
-        spawn_topology(Default::default(), move |t| {
-            t.listen(0, in_rx)
-                .filter(|i| { i % 2 == 0 })
-                .lift(move |i| { out_tx.send(i).unwrap(); })
-                .add_to(t);
-        });
-
-        // Initial value
-        assert_eq!(out_rx.recv().unwrap(), Some(0));
-
-        in_tx.send(1).unwrap();
-        assert_eq!(out_rx.recv().unwrap(), None);
-
-        in_tx.send(2).unwrap();
-        assert_eq!(out_rx.recv().unwrap(), Some(2));
-    }
-
-    #[test]
-    fn shit() {
-        use std::sync::mpsc::*;
-        use super::*;
-
-        let (in_tx, in_rx) = channel();
-        spawn_topology(Default::default(), |t| {
-            let input = t.listen(0usize, in_rx).add_to(t);
-            let plus_one = input.lift(|i| { i + 1 }).add_to(t);
-            let plus_two = plus_one.clone().lift(|i| { i + 2 });
-            let combined = plus_one.lift2(plus_two, |i, j| { i + j });
-            let accumulated = combined.fold(0, |sum, i| { sum + i });
-            t.add(accumulated);
-        });
-
-        in_tx.send(1usize).unwrap();
     }
 }

@@ -1,3 +1,5 @@
+//! Building blocks for data ingestion and transformation
+//!
 pub mod async;
 pub mod channel;
 pub mod fold;
