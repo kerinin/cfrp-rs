@@ -229,7 +229,7 @@ mod test {
 
         spawn_topology(Default::default(), move |t| {
             t.listen(0, in_rx)
-                .fold(out_tx, |tx, i| { tx.send(i | (1 << 1)).unwrap(); })
+                .fold(out_tx, |tx, i| { tx.send(i | (1 << 1)).unwrap(); tx })
                 .add_to(t);
         });
 
@@ -247,7 +247,7 @@ mod test {
 
         spawn_topology(Default::default(), move |t| {
             t.value(0)
-                .fold(out_tx, |tx, i| { tx.send(i | (1 << 1)).unwrap(); })
+                .fold(out_tx, |tx, i| { tx.send(i | (1 << 1)).unwrap(); tx })
                 .add_to(t);
         });
 

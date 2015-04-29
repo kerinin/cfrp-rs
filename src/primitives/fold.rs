@@ -5,7 +5,7 @@ use super::super::{Event, Signal, SignalExt, SignalType, Push, Config};
 /// The result of a `fold` operation
 ///
 pub struct FoldSignal<F, A, B> where
-    F: 'static + Send + FnMut(&mut B, A),
+    F: 'static + Send + Fn(B, A) -> B,
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
@@ -16,19 +16,19 @@ pub struct FoldSignal<F, A, B> where
 }
 
 impl<F, A, B> FoldSignal<F, A, B> where
-    F: 'static + Send + FnMut(&mut B, A),
+    F: 'static + Send + Fn(B, A) -> B,
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
-    pub fn new(config: Config, parent: Box<Signal<A>>, mut initial: B, mut f: F) -> Self {
+    pub fn new(config: Config, parent: Box<Signal<A>>, initial: B, f: F) -> Self {
         let state = match parent.initial() {
             SignalType::Constant(a) => {
-                f(&mut initial, a);
-                SignalType::Constant(initial)
+                let i = f(initial, a);
+                SignalType::Constant(i)
             },
             SignalType::Dynamic(a) => {
-                f(&mut initial, a);
-                SignalType::Dynamic(initial)
+                let i = f(initial, a);
+                SignalType::Dynamic(i)
             },
         };
 
@@ -42,7 +42,7 @@ impl<F, A, B> FoldSignal<F, A, B> where
 }
 
 impl<F, A, B> Signal<B> for FoldSignal<F, A, B> where
-    F: 'static + Send + FnMut(&mut B, A),
+    F: 'static + Send + Fn(B, A) -> B,
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
@@ -96,13 +96,13 @@ impl<F, A, B> Signal<B> for FoldSignal<F, A, B> where
     }
 }
 impl<F, A, B> SignalExt<B> for FoldSignal<F, A, B> where
-    F: 'static + Send + FnMut(&mut B, A),
+    F: 'static + Send + Fn(B, A) -> B,
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {}
 
 struct FoldPusher<F, A, B> where
-    F: 'static + Send + FnMut(&mut B, A),
+    F: 'static + Send + Fn(B, A) -> B,
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
@@ -113,7 +113,7 @@ struct FoldPusher<F, A, B> where
 }
 
 impl<F, A, B> Push<A> for FoldPusher<F, A, B> where
-    F: 'static + Send + FnMut(&mut B, A),
+    F: 'static + Send + Fn(B, A) -> B,
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
 {
@@ -121,7 +121,7 @@ impl<F, A, B> Push<A> for FoldPusher<F, A, B> where
         let out = match event {
             Event::Changed(a) => { 
                 debug!("FoldPusher handling Event::Changed");
-                (self.f)(&mut self.state, a);
+                self.state = (self.f)(self.state.clone(), a);
                 Event::Changed(self.state.clone())
             },
             Event::Unchanged => {

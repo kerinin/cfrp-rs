@@ -175,7 +175,7 @@ impl Builder {
     {
         self.add(
             self.tick(by)
-            .fold(initial, |c, incr| { *c = c.clone() + incr })
+            .fold(initial, |c, incr| { c + incr })
         )
     }
 

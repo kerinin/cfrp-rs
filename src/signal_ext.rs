@@ -30,7 +30,7 @@ A: 'static + Send + Clone,
     }
 
     fn fold<F, B>(mut self, initial: B, f: F) -> FoldSignal<F, A, B> where
-    F: 'static + Send + FnMut(&mut B, A),
+    F: 'static + Send + Fn(B, A) -> B,
     B: 'static + Send + Clone,
     {
         self.init();
@@ -71,7 +71,7 @@ A: 'static + Send + Clone,
         Box::new(
             self.fold(
                 (0, initial),
-                |state: &mut (usize, A), i: A| { *state = (state.0 + 1, i) },
+                |state: (usize, A), i: A| { (state.0 + 1, i) },
             )
         )
     }
@@ -90,14 +90,14 @@ A: 'static + Send + Clone,
         )
     }
 
-    fn inspect(self, f: F)
+    fn inspect<F>(self, f: F) -> Box<Signal<A>> where
     F: 'static + Send + Fn(&A) -> bool,
     {
         Box::new(
             self.lift(move |i| {
-                f(i);
+                f(&i);
                 i
             })
-        }
+        )
     }
 }
