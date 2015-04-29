@@ -1,4 +1,5 @@
 use std::thread;
+use std::iter;
 use std::cell::*;
 use std::sync::*;
 use std::sync::mpsc::*;
@@ -103,33 +104,40 @@ impl Builder {
         Value::new(self.config.clone(), v)
     }
 
-    /// Returns a signal which generates the current time at least once every
-    /// `interval`.
+    /// Returns a signal which generates the "current" time every at every `interval`
     ///
-    /// The actual interval between events may be longer than `interval` if
+    /// The actual time between events may be longer than `interval` if
     /// writing to the topology blocks or the scheduling thread is pre-empted
-    /// by other threads.
+    /// by other threads, however a signal with every interval's time value will
+    /// eventually be sent.
     /// 
-    // NOTE: Given that 'time' is sort of ambiguous across the topology, consider
-    // emitting an accumulated time value (time::now() + n * interval) for all
-    // times between start and now, and schedule it the same way.  The idea 
-    // would be that we're emitting precise clicks, even if they're generated
-    // and arrive at slightly different times...
     pub fn every(&self, interval: time::Duration) -> Branch<time::Tm>
     {
         let (tx, rx) = sync_channel(0);
+        let initial = time::now();
 
+        let mut last_tick = initial.clone();
         thread::spawn(move || {
             loop {
                 thread::sleep_ms(interval.num_milliseconds() as u32);
-                match tx.send(time::now()) {
-                    Ok(_) => {},
-                    Err(_) => return,
+
+                let ticks = iter::repeat(interval)
+                    .scan(last_tick.clone(), |tm, d| { 
+                        *tm = *tm + d;
+                        Some(tm.clone())
+                    })
+                    .take_while(|tm| { *tm < time::now() });
+                
+                for tick in ticks {
+                    match tx.send(tick) {
+                        Ok(_) => { last_tick = tick },
+                        Err(_) => return,
+                    }
                 }
             }
         });
 
-        self.listen(time::now(), rx)
+        self.listen(initial, rx)
     }
 
     /// Creates a channel which pushes `Event::Changed(initial)` when any 
