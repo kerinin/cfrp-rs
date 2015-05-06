@@ -3,10 +3,33 @@ use std::sync::mpsc::*;
 
 use super::super::{Event, Signal, SignalExt, SignalType, Push, Config};
 
+pub enum Value<T> {
+    Changed(T),
+    Unchanged(T),
+}
+
+impl<T> Value<T> {
+    pub fn unwrap(self) -> T {
+        match self {
+            Value::Changed(v) => v,
+            Value::Unchanged(v) => v,
+        }
+    }
+}
+
+impl<T> Clone for Value<T> where T: Clone {
+    fn clone(&self) -> Self {
+        match self {
+            &Value::Changed(ref v) => Value::Changed(v.clone()),
+            &Value::Unchanged(ref v) => Value::Unchanged(v.clone()),
+        }
+    }
+}
+
 /// The result of a `lift2` operation
 ///
 pub struct Lift2Signal<F, A, B, C> where
-    F: 'static + Send + Fn(A, B) -> C,
+    F: 'static + Send + Fn(Value<A>, Value<B>) -> C,
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
     C: 'static + Send + Clone,
@@ -19,7 +42,7 @@ pub struct Lift2Signal<F, A, B, C> where
 }
 
 impl<F, A, B, C> Lift2Signal<F, A, B, C> where
-    F: 'static + Send + Fn(A, B) -> C,
+    F: 'static + Send + Fn(Value<A>, Value<B>) -> C,
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
     C: 'static + Send + Clone,
@@ -27,19 +50,19 @@ impl<F, A, B, C> Lift2Signal<F, A, B, C> where
     pub fn new(config: Config, left: Box<Signal<A>>, right: Box<Signal<B>>, f: F) -> Self {
         let initial = match (left.initial(), right.initial()) {
             (SignalType::Constant(l), SignalType::Constant(r)) => {
-                SignalType::Constant(f(l, r))
+                SignalType::Constant(f(Value::Changed(l), Value::Changed(r)))
             }
 
             (SignalType::Dynamic(l), SignalType::Constant(r)) => {
-                SignalType::Dynamic(f(l, r))
+                SignalType::Dynamic(f(Value::Changed(l), Value::Changed(r)))
             }
 
             (SignalType::Constant(l), SignalType::Dynamic(r)) => {
-                SignalType::Dynamic(f(l, r))
+                SignalType::Dynamic(f(Value::Changed(l), Value::Changed(r)))
             }
 
             (SignalType::Dynamic(l), SignalType::Dynamic(r)) => {
-                SignalType::Dynamic(f(l, r))
+                SignalType::Dynamic(f(Value::Changed(l), Value::Changed(r)))
             }
         };
 
@@ -54,7 +77,7 @@ impl<F, A, B, C> Lift2Signal<F, A, B, C> where
 }
 
 impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
-    F: 'static + Send + Fn(A, B) -> C,
+    F: 'static + Send + Fn(Value<A>, Value<B>) -> C,
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
     C: 'static + Send + Clone,
@@ -108,18 +131,18 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
             let mut any_changed = false;
 
             let l = match left_initial {
-                SignalType::Constant(ref l) => l.clone(),
+                SignalType::Constant(ref l) => Value::Unchanged(l.clone()),
                 SignalType::Dynamic(_) => {
                     match left_rx.recv() {
                         Ok(Event::Changed(l)) => {
                             info!("RUN: Lift2 using changed Left value");
                             any_changed = true;
                             last_l = l.clone();
-                            l
+                            Value::Changed(l)
                         },
                         Ok(Event::Unchanged) => {
                             info!("RUN: Lift2 using cached Left value");
-                            last_l.clone()
+                            Value::Unchanged(last_l.clone())
                         },
                         Ok(Event::Exit) => return,
                         Err(_) => return,
@@ -128,18 +151,18 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
             };
 
             let r = match right_initial {
-                SignalType::Constant(ref r) => r.clone(),
+                SignalType::Constant(ref r) => Value::Unchanged(r.clone()),
                 SignalType::Dynamic(_) => {
                     match right_rx.recv() {
                         Ok(Event::Changed(r)) => {
                             info!("RUN: Lift2 using changed Right value");
                             any_changed = true;
                             last_r = r.clone();
-                            r
+                            Value::Changed(r)
                         },
                         Ok(Event::Unchanged) => {
                             info!("RUN: Lift2 using cached Right value");
-                            last_r.clone()
+                            Value::Unchanged(last_r.clone())
                         },
                         Ok(Event::Exit) => return,
                         Err(_) => return,
@@ -161,7 +184,7 @@ impl<F, A, B, C> Signal<C> for Lift2Signal<F, A, B, C> where
     }
 }
 impl<F, A, B, C> SignalExt<C> for Lift2Signal<F, A, B, C> where
-    F: 'static + Send + Fn(A, B) -> C,
+    F: 'static + Send + Fn(Value<A>, Value<B>) -> C,
     A: 'static + Send + Clone,
     B: 'static + Send + Clone,
     C: 'static + Send + Clone,

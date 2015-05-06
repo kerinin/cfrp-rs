@@ -1,6 +1,6 @@
 use super::{Signal, Builder};
 use primitives::lift::LiftSignal;
-use primitives::lift2::Lift2Signal;
+use primitives::lift2::{Lift2Signal, Value};
 use primitives::fold::FoldSignal;
 use primitives::fork::Branch;
 
@@ -76,7 +76,7 @@ pub trait SignalExt<A>: Signal<A> + Sized where
     ///
     fn lift2<F, SB, B, C>(mut self, mut right: SB, f: F) -> Lift2Signal<F, A, B, C> where
     SB: 'static + Signal<B>,
-    F: 'static + Send + Fn(A, B) -> C,
+    F: 'static + Send + Fn(Value<A>, Value<B>) -> C,
     B: 'static + Send + Clone,
     C: 'static + Send + Clone,
     {
@@ -178,14 +178,14 @@ pub trait SignalExt<A>: Signal<A> + Sized where
     /// assert_eq!(out_rx.recv().unwrap(), (1, 1));
     /// ```
     ///
-    fn zip<SB, B>(self, right: SB) -> Box<Signal<(A, B)>> where
+    fn zip<SB, B>(self, right: SB) -> Box<Signal<(Value<A>, Value<B>)>> where
     SB: 'static + Signal<B>,
     B: 'static + Send + Clone,
     {
         Box::new(
             self.lift2(
                 right,
-                |l: A, r: B| -> (A, B) { (l,r) }
+                |l: Value<A>, r: Value<B>| -> (Value<A>, Value<B>) { (l,r) }
             )
         )
     }
