@@ -70,6 +70,29 @@ pub use builder::Builder;
 pub use config::Config;
 
 
+pub enum Value<T> {
+    Changed(T),
+    Unchanged(T),
+}
+
+impl<T> Value<T> {
+    pub fn unwrap(self) -> T {
+        match self {
+            Value::Changed(v) => v,
+            Value::Unchanged(v) => v,
+        }
+    }
+}
+
+impl<T> Clone for Value<T> where T: Clone {
+    fn clone(&self) -> Self {
+        match self {
+            &Value::Changed(ref v) => Value::Changed(v.clone()),
+            &Value::Unchanged(ref v) => Value::Unchanged(v.clone()),
+        }
+    }
+}
+
 /// Container for data as it flows across the topology
 #[derive(Clone)]
 pub enum Event<A> {

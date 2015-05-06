@@ -1,30 +1,7 @@
 use std::thread;
 use std::sync::mpsc::*;
 
-use super::super::{Event, Signal, SignalExt, SignalType, Push, Config};
-
-pub enum Value<T> {
-    Changed(T),
-    Unchanged(T),
-}
-
-impl<T> Value<T> {
-    pub fn unwrap(self) -> T {
-        match self {
-            Value::Changed(v) => v,
-            Value::Unchanged(v) => v,
-        }
-    }
-}
-
-impl<T> Clone for Value<T> where T: Clone {
-    fn clone(&self) -> Self {
-        match self {
-            &Value::Changed(ref v) => Value::Changed(v.clone()),
-            &Value::Unchanged(ref v) => Value::Unchanged(v.clone()),
-        }
-    }
-}
+use super::super::{Value, Event, Signal, SignalExt, SignalType, Push, Config};
 
 /// The result of a `lift2` operation
 ///

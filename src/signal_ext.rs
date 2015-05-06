@@ -1,6 +1,6 @@
-use super::{Signal, Builder};
+use super::{Signal, Builder, Value};
 use primitives::lift::LiftSignal;
-use primitives::lift2::{Lift2Signal, Value};
+use primitives::lift2::{Lift2Signal};
 use primitives::fold::FoldSignal;
 use primitives::fork::Branch;
 
