@@ -485,7 +485,7 @@
         <span class='ident'>Value</span>::<span class='ident'>new</span>(<span class='self'>self</span>.<span class='ident'>config</span>.<span class='ident'>clone</span>(), <span class='ident'>v</span>)
     }
 
-    <span class='doccomment'>/// Returns a signal which generates the &quot;current&quot; time every at every `interval`</span>
+    <span class='doccomment'>/// Returns a signal which emits the &quot;current&quot; time every at every `interval`</span>
     <span class='doccomment'>///</span>
     <span class='doccomment'>/// The actual time between events may be longer than `interval` if</span>
     <span class='doccomment'>/// writing to the topology blocks or the scheduling thread is pre-empted</span>
@@ -523,10 +523,10 @@
     }
 
     <span class='doccomment'>/// Creates a channel which pushes `Event::Changed(initial)` when any </span>
-    <span class='doccomment'>/// other receives changes</span>
+    <span class='doccomment'>/// other channel receives changes</span>
     <span class='doccomment'>///</span>
     <span class='doccomment'>/// Signals created with `listen` only cause nodes directly downstream of </span>
-    <span class='doccomment'>/// themselves to be recomputed. By contract, signals created by `ack_*` will</span>
+    <span class='doccomment'>/// themselves to be recomputed. By contrast, signals created by `ack_*` will</span>
     <span class='doccomment'>/// emit a value when any input signal&#39;s value changes.  </span>
     <span class='doccomment'>///</span>
     <span class='doccomment'>/// # Example</span>
@@ -564,7 +564,7 @@
     <span class='doccomment'>/// Return a signal that increments each time the topology receives data</span>
     <span class='doccomment'>///</span>
     <span class='doccomment'>/// Signals created with `listen` only cause nodes directly downstream of </span>
-    <span class='doccomment'>/// themselves to be recomputed. By contract, signals created by `ack_*` will</span>
+    <span class='doccomment'>/// themselves to be recomputed. By contrast, signals created by `ack_*` will</span>
     <span class='doccomment'>/// emit a value when any input signal&#39;s value changes.  </span>
     <span class='doccomment'>///</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>ack_counter</span><span class='op'>&lt;</span><span class='ident'>A</span>, <span class='ident'>B</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='ident'>initial</span>: <span class='ident'>A</span>, <span class='ident'>by</span>: <span class='ident'>A</span>) <span class='op'>-&gt;</span> <span class='ident'>Branch</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span> <span class='kw'>where</span>
@@ -580,7 +580,7 @@
     <span class='doccomment'>/// data</span>
     <span class='doccomment'>///</span>
     <span class='doccomment'>/// Signals created with `listen` only cause nodes directly downstream of </span>
-    <span class='doccomment'>/// themselves to be recomputed. By contract, signals created by `ack_*` will</span>
+    <span class='doccomment'>/// themselves to be recomputed. By contrast, signals created by `ack_*` will</span>
     <span class='doccomment'>/// emit a value when any input signal&#39;s value changes.  </span>
     <span class='doccomment'>///</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>ack_timestamp</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>Branch</span><span class='op'>&lt;</span><span class='ident'>time</span>::<span class='ident'>Tm</span><span class='op'>&gt;</span>
@@ -595,12 +595,12 @@
     <span class='doccomment'>/// receives data</span>
     <span class='doccomment'>///</span>
     <span class='doccomment'>/// If randomness is needed, `ack_random` is probably a better way of generating it</span>
-    <span class='doccomment'>/// than creating a Rng inside a handler becasue it exposes the generated </span>
+    <span class='doccomment'>/// than creating a Rng inside a handler because it exposes the generated </span>
     <span class='doccomment'>/// value as a &#39;fact&#39; about the system&#39;s history rather than embedding it</span>
     <span class='doccomment'>/// in a non-deterministic function.  </span>
     <span class='doccomment'>///</span>
     <span class='doccomment'>/// Signals created with `listen` only cause nodes directly downstream of </span>
-    <span class='doccomment'>/// themselves to be recomputed. By contract, signals created by `ack_*` will</span>
+    <span class='doccomment'>/// themselves to be recomputed. By contrast, signals created by `ack_*` will</span>
     <span class='doccomment'>/// emit a value when any input signal&#39;s value changes.  </span>
     <span class='doccomment'>///</span>
     <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>ack_random</span><span class='op'>&lt;</span><span class='ident'>R</span>, <span class='ident'>A</span><span class='op'>&gt;</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>, <span class='kw-2'>mut</span> <span class='ident'>rng</span>: <span class='ident'>R</span>) <span class='op'>-&gt;</span> <span class='ident'>Branch</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span> <span class='kw'>where</span>

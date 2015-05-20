@@ -106,7 +106,7 @@ change values.</p>
 <span class='kw'>let</span> <span class='ident'>l2</span> <span class='op'>=</span> <span class='ident'>l1</span>.<span class='ident'>lift2</span>(<span class='ident'>ch</span>, <span class='op'>|</span><span class='ident'>st</span>, <span class='ident'>dy</span><span class='op'>|</span> { <span class='op'>*</span><span class='ident'>st</span> <span class='op'>+</span> <span class='op'>*</span><span class='ident'>dy</span> });
 </pre>
 </div><h4 id='method.every' class='method'><code>fn <a href='#method.every' class='fnname'>every</a>(&amp;self, interval: <a class='struct' href='../time/duration/struct.Duration.html' title='time::duration::Duration'>Duration</a>) -&gt; <a class='struct' href='../cfrp/primitives/fork/struct.Branch.html' title='cfrp::primitives::fork::Branch'>Branch</a>&lt;<a class='struct' href='../time/struct.Tm.html' title='time::Tm'>Tm</a>&gt;</code></h4>
-<div class='docblock'><p>Returns a signal which generates the &quot;current&quot; time every at every <code>interval</code></p>
+<div class='docblock'><p>Returns a signal which emits the &quot;current&quot; time every at every <code>interval</code></p>
 
 <p>The actual time between events may be longer than <code>interval</code> if
 writing to the topology blocks or the scheduling thread is pre-empted
@@ -114,10 +114,10 @@ by other threads, however a signal with every interval&#39;s time value will
 eventually be sent.</p>
 </div><h4 id='method.ack_value' class='method'><code>fn <a href='#method.ack_value' class='fnname'>ack_value</a>&lt;A&gt;(&amp;self, initial: A) -&gt; <a class='struct' href='../cfrp/primitives/fork/struct.Branch.html' title='cfrp::primitives::fork::Branch'>Branch</a>&lt;A&gt; <span class='where'>where A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a></span></code></h4>
 <div class='docblock'><p>Creates a channel which pushes <code>Event::Changed(initial)</code> when any
-other receives changes</p>
+other channel receives changes</p>
 
 <p>Signals created with <code>listen</code> only cause nodes directly downstream of 
-themselves to be recomputed. By contract, signals created by <code>ack_*</code> will
+themselves to be recomputed. By contrast, signals created by <code>ack_*</code> will
 emit a value when any input signal&#39;s value changes.  </p>
 
 <h1 id="example" class='section-header'><a
@@ -143,26 +143,26 @@ emit a value when any input signal&#39;s value changes.  </p>
 <div class='docblock'><p>Return a signal that increments each time the topology receives data</p>
 
 <p>Signals created with <code>listen</code> only cause nodes directly downstream of 
-themselves to be recomputed. By contract, signals created by <code>ack_*</code> will
+themselves to be recomputed. By contrast, signals created by <code>ack_*</code> will
 emit a value when any input signal&#39;s value changes.  </p>
 </div><h4 id='method.ack_timestamp' class='method'><code>fn <a href='#method.ack_timestamp' class='fnname'>ack_timestamp</a>(&amp;self) -&gt; <a class='struct' href='../cfrp/primitives/fork/struct.Branch.html' title='cfrp::primitives::fork::Branch'>Branch</a>&lt;<a class='struct' href='../time/struct.Tm.html' title='time::Tm'>Tm</a>&gt;</code></h4>
 <div class='docblock'><p>Return a signal with the &#39;current&#39; time each time the topology receives
 data</p>
 
 <p>Signals created with <code>listen</code> only cause nodes directly downstream of 
-themselves to be recomputed. By contract, signals created by <code>ack_*</code> will
+themselves to be recomputed. By contrast, signals created by <code>ack_*</code> will
 emit a value when any input signal&#39;s value changes.  </p>
 </div><h4 id='method.ack_random' class='method'><code>fn <a href='#method.ack_random' class='fnname'>ack_random</a>&lt;R, A&gt;(&amp;self, rng: R) -&gt; <a class='struct' href='../cfrp/primitives/fork/struct.Branch.html' title='cfrp::primitives::fork::Branch'>Branch</a>&lt;A&gt; <span class='where'>where R: 'static + <a class='trait' href='../rand/trait.Rng.html' title='rand::Rng'>Rng</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a>, A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a> + <a class='trait' href='../rand/trait.Rand.html' title='rand::Rand'>Rand</a></span></code></h4>
 <div class='docblock'><p>Return a signal which generates a random value each time the topology
 receives data</p>
 
 <p>If randomness is needed, <code>ack_random</code> is probably a better way of generating it
-than creating a Rng inside a handler becasue it exposes the generated 
+than creating a Rng inside a handler because it exposes the generated 
 value as a &#39;fact&#39; about the system&#39;s history rather than embedding it
 in a non-deterministic function.  </p>
 
 <p>Signals created with <code>listen</code> only cause nodes directly downstream of 
-themselves to be recomputed. By contract, signals created by <code>ack_*</code> will
+themselves to be recomputed. By contrast, signals created by <code>ack_*</code> will
 emit a value when any input signal&#39;s value changes.  </p>
 </div><h4 id='method.add' class='method'><code>fn <a href='#method.add' class='fnname'>add</a>&lt;SA, A&gt;(&amp;self, root: SA) -&gt; <a class='struct' href='../cfrp/primitives/fork/struct.Branch.html' title='cfrp::primitives::fork::Branch'>Branch</a>&lt;A&gt; <span class='where'>where SA: 'static + <a class='trait' href='../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;A&gt;, A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a></span></code></h4>
 <div class='docblock'><p>Add a signal to the topology</p>

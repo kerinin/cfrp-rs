@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["Value",""]]});
+initSidebarItems({"enum":[["Value","Value<T> encodes the difference between changed & unchanged data, in cases where multiple inputs have been combined."]]});

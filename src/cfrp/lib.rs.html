@@ -396,11 +396,6 @@
 <span id="354">354</span>
 <span id="355">355</span>
 <span id="356">356</span>
-<span id="357">357</span>
-<span id="358">358</span>
-<span id="359">359</span>
-<span id="360">360</span>
-<span id="361">361</span>
 </pre><pre class='rust '>
 <span class='doccomment'>//! # Concurrent Function Reactive Programming</span>
 <span class='doccomment'>//!</span>
@@ -417,44 +412,40 @@
 <span class='doccomment'>//!</span>
 <span class='doccomment'>//! // create some channels for communicating with the topology</span>
 <span class='doccomment'>//! let (in_tx, in_rx) = channel();</span>
-<span class='doccomment'>//! //let (out_tx, out_rx) = channel();</span>
 <span class='doccomment'>//! </span>
 <span class='doccomment'>//! // Topologies are statically defined, run-once structures.  Due to how</span>
 <span class='doccomment'>//! // concurrency is handled, changes to the graph structure can cause</span>
 <span class='doccomment'>//! // inconsistencies in the data processing</span>
 <span class='doccomment'>//! // </span>
-<span class='doccomment'>//! // You can pass some state in (here we&#39;re passing `(in_rx, out_rx)`) if you need</span>
-<span class='doccomment'>//! // to.</span>
 <span class='doccomment'>//! spawn_topology(Default::default(), |t| {</span>
 <span class='doccomment'>//! </span>
 <span class='doccomment'>//!     // Create a listener on `in_rx` with initial value `0`.  Messages </span>
 <span class='doccomment'>//!     // received on the channel will be sent to any nodes subscribed to `input`</span>
 <span class='doccomment'>//!     let input = t.listen(0usize, in_rx).add_to(t);</span>
 <span class='doccomment'>//! </span>
-<span class='doccomment'>//!     // Basic map operation.  Since this is a pure function, it will only be</span>
-<span class='doccomment'>//!     // evaluated when the value of `input` changes</span>
+<span class='doccomment'>//!     // Basic map operation.  Since this is expected to be a pure function, </span>
+<span class='doccomment'>//!     // it will only be evaluated when the value of `input` changes</span>
 <span class='doccomment'>//!     let plus_one = input.lift(|i| { i + 1 }).add_to(t);</span>
 <span class='doccomment'>//! </span>
-<span class='doccomment'>//!     // The return value of `add` &amp; `add_to` implements `clone`, and can be used to</span>
+<span class='doccomment'>//!     // The return value of `add` / `add_to` implements `clone`, and can be used to</span>
 <span class='doccomment'>//!     // &#39;fan-out&#39; data</span>
 <span class='doccomment'>//!     let plus_two = plus_one.clone().lift(|i| { i + 2 });</span>
 <span class='doccomment'>//! </span>
 <span class='doccomment'>//!     // We can combine signals too.  Since it&#39;s possible to receive input on one</span>
-<span class='doccomment'>//!     // side but not the other, `lift2` always passes `Option&lt;T&gt;` to its</span>
-<span class='doccomment'>//!     // function.  Like `lift`, this function is only called when needed</span>
+<span class='doccomment'>//!     // side but not the other, `lift2` wraps data in a `Value&lt;T&gt;` which is </span>
+<span class='doccomment'>//!     // either `Value::Changed(T)` or `Value::Unchanged(T)`.  Like `lift`, </span>
+<span class='doccomment'>//!     // this function is only called when needed</span>
 <span class='doccomment'>//!     let combined = plus_one.lift2(plus_two, |i, j| { *i + *j });</span>
 <span class='doccomment'>//! </span>
 <span class='doccomment'>//!     // `fold` allows us to track state across events.  </span>
 <span class='doccomment'>//!     let accumulated = combined.fold(0, |sum, i| { sum + i });</span>
 <span class='doccomment'>//! </span>
-<span class='doccomment'>//!     // Make sure to add transformations to the topology - if it&#39;s not added it</span>
-<span class='doccomment'>//!     // won&#39;t be run...</span>
+<span class='doccomment'>//!     // Make sure to add transformations to the topology with `add` / `add_to`</span>
+<span class='doccomment'>//!     // I it&#39;s not added it won&#39;t be run...</span>
 <span class='doccomment'>//!     t.add(accumulated);</span>
 <span class='doccomment'>//! });</span>
 <span class='doccomment'>//!</span>
 <span class='doccomment'>//! in_tx.send(1usize).unwrap();</span>
-<span class='doccomment'>//! // let out: usize = out_rx.recv().unwrap();</span>
-<span class='doccomment'>//! // assert_eq!(out, 2);</span>
 <span class='doccomment'>//! ```</span>
 <span class='doccomment'>//!</span>
 <span class='attribute'>#[<span class='ident'>macro_use</span>]</span>
@@ -559,8 +550,7 @@
 <span class='doccomment'>/// Construct a new topology and run it</span>
 <span class='doccomment'>///</span>
 <span class='doccomment'>/// `f` will be called with a `Builder`, which exposes methods for adding</span>
-<span class='doccomment'>/// inputs &amp; transformations to the topology and `state` which is provided as </span>
-<span class='doccomment'>/// a convenience for passing values through to builder&#39;s scope.</span>
+<span class='doccomment'>/// inputs &amp; transformations to the topology</span>
 <span class='doccomment'>///</span>
 <span class='doccomment'>/// # Example</span>
 <span class='doccomment'>///</span>
