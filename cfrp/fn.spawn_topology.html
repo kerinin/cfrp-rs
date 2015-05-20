@@ -43,8 +43,8 @@
     <section id='main' class="content fn">
 <h1 class='fqn'><span class='in-band'>Function <a href='index.html'>cfrp</a>::<wbr><a class='fn' href=''>spawn_topology</a><wbr></span><span class='out-of-band'><span id='render-detail'>
             <a id="collapse-all" href="#">[-]</a>&nbsp;<a id="expand-all" href="#">[+]</a>
-        </span><a id='src-5318' href='../src/cfrp/lib.rs.html#241-247'>[src]</a></span></h1>
-<pre class='rust fn'>pub fn spawn_topology&lt;T, F&gt;(state: T, f: F) -&gt; <a class='struct' href='../cfrp/primitives/struct.TopologyHandle.html' title='cfrp::primitives::TopologyHandle'>TopologyHandle</a> <span class='where'>where F: <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(&amp;<a class='struct' href='../cfrp/primitives/struct.Builder.html' title='cfrp::primitives::Builder'>Builder</a>, T)</span></pre><div class='docblock'><p>Construct a new topology and run it</p>
+        </span><a id='src-8266' href='../src/cfrp/lib.rs.html#172-178'>[src]</a></span></h1>
+<pre class='rust fn'>pub fn spawn_topology&lt;F&gt;(config: <a class='struct' href='../cfrp/struct.Config.html' title='cfrp::Config'>Config</a>, f: F) -&gt; <a class='struct' href='../cfrp/struct.TopologyHandle.html' title='cfrp::TopologyHandle'>TopologyHandle</a> <span class='where'>where F: <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.FnOnce.html' title='core::ops::FnOnce'>FnOnce</a>(&amp;<a class='struct' href='../cfrp/struct.Builder.html' title='cfrp::Builder'>Builder</a>)</span></pre><div class='docblock'><p>Construct a new topology and run it</p>
 
 <p><code>f</code> will be called with a <code>Builder</code>, which exposes methods for adding
 inputs &amp; transformations to the topology and <code>state</code> which is provided as 
@@ -52,12 +52,11 @@ a convenience for passing values through to builder&#39;s scope.</p>
 
 <h1 id="example" class='section-header'><a
                            href="#example">Example</a></h1><pre id='rust-example-rendered' class='rust '>
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>default</span>::<span class='op'>*</span>;
 <span class='kw'>use</span> <span class='ident'>cfrp</span>::<span class='op'>*</span>;
 
-<span class='kw'>let</span> <span class='ident'>handle</span> <span class='op'>=</span> <span class='ident'>spawn_topology</span>((<span class='number'>0</span>, <span class='number'>1</span>), <span class='op'>|</span><span class='ident'>t</span>, (<span class='ident'>init</span>, <span class='ident'>incr</span>)<span class='op'>|</span> {
-    <span class='ident'>t</span>.<span class='ident'>add</span>(
-        <span class='ident'>t</span>.<span class='ident'>value</span>(<span class='ident'>incr</span>).<span class='ident'>fold</span>(<span class='ident'>init</span>, <span class='op'>|</span><span class='ident'>sum</span>, <span class='ident'>i</span><span class='op'>|</span> { <span class='op'>*</span><span class='ident'>sum</span> <span class='op'>+=</span> <span class='ident'>i</span> })
-    );
+<span class='kw'>let</span> <span class='ident'>handle</span> <span class='op'>=</span> <span class='ident'>spawn_topology</span>(<span class='ident'>Default</span>::<span class='ident'>default</span>(), <span class='op'>|</span><span class='ident'>t</span><span class='op'>|</span> {
+    <span class='ident'>t</span>.<span class='ident'>value</span>(<span class='number'>0usize</span>).<span class='ident'>add_to</span>(<span class='ident'>t</span>);
 });
 </pre>
 </div></section>

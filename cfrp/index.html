@@ -43,7 +43,7 @@
     <section id='main' class="content mod">
 <h1 class='fqn'><span class='in-band'>Crate <a class='mod' href=''>cfrp</a><wbr></span><span class='out-of-band'><a href='stability.html'>[stability]</a> <span id='render-detail'>
             <a id="collapse-all" href="#">[-]</a>&nbsp;<a id="expand-all" href="#">[+]</a>
-        </span><a id='src-0' href='../src/cfrp/lib.rs.html#1-291'>[src]</a></span></h1>
+        </span><a id='src-0' href='../src/cfrp/lib.rs.html#1-361'>[src]</a></span></h1>
 <div class='docblock'>
 <h1 id="concurrent-function-reactive-programming" class='section-header'><a
                            href="#concurrent-function-reactive-programming">Concurrent Function Reactive Programming</a></h1>
@@ -53,6 +53,7 @@ concurrent data flow processes.</p>
 
 <h1 id="examples" class='section-header'><a
                            href="#examples">Examples</a></h1><pre id='rust-example-rendered' class='rust '>
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>default</span>::<span class='op'>*</span>;
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>sync</span>::<span class='ident'>mpsc</span>::<span class='op'>*</span>;
 <span class='kw'>use</span> <span class='ident'>cfrp</span>::<span class='op'>*</span>;
 
@@ -66,35 +67,27 @@ concurrent data flow processes.</p>
 <span class='comment'>// </span>
 <span class='comment'>// You can pass some state in (here we&#39;re passing `(in_rx, out_rx)`) if you need</span>
 <span class='comment'>// to.</span>
-<span class='ident'>spawn_topology</span>( <span class='ident'>in_rx</span>, <span class='op'>|</span><span class='ident'>t</span>, <span class='ident'>in_rx</span><span class='op'>|</span> {
+<span class='ident'>spawn_topology</span>(<span class='ident'>Default</span>::<span class='ident'>default</span>(), <span class='op'>|</span><span class='ident'>t</span><span class='op'>|</span> {
  
-    <span class='comment'>// Create a listener on `in_rx`.  Messages received on the channel will be</span>
-    <span class='comment'>// sent to any nodes subscribed to `input`</span>
-    <span class='kw'>let</span> <span class='ident'>input</span> <span class='op'>=</span> <span class='ident'>t</span>.<span class='ident'>add</span>(<span class='ident'>t</span>.<span class='ident'>listen</span>(<span class='number'>0</span>, <span class='ident'>in_rx</span>));
+    <span class='comment'>// Create a listener on `in_rx` with initial value `0`.  Messages </span>
+    <span class='comment'>// received on the channel will be sent to any nodes subscribed to `input`</span>
+    <span class='kw'>let</span> <span class='ident'>input</span> <span class='op'>=</span> <span class='ident'>t</span>.<span class='ident'>listen</span>(<span class='number'>0usize</span>, <span class='ident'>in_rx</span>).<span class='ident'>add_to</span>(<span class='ident'>t</span>);
  
     <span class='comment'>// Basic map operation.  Since this is a pure function, it will only be</span>
     <span class='comment'>// evaluated when the value of `input` changes</span>
-    <span class='kw'>let</span> <span class='ident'>plus_one</span> <span class='op'>=</span> <span class='ident'>t</span>.<span class='ident'>add</span>(<span class='ident'>input</span>.<span class='ident'>lift</span>(<span class='op'>|</span><span class='ident'>i</span><span class='op'>|</span> <span class='op'>-&gt;</span> <span class='ident'>usize</span> { <span class='ident'>i</span> <span class='op'>+</span> <span class='number'>1</span> }));
+    <span class='kw'>let</span> <span class='ident'>plus_one</span> <span class='op'>=</span> <span class='ident'>input</span>.<span class='ident'>lift</span>(<span class='op'>|</span><span class='ident'>i</span><span class='op'>|</span> { <span class='ident'>i</span> <span class='op'>+</span> <span class='number'>1</span> }).<span class='ident'>add_to</span>(<span class='ident'>t</span>);
  
-    <span class='comment'>// The return value of `add` implements `Clone`, and can be used to</span>
+    <span class='comment'>// The return value of `add` &amp; `add_to` implements `clone`, and can be used to</span>
     <span class='comment'>// &#39;fan-out&#39; data</span>
-    <span class='kw'>let</span> <span class='ident'>plus_two</span> <span class='op'>=</span> <span class='ident'>plus_one</span>.<span class='ident'>clone</span>().<span class='ident'>lift</span>(<span class='op'>|</span><span class='ident'>i</span><span class='op'>|</span> <span class='op'>-&gt;</span> <span class='ident'>usize</span> { <span class='ident'>i</span> <span class='op'>+</span> <span class='number'>2</span> });
+    <span class='kw'>let</span> <span class='ident'>plus_two</span> <span class='op'>=</span> <span class='ident'>plus_one</span>.<span class='ident'>clone</span>().<span class='ident'>lift</span>(<span class='op'>|</span><span class='ident'>i</span><span class='op'>|</span> { <span class='ident'>i</span> <span class='op'>+</span> <span class='number'>2</span> });
  
     <span class='comment'>// We can combine signals too.  Since it&#39;s possible to receive input on one</span>
     <span class='comment'>// side but not the other, `lift2` always passes `Option&lt;T&gt;` to its</span>
     <span class='comment'>// function.  Like `lift`, this function is only called when needed</span>
-    <span class='kw'>let</span> <span class='ident'>combined</span> <span class='op'>=</span> <span class='ident'>plus_one</span>.<span class='ident'>lift2</span>(<span class='ident'>plus_two</span>, <span class='op'>|</span><span class='ident'>i</span>, <span class='ident'>j</span><span class='op'>|</span> <span class='op'>-&gt;</span> <span class='ident'>usize</span> {
-        <span class='macro'>println</span><span class='macro'>!</span>(<span class='string'>&quot;lifting&quot;</span>);
-        <span class='kw'>match</span> (<span class='ident'>i</span>, <span class='ident'>j</span>) {
-            (<span class='prelude-val'>Some</span>(<span class='ident'>a</span>), <span class='prelude-val'>Some</span>(<span class='ident'>b</span>)) <span class='op'>=&gt;</span> <span class='ident'>a</span> <span class='op'>+</span> <span class='ident'>b</span>,
-            _ <span class='op'>=&gt;</span> <span class='number'>0</span>,
-        } 
-    });
+    <span class='kw'>let</span> <span class='ident'>combined</span> <span class='op'>=</span> <span class='ident'>plus_one</span>.<span class='ident'>lift2</span>(<span class='ident'>plus_two</span>, <span class='op'>|</span><span class='ident'>i</span>, <span class='ident'>j</span><span class='op'>|</span> { <span class='op'>*</span><span class='ident'>i</span> <span class='op'>+</span> <span class='op'>*</span><span class='ident'>j</span> });
  
-    <span class='comment'>// `fold` allows us to track state across events.  Since this is assumed to</span>
-    <span class='comment'>// be impure, it is called any time a signal is received upstream of</span>
-    <span class='comment'>// `combined`.</span>
-    <span class='kw'>let</span> <span class='ident'>accumulated</span> <span class='op'>=</span> <span class='ident'>combined</span>.<span class='ident'>fold</span>(<span class='number'>0</span>, <span class='op'>|</span><span class='ident'>sum</span>, <span class='ident'>i</span><span class='op'>|</span> { <span class='op'>*</span><span class='ident'>sum</span> <span class='op'>+=</span> <span class='ident'>i</span>; });
+    <span class='comment'>// `fold` allows us to track state across events.  </span>
+    <span class='kw'>let</span> <span class='ident'>accumulated</span> <span class='op'>=</span> <span class='ident'>combined</span>.<span class='ident'>fold</span>(<span class='number'>0</span>, <span class='op'>|</span><span class='ident'>sum</span>, <span class='ident'>i</span><span class='op'>|</span> { <span class='ident'>sum</span> <span class='op'>+</span> <span class='ident'>i</span> });
  
     <span class='comment'>// Make sure to add transformations to the topology - if it&#39;s not added it</span>
     <span class='comment'>// won&#39;t be run...</span>
@@ -110,7 +103,37 @@ concurrent data flow processes.</p>
                     <tr>
                         <td><a class='stability Unmarked' title='No stability level'></a><a class='mod' href='primitives/index.html'
                                title='cfrp::primitives'>primitives</a></td>
-                        <td class='docblock short'></td>
+                        <td class='docblock short'><p>Building blocks for data ingestion and transformation</p>
+</td>
+                    </tr>
+                </table><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                    <tr>
+                        <td><a class='stability Unmarked' title='No stability level'></a><a class='struct' href='struct.Builder.html'
+                               title='cfrp::Builder'>Builder</a></td>
+                        <td class='docblock short'><p><code>Builder</code> provides helpers for building topologies</p>
+</td>
+                    </tr>
+                
+                    <tr>
+                        <td><a class='stability Unmarked' title='No stability level'></a><a class='struct' href='struct.Config.html'
+                               title='cfrp::Config'>Config</a></td>
+                        <td class='docblock short'><p>Topology Configuration</p>
+</td>
+                    </tr>
+                
+                    <tr>
+                        <td><a class='stability Unmarked' title='No stability level'></a><a class='struct' href='struct.Topology.html'
+                               title='cfrp::Topology'>Topology</a></td>
+                        <td class='docblock short'><p><code>Topology&lt;T&gt;</code> describes a data flow and controls its execution</p>
+</td>
+                    </tr>
+                
+                    <tr>
+                        <td><a class='stability Unmarked' title='No stability level'></a><a class='struct' href='struct.TopologyHandle.html'
+                               title='cfrp::TopologyHandle'>TopologyHandle</a></td>
+                        <td class='docblock short'><p>For explicitly terminating a running topology</p>
+</td>
                     </tr>
                 </table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
 <table>
@@ -120,33 +143,21 @@ concurrent data flow processes.</p>
                         <td class='docblock short'><p>Container for data as it flows across the topology</p>
 </td>
                     </tr>
+                
+                    <tr>
+                        <td><a class='stability Unmarked' title='No stability level'></a><a class='enum' href='enum.SignalType.html'
+                               title='cfrp::SignalType'>SignalType</a></td>
+                        <td class='docblock short'><p>Tag to distinguish unchanging signals from dynamic signals</p>
+</td>
+                    </tr>
+                
+                    <tr>
+                        <td><a class='stability Unmarked' title='No stability level'></a><a class='enum' href='enum.Value.html'
+                               title='cfrp::Value'>Value</a></td>
+                        <td class='docblock short'></td>
+                    </tr>
                 </table><h2 id='traits' class='section-header'><a href="#traits">Traits</a></h2>
 <table>
-                    <tr>
-                        <td><a class='stability Unmarked' title='No stability level'></a><a class='trait' href='trait.Fold.html'
-                               title='cfrp::Fold'>Fold</a></td>
-                        <td class='docblock short'><p>Apply a function <code>F</code> which uses a data source <code>Signal&lt;A&gt;</code> to
-mutate an instance of <code>B</code>, generating an output data source <code>Signal&lt;B&gt;</code>
-containing the mutated value</p>
-</td>
-                    </tr>
-                
-                    <tr>
-                        <td><a class='stability Unmarked' title='No stability level'></a><a class='trait' href='trait.Lift.html'
-                               title='cfrp::Lift'>Lift</a></td>
-                        <td class='docblock short'><p>Apply a pure function <code>F</code> to a data source <code>Signal&lt;A&gt;</code>, generating a
-transformed output data source <code>Signal&lt;B&gt;</code>.</p>
-</td>
-                    </tr>
-                
-                    <tr>
-                        <td><a class='stability Unmarked' title='No stability level'></a><a class='trait' href='trait.Lift2.html'
-                               title='cfrp::Lift2'>Lift2</a></td>
-                        <td class='docblock short'><p>Apply a pure function <code>F</code> to a two data sources <code>Signal&lt;A&gt;</code>, and <code>Signal&lt;B&gt;</code>,
-generating a transformed output data source <code>Signal&lt;C&gt;</code>.</p>
-</td>
-                    </tr>
-                
                     <tr>
                         <td><a class='stability Unmarked' title='No stability level'></a><a class='trait' href='trait.Push.html'
                                title='cfrp::Push'>Push</a></td>
@@ -155,9 +166,23 @@ generating a transformed output data source <code>Signal&lt;C&gt;</code>.</p>
                     </tr>
                 
                     <tr>
+                        <td><a class='stability Unmarked' title='No stability level'></a><a class='trait' href='trait.Run.html'
+                               title='cfrp::Run'>Run</a></td>
+                        <td class='docblock short'><p>Types which can initiate a chain of transformations</p>
+</td>
+                    </tr>
+                
+                    <tr>
                         <td><a class='stability Unmarked' title='No stability level'></a><a class='trait' href='trait.Signal.html'
                                title='cfrp::Signal'>Signal</a></td>
                         <td class='docblock short'><p>Types which can serve as a data source</p>
+</td>
+                    </tr>
+                
+                    <tr>
+                        <td><a class='stability Unmarked' title='No stability level'></a><a class='trait' href='trait.SignalExt.html'
+                               title='cfrp::SignalExt'>SignalExt</a></td>
+                        <td class='docblock short'><p>Methods for manipulating signals</p>
 </td>
                     </tr>
                 </table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>

@@ -216,169 +216,189 @@
 <span id="174">174</span>
 <span id="175">175</span>
 <span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
+<span id="184">184</span>
+<span id="185">185</span>
+<span id="186">186</span>
 </pre><pre class='rust '>
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>thread</span>;
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>sync</span>::<span class='ident'>mpsc</span>::<span class='op'>*</span>;
 
-<span class='kw'>use</span> <span class='ident'>super</span>::<span class='ident'>super</span>::{<span class='ident'>Event</span>, <span class='ident'>Signal</span>, <span class='ident'>Push</span>, <span class='ident'>Lift</span>, <span class='ident'>Lift2</span>, <span class='ident'>Fold</span>};
+<span class='kw'>use</span> <span class='ident'>super</span>::<span class='ident'>super</span>::{<span class='ident'>Value</span>, <span class='ident'>Event</span>, <span class='ident'>Signal</span>, <span class='ident'>SignalExt</span>, <span class='ident'>SignalType</span>, <span class='ident'>Push</span>, <span class='ident'>Config</span>};
 
 <span class='doccomment'>/// The result of a `lift2` operation</span>
 <span class='doccomment'>///</span>
 <span class='kw'>pub</span> <span class='kw'>struct</span> <span class='ident'>Lift2Signal</span><span class='op'>&lt;</span><span class='ident'>F</span>, <span class='ident'>A</span>, <span class='ident'>B</span>, <span class='ident'>C</span><span class='op'>&gt;</span> <span class='kw'>where</span>
-    <span class='ident'>F</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Fn</span>(<span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span>, <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>B</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>C</span>,
-    <span class='ident'>A</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span>,
-    <span class='ident'>B</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span>,
+    <span class='ident'>F</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Fn</span>(<span class='ident'>Value</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span>, <span class='ident'>Value</span><span class='op'>&lt;</span><span class='ident'>B</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>C</span>,
+    <span class='ident'>A</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
+    <span class='ident'>B</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
     <span class='ident'>C</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
 {
+    <span class='ident'>config</span>: <span class='ident'>Config</span>,
     <span class='ident'>left</span>: <span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Signal</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;&gt;</span>,
     <span class='ident'>right</span>: <span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Signal</span><span class='op'>&lt;</span><span class='ident'>B</span><span class='op'>&gt;&gt;</span>,
     <span class='ident'>f</span>: <span class='ident'>F</span>,
+    <span class='ident'>initial</span>: <span class='ident'>SignalType</span><span class='op'>&lt;</span><span class='ident'>C</span><span class='op'>&gt;</span>,
 }
 
 <span class='kw'>impl</span><span class='op'>&lt;</span><span class='ident'>F</span>, <span class='ident'>A</span>, <span class='ident'>B</span>, <span class='ident'>C</span><span class='op'>&gt;</span> <span class='ident'>Lift2Signal</span><span class='op'>&lt;</span><span class='ident'>F</span>, <span class='ident'>A</span>, <span class='ident'>B</span>, <span class='ident'>C</span><span class='op'>&gt;</span> <span class='kw'>where</span>
-    <span class='ident'>F</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Fn</span>(<span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span>, <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>B</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>C</span>,
-    <span class='ident'>A</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span>,
-    <span class='ident'>B</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span>,
+    <span class='ident'>F</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Fn</span>(<span class='ident'>Value</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span>, <span class='ident'>Value</span><span class='op'>&lt;</span><span class='ident'>B</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>C</span>,
+    <span class='ident'>A</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
+    <span class='ident'>B</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
     <span class='ident'>C</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
 {
-    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>new</span>(<span class='ident'>left</span>: <span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Signal</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;&gt;</span>, <span class='ident'>right</span>: <span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Signal</span><span class='op'>&lt;</span><span class='ident'>B</span><span class='op'>&gt;&gt;</span>, <span class='ident'>f</span>: <span class='ident'>F</span>) <span class='op'>-&gt;</span> <span class='kw'>Self</span> {
+    <span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>new</span>(<span class='ident'>config</span>: <span class='ident'>Config</span>, <span class='ident'>left</span>: <span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Signal</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;&gt;</span>, <span class='ident'>right</span>: <span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Signal</span><span class='op'>&lt;</span><span class='ident'>B</span><span class='op'>&gt;&gt;</span>, <span class='ident'>f</span>: <span class='ident'>F</span>) <span class='op'>-&gt;</span> <span class='kw'>Self</span> {
+        <span class='kw'>let</span> <span class='ident'>initial</span> <span class='op'>=</span> <span class='kw'>match</span> (<span class='ident'>left</span>.<span class='ident'>initial</span>(), <span class='ident'>right</span>.<span class='ident'>initial</span>()) {
+            (<span class='ident'>SignalType</span>::<span class='ident'>Constant</span>(<span class='ident'>l</span>), <span class='ident'>SignalType</span>::<span class='ident'>Constant</span>(<span class='ident'>r</span>)) <span class='op'>=&gt;</span> {
+                <span class='ident'>SignalType</span>::<span class='ident'>Constant</span>(<span class='ident'>f</span>(<span class='ident'>Value</span>::<span class='ident'>Changed</span>(<span class='ident'>l</span>), <span class='ident'>Value</span>::<span class='ident'>Changed</span>(<span class='ident'>r</span>)))
+            }
+
+            (<span class='ident'>SignalType</span>::<span class='ident'>Dynamic</span>(<span class='ident'>l</span>), <span class='ident'>SignalType</span>::<span class='ident'>Constant</span>(<span class='ident'>r</span>)) <span class='op'>=&gt;</span> {
+                <span class='ident'>SignalType</span>::<span class='ident'>Dynamic</span>(<span class='ident'>f</span>(<span class='ident'>Value</span>::<span class='ident'>Changed</span>(<span class='ident'>l</span>), <span class='ident'>Value</span>::<span class='ident'>Changed</span>(<span class='ident'>r</span>)))
+            }
+
+            (<span class='ident'>SignalType</span>::<span class='ident'>Constant</span>(<span class='ident'>l</span>), <span class='ident'>SignalType</span>::<span class='ident'>Dynamic</span>(<span class='ident'>r</span>)) <span class='op'>=&gt;</span> {
+                <span class='ident'>SignalType</span>::<span class='ident'>Dynamic</span>(<span class='ident'>f</span>(<span class='ident'>Value</span>::<span class='ident'>Changed</span>(<span class='ident'>l</span>), <span class='ident'>Value</span>::<span class='ident'>Changed</span>(<span class='ident'>r</span>)))
+            }
+
+            (<span class='ident'>SignalType</span>::<span class='ident'>Dynamic</span>(<span class='ident'>l</span>), <span class='ident'>SignalType</span>::<span class='ident'>Dynamic</span>(<span class='ident'>r</span>)) <span class='op'>=&gt;</span> {
+                <span class='ident'>SignalType</span>::<span class='ident'>Dynamic</span>(<span class='ident'>f</span>(<span class='ident'>Value</span>::<span class='ident'>Changed</span>(<span class='ident'>l</span>), <span class='ident'>Value</span>::<span class='ident'>Changed</span>(<span class='ident'>r</span>)))
+            }
+        };
+
         <span class='ident'>Lift2Signal</span> {
+            <span class='ident'>config</span>: <span class='ident'>config</span>,
             <span class='ident'>left</span>: <span class='ident'>left</span>,
             <span class='ident'>right</span>: <span class='ident'>right</span>,
             <span class='ident'>f</span>: <span class='ident'>f</span>,
+            <span class='ident'>initial</span>: <span class='ident'>initial</span>,
         }
     }
 }
 
 <span class='kw'>impl</span><span class='op'>&lt;</span><span class='ident'>F</span>, <span class='ident'>A</span>, <span class='ident'>B</span>, <span class='ident'>C</span><span class='op'>&gt;</span> <span class='ident'>Signal</span><span class='op'>&lt;</span><span class='ident'>C</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>Lift2Signal</span><span class='op'>&lt;</span><span class='ident'>F</span>, <span class='ident'>A</span>, <span class='ident'>B</span>, <span class='ident'>C</span><span class='op'>&gt;</span> <span class='kw'>where</span>
-    <span class='ident'>F</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Fn</span>(<span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span>, <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>B</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>C</span>,
+    <span class='ident'>F</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Fn</span>(<span class='ident'>Value</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span>, <span class='ident'>Value</span><span class='op'>&lt;</span><span class='ident'>B</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>C</span>,
     <span class='ident'>A</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
     <span class='ident'>B</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
     <span class='ident'>C</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
 {
-    <span class='kw'>fn</span> <span class='ident'>push_to</span>(<span class='self'>self</span>: <span class='ident'>Box</span><span class='op'>&lt;</span><span class='kw'>Self</span><span class='op'>&gt;</span>, <span class='ident'>target</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Push</span><span class='op'>&lt;</span><span class='ident'>C</span><span class='op'>&gt;&gt;</span><span class='op'>&gt;</span>) {
+    <span class='kw'>fn</span> <span class='ident'>config</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>Config</span> {
+        <span class='self'>self</span>.<span class='ident'>config</span>.<span class='ident'>clone</span>()
+    }
+
+    <span class='kw'>fn</span> <span class='ident'>initial</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>SignalType</span><span class='op'>&lt;</span><span class='ident'>C</span><span class='op'>&gt;</span> {
+        <span class='self'>self</span>.<span class='ident'>initial</span>.<span class='ident'>clone</span>()
+    }
+
+    <span class='kw'>fn</span> <span class='ident'>push_to</span>(<span class='self'>self</span>: <span class='ident'>Box</span><span class='op'>&lt;</span><span class='kw'>Self</span><span class='op'>&gt;</span>, <span class='kw-2'>mut</span> <span class='ident'>target</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Push</span><span class='op'>&lt;</span><span class='ident'>C</span><span class='op'>&gt;&gt;</span><span class='op'>&gt;</span>) {
         <span class='kw'>let</span> <span class='ident'>inner</span> <span class='op'>=</span> <span class='op'>*</span><span class='self'>self</span>;
-        <span class='kw'>let</span> <span class='ident'>Lift2Signal</span> {<span class='ident'>left</span>, <span class='ident'>right</span>, <span class='ident'>f</span>} <span class='op'>=</span> <span class='ident'>inner</span>;
+        <span class='kw'>let</span> <span class='ident'>Lift2Signal</span> {<span class='ident'>config</span>, <span class='ident'>left</span>, <span class='ident'>right</span>, <span class='ident'>f</span>, <span class='ident'>initial</span>: _} <span class='op'>=</span> <span class='ident'>inner</span>;
 
-        <span class='kw'>let</span> (<span class='ident'>left_tx</span>, <span class='ident'>left_rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
-        <span class='ident'>thread</span>::<span class='ident'>spawn</span>(<span class='kw'>move</span> <span class='op'>||</span> {
-            <span class='kw'>let</span> <span class='ident'>pusher</span> <span class='op'>=</span> <span class='ident'>InputPusher</span> {
-                <span class='ident'>tx</span>: <span class='ident'>left_tx</span>,
-            };
-            <span class='macro'>debug</span><span class='macro'>!</span>(<span class='string'>&quot;Pushing Lift2::InputPusher left&quot;</span>);
-            <span class='ident'>left</span>.<span class='ident'>push_to</span>(<span class='prelude-val'>Some</span>(<span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='ident'>pusher</span>)));
-        });
+        <span class='kw'>let</span> (<span class='ident'>left_tx</span>, <span class='ident'>left_rx</span>) <span class='op'>=</span> <span class='ident'>sync_channel</span>(<span class='ident'>config</span>.<span class='ident'>buffer_size</span>.<span class='ident'>clone</span>());
+        <span class='kw'>let</span> (<span class='ident'>right_tx</span>, <span class='ident'>right_rx</span>) <span class='op'>=</span> <span class='ident'>sync_channel</span>(<span class='ident'>config</span>.<span class='ident'>buffer_size</span>.<span class='ident'>clone</span>());
+        <span class='kw'>let</span> <span class='ident'>left_initial</span> <span class='op'>=</span> <span class='ident'>left</span>.<span class='ident'>initial</span>();
+        <span class='kw'>let</span> <span class='ident'>right_initial</span> <span class='op'>=</span> <span class='ident'>right</span>.<span class='ident'>initial</span>();
 
-        <span class='kw'>let</span> (<span class='ident'>right_tx</span>, <span class='ident'>right_rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
-        <span class='ident'>thread</span>::<span class='ident'>spawn</span>(<span class='kw'>move</span> <span class='op'>||</span> {
-            <span class='kw'>let</span> <span class='ident'>pusher</span> <span class='op'>=</span> <span class='ident'>InputPusher</span> {
-                <span class='ident'>tx</span>: <span class='ident'>right_tx</span>,
-            };
-            <span class='macro'>debug</span><span class='macro'>!</span>(<span class='string'>&quot;Pushing Lift2::InputPusher right&quot;</span>);
-            <span class='ident'>right</span>.<span class='ident'>push_to</span>(<span class='prelude-val'>Some</span>(<span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='ident'>pusher</span>)));
-        });
+        <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>last_l</span> <span class='op'>=</span> <span class='kw'>match</span> <span class='ident'>left</span>.<span class='ident'>initial</span>() {
+            <span class='ident'>SignalType</span>::<span class='ident'>Constant</span>(<span class='ident'>l</span>) <span class='op'>=&gt;</span> <span class='ident'>l</span>,
+            <span class='ident'>SignalType</span>::<span class='ident'>Dynamic</span>(<span class='ident'>l</span>) <span class='op'>=&gt;</span> {
+                <span class='ident'>thread</span>::<span class='ident'>spawn</span>(<span class='kw'>move</span> <span class='op'>||</span> {
+                    <span class='kw'>let</span> <span class='ident'>pusher</span> <span class='op'>=</span> <span class='ident'>InputPusher</span> {
+                        <span class='ident'>tx</span>: <span class='ident'>left_tx</span>,
+                    };
+                    <span class='ident'>left</span>.<span class='ident'>push_to</span>(<span class='prelude-val'>Some</span>(<span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='ident'>pusher</span>)));
+                });
 
-        <span class='kw'>match</span> <span class='ident'>target</span> {
-            <span class='prelude-val'>Some</span>(<span class='kw-2'>mut</span> <span class='ident'>t</span>) <span class='op'>=&gt;</span> {
-                <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>cached_left</span> <span class='op'>=</span> <span class='prelude-val'>None</span>;
-                <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>cached_right</span> <span class='op'>=</span> <span class='prelude-val'>None</span>;
-
-                <span class='kw'>loop</span> {
-
-                    <span class='comment'>// NOTE: There&#39;s probably a better way of doing this...</span>
-                    <span class='comment'>// Also, we can eliminate _some_ computation by detecting</span>
-                    <span class='comment'>// repeated NoOps and only computing f if there&#39;s a change.</span>
-                    <span class='kw'>match</span> (<span class='ident'>left_rx</span>.<span class='ident'>recv</span>(), <span class='ident'>right_rx</span>.<span class='ident'>recv</span>()) {
-                        (<span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>Changed</span>(<span class='ident'>l</span>)), <span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>Changed</span>(<span class='ident'>r</span>))) <span class='op'>=&gt;</span> {
-                            <span class='ident'>cached_left</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>l</span>.<span class='ident'>clone</span>());
-                            <span class='ident'>cached_right</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>r</span>.<span class='ident'>clone</span>());
-
-                            <span class='kw'>let</span> <span class='ident'>c</span> <span class='op'>=</span> <span class='ident'>f</span>(<span class='prelude-val'>Some</span>(<span class='ident'>l</span>), <span class='prelude-val'>Some</span>(<span class='ident'>r</span>));
-                            <span class='ident'>t</span>.<span class='ident'>push</span>(<span class='ident'>Event</span>::<span class='ident'>Changed</span>(<span class='ident'>c</span>));
-                        }
-
-                        (<span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>Unchanged</span>), <span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>Changed</span>(<span class='ident'>r</span>))) <span class='op'>=&gt;</span> {
-                            <span class='kw'>match</span> <span class='ident'>cached_left</span> {
-                                <span class='prelude-val'>Some</span>(<span class='kw-2'>ref</span> <span class='ident'>l</span>) <span class='op'>=&gt;</span> {
-                                    <span class='ident'>cached_right</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>r</span>.<span class='ident'>clone</span>());
-
-                                    <span class='kw'>let</span> <span class='ident'>c</span> <span class='op'>=</span> <span class='ident'>f</span>(<span class='prelude-val'>Some</span>(<span class='ident'>l</span>.<span class='ident'>clone</span>()), <span class='prelude-val'>Some</span>(<span class='ident'>r</span>));
-                                    <span class='ident'>t</span>.<span class='ident'>push</span>(<span class='ident'>Event</span>::<span class='ident'>Changed</span>(<span class='ident'>c</span>));
-                                }
-                                <span class='prelude-val'>None</span> <span class='op'>=&gt;</span> <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;No cached left value&quot;</span>),
-                            }
-                        }
-
-                        (<span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>Changed</span>(<span class='ident'>l</span>)), <span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>Unchanged</span>)) <span class='op'>=&gt;</span> {
-                            <span class='kw'>match</span> <span class='ident'>cached_right</span> {
-                                <span class='prelude-val'>Some</span>(<span class='kw-2'>ref</span> <span class='ident'>r</span>) <span class='op'>=&gt;</span> {
-                                    <span class='ident'>cached_left</span> <span class='op'>=</span> <span class='prelude-val'>Some</span>(<span class='ident'>l</span>.<span class='ident'>clone</span>());
-
-                                    <span class='kw'>let</span> <span class='ident'>c</span> <span class='op'>=</span> <span class='ident'>f</span>(<span class='prelude-val'>Some</span>(<span class='ident'>l</span>), <span class='prelude-val'>Some</span>(<span class='ident'>r</span>.<span class='ident'>clone</span>()));
-                                    <span class='ident'>t</span>.<span class='ident'>push</span>(<span class='ident'>Event</span>::<span class='ident'>Changed</span>(<span class='ident'>c</span>));
-                                }
-                                <span class='prelude-val'>None</span> <span class='op'>=&gt;</span> <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;No cached right value&quot;</span>),
-                            }
-                        }
-
-                        (<span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>Unchanged</span>), <span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>Unchanged</span>)) <span class='op'>=&gt;</span> {
-                            <span class='ident'>t</span>.<span class='ident'>push</span>(<span class='ident'>Event</span>::<span class='ident'>Unchanged</span>);
-                        }
-
-                        (<span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>Exit</span>), _) <span class='op'>=&gt;</span> {
-                            <span class='ident'>t</span>.<span class='ident'>push</span>(<span class='ident'>Event</span>::<span class='ident'>Exit</span>);
-                            <span class='comment'>// return</span>
-                        }
-
-                        (_, <span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>Exit</span>)) <span class='op'>=&gt;</span> {
-                            <span class='ident'>t</span>.<span class='ident'>push</span>(<span class='ident'>Event</span>::<span class='ident'>Exit</span>);
-                            <span class='comment'>// return</span>
-                        }
-
-                        (<span class='prelude-val'>Err</span>(_), _) <span class='op'>=&gt;</span> {
-                            <span class='ident'>t</span>.<span class='ident'>push</span>(<span class='ident'>Event</span>::<span class='ident'>Exit</span>);
-                        }
-
-                        (_, <span class='prelude-val'>Err</span>(_)) <span class='op'>=&gt;</span> {
-                            <span class='ident'>t</span>.<span class='ident'>push</span>(<span class='ident'>Event</span>::<span class='ident'>Exit</span>);
-                        }
-                    }
-                }
+                <span class='ident'>l</span>
             },
-            <span class='prelude-val'>None</span> <span class='op'>=&gt;</span> {
-                <span class='kw'>loop</span> {
-                    <span class='kw'>match</span> (<span class='ident'>left_rx</span>.<span class='ident'>recv</span>(), <span class='ident'>right_rx</span>.<span class='ident'>recv</span>()) {
-                        _ <span class='op'>=&gt;</span> {}
+        };
+
+        <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>last_r</span> <span class='op'>=</span> <span class='kw'>match</span> <span class='ident'>right</span>.<span class='ident'>initial</span>().<span class='ident'>clone</span>() {
+            <span class='ident'>SignalType</span>::<span class='ident'>Constant</span>(<span class='ident'>r</span>) <span class='op'>=&gt;</span> <span class='ident'>r</span>,
+            <span class='ident'>SignalType</span>::<span class='ident'>Dynamic</span>(<span class='ident'>r</span>) <span class='op'>=&gt;</span> {
+                <span class='ident'>thread</span>::<span class='ident'>spawn</span>(<span class='kw'>move</span> <span class='op'>||</span> {
+                    <span class='kw'>let</span> <span class='ident'>pusher</span> <span class='op'>=</span> <span class='ident'>InputPusher</span> {
+                        <span class='ident'>tx</span>: <span class='ident'>right_tx</span>,
+                    };
+                    <span class='ident'>right</span>.<span class='ident'>push_to</span>(<span class='prelude-val'>Some</span>(<span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='ident'>pusher</span>)));
+                });
+
+                <span class='ident'>r</span>
+            },
+        };
+
+        <span class='kw'>loop</span> {
+            <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>any_changed</span> <span class='op'>=</span> <span class='boolval'>false</span>;
+
+            <span class='kw'>let</span> <span class='ident'>l</span> <span class='op'>=</span> <span class='kw'>match</span> <span class='ident'>left_initial</span> {
+                <span class='ident'>SignalType</span>::<span class='ident'>Constant</span>(<span class='kw-2'>ref</span> <span class='ident'>l</span>) <span class='op'>=&gt;</span> <span class='ident'>Value</span>::<span class='ident'>Unchanged</span>(<span class='ident'>l</span>.<span class='ident'>clone</span>()),
+                <span class='ident'>SignalType</span>::<span class='ident'>Dynamic</span>(_) <span class='op'>=&gt;</span> {
+                    <span class='kw'>match</span> <span class='ident'>left_rx</span>.<span class='ident'>recv</span>() {
+                        <span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>Changed</span>(<span class='ident'>l</span>)) <span class='op'>=&gt;</span> {
+                            <span class='macro'>info</span><span class='macro'>!</span>(<span class='string'>&quot;RUN: Lift2 using changed Left value&quot;</span>);
+                            <span class='ident'>any_changed</span> <span class='op'>=</span> <span class='boolval'>true</span>;
+                            <span class='ident'>last_l</span> <span class='op'>=</span> <span class='ident'>l</span>.<span class='ident'>clone</span>();
+                            <span class='ident'>Value</span>::<span class='ident'>Changed</span>(<span class='ident'>l</span>)
+                        },
+                        <span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>Unchanged</span>) <span class='op'>=&gt;</span> {
+                            <span class='macro'>info</span><span class='macro'>!</span>(<span class='string'>&quot;RUN: Lift2 using cached Left value&quot;</span>);
+                            <span class='ident'>Value</span>::<span class='ident'>Unchanged</span>(<span class='ident'>last_l</span>.<span class='ident'>clone</span>())
+                        },
+                        <span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>Exit</span>) <span class='op'>=&gt;</span> <span class='kw'>return</span>,
+                        <span class='prelude-val'>Err</span>(_) <span class='op'>=&gt;</span> <span class='kw'>return</span>,
                     }
                 }
+            };
+
+            <span class='kw'>let</span> <span class='ident'>r</span> <span class='op'>=</span> <span class='kw'>match</span> <span class='ident'>right_initial</span> {
+                <span class='ident'>SignalType</span>::<span class='ident'>Constant</span>(<span class='kw-2'>ref</span> <span class='ident'>r</span>) <span class='op'>=&gt;</span> <span class='ident'>Value</span>::<span class='ident'>Unchanged</span>(<span class='ident'>r</span>.<span class='ident'>clone</span>()),
+                <span class='ident'>SignalType</span>::<span class='ident'>Dynamic</span>(_) <span class='op'>=&gt;</span> {
+                    <span class='kw'>match</span> <span class='ident'>right_rx</span>.<span class='ident'>recv</span>() {
+                        <span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>Changed</span>(<span class='ident'>r</span>)) <span class='op'>=&gt;</span> {
+                            <span class='macro'>info</span><span class='macro'>!</span>(<span class='string'>&quot;RUN: Lift2 using changed Right value&quot;</span>);
+                            <span class='ident'>any_changed</span> <span class='op'>=</span> <span class='boolval'>true</span>;
+                            <span class='ident'>last_r</span> <span class='op'>=</span> <span class='ident'>r</span>.<span class='ident'>clone</span>();
+                            <span class='ident'>Value</span>::<span class='ident'>Changed</span>(<span class='ident'>r</span>)
+                        },
+                        <span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>Unchanged</span>) <span class='op'>=&gt;</span> {
+                            <span class='macro'>info</span><span class='macro'>!</span>(<span class='string'>&quot;RUN: Lift2 using cached Right value&quot;</span>);
+                            <span class='ident'>Value</span>::<span class='ident'>Unchanged</span>(<span class='ident'>last_r</span>.<span class='ident'>clone</span>())
+                        },
+                        <span class='prelude-val'>Ok</span>(<span class='ident'>Event</span>::<span class='ident'>Exit</span>) <span class='op'>=&gt;</span> <span class='kw'>return</span>,
+                        <span class='prelude-val'>Err</span>(_) <span class='op'>=&gt;</span> <span class='kw'>return</span>,
+                    }
+                }
+            };
+
+            <span class='kw'>let</span> <span class='ident'>c</span> <span class='op'>=</span> <span class='kw'>if</span> <span class='ident'>any_changed</span> {
+                <span class='ident'>Event</span>::<span class='ident'>Changed</span>(<span class='ident'>f</span>(<span class='ident'>l</span>,<span class='ident'>r</span>))
+            } <span class='kw'>else</span> {
+                <span class='ident'>Event</span>::<span class='ident'>Unchanged</span>
+            };
+
+            <span class='kw'>match</span> <span class='ident'>target</span> {
+                <span class='prelude-val'>Some</span>(<span class='kw-2'>ref</span> <span class='kw-2'>mut</span> <span class='ident'>t</span>) <span class='op'>=&gt;</span> <span class='ident'>t</span>.<span class='ident'>push</span>(<span class='ident'>c</span>),
+                <span class='prelude-val'>None</span> <span class='op'>=&gt;</span> {},
             }
         }
     }
 }
-
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='ident'>F</span>, <span class='ident'>A</span>, <span class='ident'>B</span>, <span class='ident'>C</span><span class='op'>&gt;</span> <span class='ident'>Lift</span><span class='op'>&lt;</span><span class='ident'>C</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>Lift2Signal</span><span class='op'>&lt;</span><span class='ident'>F</span>, <span class='ident'>A</span>, <span class='ident'>B</span>, <span class='ident'>C</span><span class='op'>&gt;</span> <span class='kw'>where</span>
-    <span class='ident'>F</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Fn</span>(<span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span>, <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>B</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>C</span>,
+<span class='kw'>impl</span><span class='op'>&lt;</span><span class='ident'>F</span>, <span class='ident'>A</span>, <span class='ident'>B</span>, <span class='ident'>C</span><span class='op'>&gt;</span> <span class='ident'>SignalExt</span><span class='op'>&lt;</span><span class='ident'>C</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>Lift2Signal</span><span class='op'>&lt;</span><span class='ident'>F</span>, <span class='ident'>A</span>, <span class='ident'>B</span>, <span class='ident'>C</span><span class='op'>&gt;</span> <span class='kw'>where</span>
+    <span class='ident'>F</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Fn</span>(<span class='ident'>Value</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span>, <span class='ident'>Value</span><span class='op'>&lt;</span><span class='ident'>B</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>C</span>,
     <span class='ident'>A</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
     <span class='ident'>B</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
     <span class='ident'>C</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
 {}
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='ident'>F</span>, <span class='ident'>A</span>, <span class='ident'>B</span>, <span class='ident'>C</span>, <span class='ident'>D</span>, <span class='ident'>SD</span><span class='op'>&gt;</span> <span class='ident'>Lift2</span><span class='op'>&lt;</span><span class='ident'>C</span>, <span class='ident'>D</span>, <span class='ident'>SD</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>Lift2Signal</span><span class='op'>&lt;</span><span class='ident'>F</span>, <span class='ident'>A</span>, <span class='ident'>B</span>, <span class='ident'>C</span><span class='op'>&gt;</span> <span class='kw'>where</span>
-    <span class='ident'>F</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Fn</span>(<span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span>, <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>B</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>C</span>,
-    <span class='ident'>A</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
-    <span class='ident'>B</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
-    <span class='ident'>C</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
-{}
-<span class='kw'>impl</span><span class='op'>&lt;</span><span class='ident'>F</span>, <span class='ident'>A</span>, <span class='ident'>B</span>, <span class='ident'>C</span><span class='op'>&gt;</span> <span class='ident'>Fold</span><span class='op'>&lt;</span><span class='ident'>C</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>Lift2Signal</span><span class='op'>&lt;</span><span class='ident'>F</span>, <span class='ident'>A</span>, <span class='ident'>B</span>, <span class='ident'>C</span><span class='op'>&gt;</span> <span class='kw'>where</span>
-    <span class='ident'>F</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Fn</span>(<span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span>, <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>B</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>C</span>,
-    <span class='ident'>A</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
-    <span class='ident'>B</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
-    <span class='ident'>C</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
-{}
-
 
 <span class='comment'>// Passed up the &#39;push_to&#39; chain, finalizes by sending to a channel</span>
 <span class='kw'>struct</span> <span class='ident'>InputPusher</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span> {
-    <span class='ident'>tx</span>: <span class='ident'>Sender</span><span class='op'>&lt;</span><span class='ident'>Event</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;&gt;</span>,
+    <span class='ident'>tx</span>: <span class='ident'>SyncSender</span><span class='op'>&lt;</span><span class='ident'>Event</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;&gt;</span>,
 }
 
 <span class='kw'>impl</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span> <span class='ident'>Push</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>InputPusher</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span> <span class='kw'>where</span>

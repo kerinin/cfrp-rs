@@ -331,6 +331,76 @@
 <span id="289">289</span>
 <span id="290">290</span>
 <span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
+<span id="352">352</span>
+<span id="353">353</span>
+<span id="354">354</span>
+<span id="355">355</span>
+<span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
+<span id="360">360</span>
+<span id="361">361</span>
 </pre><pre class='rust '>
 <span class='doccomment'>//! # Concurrent Function Reactive Programming</span>
 <span class='doccomment'>//!</span>
@@ -341,6 +411,7 @@
 <span class='doccomment'>//! # Examples</span>
 <span class='doccomment'>//!</span>
 <span class='doccomment'>//! ```</span>
+<span class='doccomment'>//! use std::default::*;</span>
 <span class='doccomment'>//! use std::sync::mpsc::*;</span>
 <span class='doccomment'>//! use cfrp::*;</span>
 <span class='doccomment'>//!</span>
@@ -354,35 +425,27 @@
 <span class='doccomment'>//! // </span>
 <span class='doccomment'>//! // You can pass some state in (here we&#39;re passing `(in_rx, out_rx)`) if you need</span>
 <span class='doccomment'>//! // to.</span>
-<span class='doccomment'>//! spawn_topology( in_rx, |t, in_rx| {</span>
+<span class='doccomment'>//! spawn_topology(Default::default(), |t| {</span>
 <span class='doccomment'>//! </span>
-<span class='doccomment'>//!     // Create a listener on `in_rx`.  Messages received on the channel will be</span>
-<span class='doccomment'>//!     // sent to any nodes subscribed to `input`</span>
-<span class='doccomment'>//!     let input = t.add(t.listen(0, in_rx));</span>
+<span class='doccomment'>//!     // Create a listener on `in_rx` with initial value `0`.  Messages </span>
+<span class='doccomment'>//!     // received on the channel will be sent to any nodes subscribed to `input`</span>
+<span class='doccomment'>//!     let input = t.listen(0usize, in_rx).add_to(t);</span>
 <span class='doccomment'>//! </span>
 <span class='doccomment'>//!     // Basic map operation.  Since this is a pure function, it will only be</span>
 <span class='doccomment'>//!     // evaluated when the value of `input` changes</span>
-<span class='doccomment'>//!     let plus_one = t.add(input.lift(|i| -&gt; usize { i + 1 }));</span>
+<span class='doccomment'>//!     let plus_one = input.lift(|i| { i + 1 }).add_to(t);</span>
 <span class='doccomment'>//! </span>
-<span class='doccomment'>//!     // The return value of `add` implements `Clone`, and can be used to</span>
+<span class='doccomment'>//!     // The return value of `add` &amp; `add_to` implements `clone`, and can be used to</span>
 <span class='doccomment'>//!     // &#39;fan-out&#39; data</span>
-<span class='doccomment'>//!     let plus_two = plus_one.clone().lift(|i| -&gt; usize { i + 2 });</span>
+<span class='doccomment'>//!     let plus_two = plus_one.clone().lift(|i| { i + 2 });</span>
 <span class='doccomment'>//! </span>
 <span class='doccomment'>//!     // We can combine signals too.  Since it&#39;s possible to receive input on one</span>
 <span class='doccomment'>//!     // side but not the other, `lift2` always passes `Option&lt;T&gt;` to its</span>
 <span class='doccomment'>//!     // function.  Like `lift`, this function is only called when needed</span>
-<span class='doccomment'>//!     let combined = plus_one.lift2(plus_two, |i, j| -&gt; usize {</span>
-<span class='doccomment'>//!         println!(&quot;lifting&quot;);</span>
-<span class='doccomment'>//!         match (i, j) {</span>
-<span class='doccomment'>//!             (Some(a), Some(b)) =&gt; a + b,</span>
-<span class='doccomment'>//!             _ =&gt; 0,</span>
-<span class='doccomment'>//!         } </span>
-<span class='doccomment'>//!     });</span>
+<span class='doccomment'>//!     let combined = plus_one.lift2(plus_two, |i, j| { *i + *j });</span>
 <span class='doccomment'>//! </span>
-<span class='doccomment'>//!     // `fold` allows us to track state across events.  Since this is assumed to</span>
-<span class='doccomment'>//!     // be impure, it is called any time a signal is received upstream of</span>
-<span class='doccomment'>//!     // `combined`.</span>
-<span class='doccomment'>//!     let accumulated = combined.fold(0, |sum, i| { *sum += i; });</span>
+<span class='doccomment'>//!     // `fold` allows us to track state across events.  </span>
+<span class='doccomment'>//!     let accumulated = combined.fold(0, |sum, i| { sum + i });</span>
 <span class='doccomment'>//! </span>
 <span class='doccomment'>//!     // Make sure to add transformations to the topology - if it&#39;s not added it</span>
 <span class='doccomment'>//!     // won&#39;t be run...</span>
@@ -396,18 +459,21 @@
 <span class='doccomment'>//!</span>
 <span class='attribute'>#[<span class='ident'>macro_use</span>]</span>
 <span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>log</span>;
+<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>time</span>;
+<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>rand</span>;
 
 <span class='kw'>pub</span> <span class='kw'>mod</span> <span class='ident'>primitives</span>;
-<span class='comment'>// mod topology;</span>
+<span class='kw'>mod</span> <span class='ident'>signal_ext</span>;
+<span class='kw'>mod</span> <span class='ident'>topology</span>;
+<span class='kw'>mod</span> <span class='ident'>builder</span>;
+<span class='kw'>mod</span> <span class='ident'>config</span>;
+<span class='kw'>mod</span> <span class='ident'>value</span>;
 
-<span class='comment'>// pub use topology::{Topology, Builder};</span>
-<span class='kw'>use</span> <span class='ident'>primitives</span>::{<span class='ident'>Topology</span>, <span class='ident'>Builder</span>, <span class='ident'>TopologyHandle</span>};
-<span class='kw'>use</span> <span class='ident'>primitives</span>::<span class='ident'>LiftSignal</span>;
-<span class='kw'>use</span> <span class='ident'>primitives</span>::<span class='ident'>Lift2Signal</span>;
-<span class='kw'>use</span> <span class='ident'>primitives</span>::<span class='ident'>FoldSignal</span>;
-
-
-
+<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>signal_ext</span>::<span class='ident'>SignalExt</span>;
+<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>topology</span>::{<span class='ident'>Topology</span>, <span class='ident'>TopologyHandle</span>};
+<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>builder</span>::<span class='ident'>Builder</span>;
+<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>config</span>::<span class='ident'>Config</span>;
+<span class='kw'>pub</span> <span class='kw'>use</span> <span class='ident'>value</span>::<span class='ident'>Value</span>;
 
 <span class='doccomment'>/// Container for data as it flows across the topology</span>
 <span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Clone</span>)]</span>
@@ -417,15 +483,62 @@
     <span class='ident'>Exit</span>,
 }
 
+<span class='doccomment'>/// Tag to distinguish unchanging signals from dynamic signals</span>
+<span class='attribute'>#[<span class='ident'>derive</span>(<span class='ident'>Clone</span>)]</span>
+<span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>SignalType</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span> {
+    <span class='ident'>Constant</span>(<span class='ident'>A</span>),
+    <span class='ident'>Dynamic</span>(<span class='ident'>A</span>),
+}
+
+<span class='kw'>impl</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span> <span class='ident'>SignalType</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span> {
+    <span class='kw'>fn</span> <span class='ident'>unwrap</span>(<span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>A</span> {
+        <span class='kw'>match</span> <span class='self'>self</span> {
+            <span class='ident'>SignalType</span>::<span class='ident'>Constant</span>(<span class='ident'>v</span>) <span class='op'>=&gt;</span> <span class='ident'>v</span>,
+            <span class='ident'>SignalType</span>::<span class='ident'>Dynamic</span>(<span class='ident'>v</span>) <span class='op'>=&gt;</span> <span class='ident'>v</span>,
+        }
+    }
+}
+
 <span class='doccomment'>/// Types which can serve as a data source</span>
 <span class='doccomment'>///</span>
-<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>Signal</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span>: <span class='ident'>Send</span> {
+<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>Signal</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span>: <span class='ident'>Send</span> <span class='kw'>where</span>
+<span class='ident'>A</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
+{
+    <span class='comment'>// Returns a copy of the signal&#39;s Config </span>
+    <span class='kw'>fn</span> <span class='ident'>config</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>Config</span>;
+
     <span class='comment'>// Called at build time when a downstream process is created for the signal</span>
     <span class='kw'>fn</span> <span class='ident'>init</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) {}
+
+    <span class='comment'>// Returns the &quot;initial&quot; value of the signal</span>
+    <span class='kw'>fn</span> <span class='ident'>initial</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>SignalType</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span>;
 
     <span class='comment'>// Called at compile time when a donstream process is run</span>
     <span class='kw'>fn</span> <span class='ident'>push_to</span>(<span class='self'>self</span>: <span class='ident'>Box</span><span class='op'>&lt;</span><span class='kw'>Self</span><span class='op'>&gt;</span>, <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Push</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;&gt;</span><span class='op'>&gt;</span>);
 }
+
+<span class='kw'>impl</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span> <span class='ident'>Signal</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Signal</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;&gt;</span> <span class='kw'>where</span>
+<span class='ident'>A</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
+{
+    <span class='kw'>fn</span> <span class='ident'>config</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>Config</span> {
+        (<span class='op'>*</span><span class='op'>*</span><span class='self'>self</span>).<span class='ident'>config</span>()
+    }
+
+    <span class='kw'>fn</span> <span class='ident'>init</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>) {
+        (<span class='op'>*</span><span class='op'>*</span><span class='self'>self</span>).<span class='ident'>init</span>()
+    }
+
+    <span class='kw'>fn</span> <span class='ident'>initial</span>(<span class='kw-2'>&amp;</span><span class='self'>self</span>) <span class='op'>-&gt;</span> <span class='ident'>SignalType</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span> {
+        (<span class='op'>*</span><span class='op'>*</span><span class='self'>self</span>).<span class='ident'>initial</span>()
+    }
+
+    <span class='kw'>fn</span> <span class='ident'>push_to</span>(<span class='self'>self</span>: <span class='ident'>Box</span><span class='op'>&lt;</span><span class='kw'>Self</span><span class='op'>&gt;</span>, <span class='ident'>target</span>: <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Push</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;&gt;</span><span class='op'>&gt;</span>) {
+        (<span class='op'>*</span><span class='self'>self</span>).<span class='ident'>push_to</span>(<span class='ident'>target</span>)
+    }
+}
+<span class='kw'>impl</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span> <span class='ident'>SignalExt</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span> <span class='kw'>for</span> <span class='ident'>Box</span><span class='op'>&lt;</span><span class='ident'>Signal</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;&gt;</span> <span class='kw'>where</span>
+<span class='ident'>A</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
+{}
 
 <span class='doccomment'>/// Types which can receive incoming data from other signals</span>
 <span class='doccomment'>///</span>
@@ -433,125 +546,14 @@
     <span class='kw'>fn</span> <span class='ident'>push</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>Event</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span>);
 }
 
-<span class='doccomment'>/// Apply a pure function `F` to a data source `Signal&lt;A&gt;`, generating a </span>
-<span class='doccomment'>/// transformed output data source `Signal&lt;B&gt;`.</span>
+<span class='doccomment'>/// Types which can initiate a chain of transformations</span>
 <span class='doccomment'>///</span>
-<span class='doccomment'>/// Other names for this operation include &quot;map&quot; or &quot;collect&quot;.  `f` will be</span>
-<span class='doccomment'>/// run in `self`&#39;s thread</span>
+<span class='doccomment'>/// Linear transformations are combined into thread-local function</span>
+<span class='doccomment'>/// compositions - concurrency only applies to forking/merging transformations.</span>
+<span class='doccomment'>/// `Run` is required for the &#39;tip&#39; of each linear transformation.</span>
 <span class='doccomment'>///</span>
-<span class='doccomment'>/// Because `F` is assumed to be pure, it will only be evaluated for</span>
-<span class='doccomment'>/// new data that has changed since the last observation.  If side-effects are</span>
-<span class='doccomment'>/// desired, use `fold` instead.</span>
-<span class='doccomment'>///</span>
-<span class='doccomment'>/// # Example</span>
-<span class='doccomment'>///</span>
-<span class='doccomment'>/// ```</span>
-<span class='doccomment'>/// use cfrp::*;</span>
-<span class='doccomment'>/// use cfrp::primitives::*;</span>
-<span class='doccomment'>///</span>
-<span class='doccomment'>/// // Create a constant-valued channel with value 1 and return a channel with</span>
-<span class='doccomment'>/// // value 2.  The value will only be calculated with `i` changes (which in </span>
-<span class='doccomment'>/// // this case is never)</span>
-<span class='doccomment'>/// Builder::new().value(1)</span>
-<span class='doccomment'>///     .lift(|i| { i + 1 });</span>
-<span class='doccomment'>/// ```</span>
-<span class='doccomment'>///</span>
-<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>Lift</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span>: <span class='ident'>Signal</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span> <span class='op'>+</span> <span class='ident'>Sized</span> {
-    <span class='kw'>fn</span> <span class='ident'>lift</span><span class='op'>&lt;</span><span class='ident'>F</span>, <span class='ident'>B</span><span class='op'>&gt;</span>(<span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>f</span>: <span class='ident'>F</span>) <span class='op'>-&gt;</span> <span class='ident'>LiftSignal</span><span class='op'>&lt;</span><span class='ident'>F</span>, <span class='ident'>A</span>, <span class='ident'>B</span><span class='op'>&gt;</span> <span class='kw'>where</span>
-        <span class='kw'>Self</span>: <span class='lifetime'>&#39;static</span>,
-        <span class='ident'>F</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Fn</span>(<span class='ident'>A</span>) <span class='op'>-&gt;</span> <span class='ident'>B</span>,
-        <span class='ident'>A</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span>,
-        <span class='ident'>B</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span>,
-    {
-        <span class='self'>self</span>.<span class='ident'>init</span>();
-
-        <span class='ident'>LiftSignal</span>::<span class='ident'>new</span>(<span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='self'>self</span>), <span class='ident'>f</span>)
-    }
-}
-
-<span class='doccomment'>/// Apply a pure function `F` to a two data sources `Signal&lt;A&gt;`, and `Signal&lt;B&gt;`,</span>
-<span class='doccomment'>/// generating a transformed output data source `Signal&lt;C&gt;`.</span>
-<span class='doccomment'>///</span>
-<span class='doccomment'>/// Other names for this operation include &quot;map&quot; or &quot;collect&quot;.  `f` will be</span>
-<span class='doccomment'>/// run in `self`&#39;s thread</span>
-<span class='doccomment'>///</span>
-<span class='doccomment'>/// Because `F` is assumed to be pure, it will only be evaluated for</span>
-<span class='doccomment'>/// new data that has changed since the last observation.  If side-effects are</span>
-<span class='doccomment'>/// desired, use `fold` instead.</span>
-<span class='doccomment'>///</span>
-<span class='doccomment'>/// # Example</span>
-<span class='doccomment'>///</span>
-<span class='doccomment'>/// ```</span>
-<span class='doccomment'>/// use cfrp::*;</span>
-<span class='doccomment'>/// use cfrp::primitives::*;</span>
-<span class='doccomment'>///</span>
-<span class='doccomment'>/// let b = Builder::new();</span>
-<span class='doccomment'>///</span>
-<span class='doccomment'>/// // Create two constant-valued channels with value 1 and return a channel with</span>
-<span class='doccomment'>/// // their sum.  The value will only be calculated with `i` or `j` changes </span>
-<span class='doccomment'>/// // (which in this case is never)</span>
-<span class='doccomment'>/// b.value(1).lift2(b.value(1), |i, j| { </span>
-<span class='doccomment'>///</span>
-<span class='doccomment'>///     // All data entering the topology is processed by every node in the </span>
-<span class='doccomment'>///     // topology, this means that data entering a given channel will be `None`</span>
-<span class='doccomment'>///     // downstream of other channels.</span>
-<span class='doccomment'>///     match (i, j) {</span>
-<span class='doccomment'>///         (Some(i), Some(j))  =&gt; { i + j },</span>
-<span class='doccomment'>///         (Some(i), None)     =&gt; i,</span>
-<span class='doccomment'>///         (None, Some(j))     =&gt; j,</span>
-<span class='doccomment'>///         (None, None)        =&gt; 0,</span>
-<span class='doccomment'>///     }</span>
-<span class='doccomment'>/// });</span>
-<span class='doccomment'>/// ```</span>
-<span class='doccomment'>///</span>
-<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>Lift2</span><span class='op'>&lt;</span><span class='ident'>A</span>, <span class='ident'>B</span>, <span class='ident'>SB</span><span class='op'>&gt;</span>: <span class='ident'>Signal</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span> <span class='op'>+</span> <span class='ident'>Sized</span> {
-    <span class='kw'>fn</span> <span class='ident'>lift2</span><span class='op'>&lt;</span><span class='ident'>F</span>, <span class='ident'>C</span><span class='op'>&gt;</span>(<span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='kw-2'>mut</span> <span class='ident'>right</span>: <span class='ident'>SB</span>, <span class='ident'>f</span>: <span class='ident'>F</span>) <span class='op'>-&gt;</span> <span class='ident'>Lift2Signal</span><span class='op'>&lt;</span><span class='ident'>F</span>, <span class='ident'>A</span>, <span class='ident'>B</span>, <span class='ident'>C</span><span class='op'>&gt;</span> <span class='kw'>where</span>
-        <span class='kw'>Self</span>: <span class='lifetime'>&#39;static</span>,
-        <span class='ident'>SB</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Signal</span><span class='op'>&lt;</span><span class='ident'>B</span><span class='op'>&gt;</span>,
-        <span class='ident'>F</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Fn</span>(<span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span>, <span class='prelude-ty'>Option</span><span class='op'>&lt;</span><span class='ident'>B</span><span class='op'>&gt;</span>) <span class='op'>-&gt;</span> <span class='ident'>C</span>,
-        <span class='ident'>A</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
-        <span class='ident'>B</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
-        <span class='ident'>C</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
-    {
-        <span class='self'>self</span>.<span class='ident'>init</span>();
-        <span class='ident'>right</span>.<span class='ident'>init</span>();
-
-        <span class='ident'>Lift2Signal</span>::<span class='ident'>new</span>(<span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='self'>self</span>), <span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='ident'>right</span>), <span class='ident'>f</span>)
-    }
-}
-
-<span class='doccomment'>/// Apply a function `F` which uses a data source `Signal&lt;A&gt;` to </span>
-<span class='doccomment'>/// mutate an instance of `B`, generating an output data source `Signal&lt;B&gt;`</span>
-<span class='doccomment'>/// containing the mutated value</span>
-<span class='doccomment'>///</span>
-<span class='doccomment'>/// Other names for this operation include &quot;reduce&quot; or &quot;inject&quot;.  `f` will</span>
-<span class='doccomment'>/// be run in `self`&#39;s thread</span>
-<span class='doccomment'>///</span>
-<span class='doccomment'>/// Fold is assumed to be impure, therefore the function will be called with</span>
-<span class='doccomment'>/// all data upstream of the fold, even if there are no changes in the stream.</span>
-<span class='doccomment'>///</span>
-<span class='doccomment'>/// # Example</span>
-<span class='doccomment'>///</span>
-<span class='doccomment'>/// ```</span>
-<span class='doccomment'>/// use cfrp::*;</span>
-<span class='doccomment'>/// use cfrp::primitives::*;</span>
-<span class='doccomment'>///</span>
-<span class='doccomment'>/// // Create a constant-valued channel with value 1 and fold it into a summation</span>
-<span class='doccomment'>/// Builder::new().value(1)</span>
-<span class='doccomment'>///     .fold(0, |sum, i| { *sum += i });</span>
-<span class='doccomment'>/// ```</span>
-<span class='doccomment'>///</span>
-<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>Fold</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span>: <span class='ident'>Signal</span><span class='op'>&lt;</span><span class='ident'>A</span><span class='op'>&gt;</span> <span class='op'>+</span> <span class='ident'>Sized</span> {
-    <span class='kw'>fn</span> <span class='ident'>fold</span><span class='op'>&lt;</span><span class='ident'>F</span>, <span class='ident'>B</span><span class='op'>&gt;</span>(<span class='kw-2'>mut</span> <span class='self'>self</span>, <span class='ident'>initial</span>: <span class='ident'>B</span>, <span class='ident'>f</span>: <span class='ident'>F</span>) <span class='op'>-&gt;</span> <span class='ident'>FoldSignal</span><span class='op'>&lt;</span><span class='ident'>F</span>, <span class='ident'>A</span>, <span class='ident'>B</span><span class='op'>&gt;</span> <span class='kw'>where</span>
-        <span class='kw'>Self</span>: <span class='lifetime'>&#39;static</span>,
-        <span class='ident'>F</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>FnMut</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>B</span>, <span class='ident'>A</span>),
-        <span class='ident'>A</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
-        <span class='ident'>B</span>: <span class='lifetime'>&#39;static</span> <span class='op'>+</span> <span class='ident'>Send</span> <span class='op'>+</span> <span class='ident'>Clone</span>,
-    {
-        <span class='self'>self</span>.<span class='ident'>init</span>();
-
-        <span class='ident'>FoldSignal</span>::<span class='ident'>new</span>(<span class='ident'>Box</span>::<span class='ident'>new</span>(<span class='self'>self</span>), <span class='ident'>initial</span>, <span class='ident'>f</span>)
-    }
+<span class='kw'>pub</span> <span class='kw'>trait</span> <span class='ident'>Run</span>: <span class='ident'>Send</span> {
+    <span class='kw'>fn</span> <span class='ident'>run</span>(<span class='kw-2'>mut</span> <span class='self'>self</span>: <span class='ident'>Box</span><span class='op'>&lt;</span><span class='kw'>Self</span><span class='op'>&gt;</span>);
 }
 
 <span class='doccomment'>/// Construct a new topology and run it</span>
@@ -563,64 +565,202 @@
 <span class='doccomment'>/// # Example</span>
 <span class='doccomment'>///</span>
 <span class='doccomment'>/// ```</span>
+<span class='doccomment'>/// use std::default::*;</span>
 <span class='doccomment'>/// use cfrp::*;</span>
 <span class='doccomment'>///</span>
-<span class='doccomment'>/// let handle = spawn_topology((0, 1), |t, (init, incr)| {</span>
-<span class='doccomment'>///     t.add(</span>
-<span class='doccomment'>///         t.value(incr).fold(init, |sum, i| { *sum += i })</span>
-<span class='doccomment'>///     );</span>
+<span class='doccomment'>/// let handle = spawn_topology(Default::default(), |t| {</span>
+<span class='doccomment'>///     t.value(0usize).add_to(t);</span>
 <span class='doccomment'>/// });</span>
 <span class='doccomment'>/// ```</span>
 <span class='doccomment'>///</span>
-<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>spawn_topology</span><span class='op'>&lt;</span><span class='ident'>T</span>, <span class='ident'>F</span><span class='op'>&gt;</span>(<span class='ident'>state</span>: <span class='ident'>T</span>, <span class='ident'>f</span>: <span class='ident'>F</span>) <span class='op'>-&gt;</span> <span class='ident'>TopologyHandle</span> <span class='kw'>where</span>
-    <span class='ident'>F</span>: <span class='ident'>Fn</span>(<span class='kw-2'>&amp;</span><span class='ident'>Builder</span>, <span class='ident'>T</span>),
+<span class='kw'>pub</span> <span class='kw'>fn</span> <span class='ident'>spawn_topology</span><span class='op'>&lt;</span><span class='ident'>F</span><span class='op'>&gt;</span>(<span class='ident'>config</span>: <span class='ident'>Config</span>, <span class='ident'>f</span>: <span class='ident'>F</span>) <span class='op'>-&gt;</span> <span class='ident'>TopologyHandle</span> <span class='kw'>where</span>
+    <span class='ident'>F</span>: <span class='ident'>FnOnce</span>(<span class='kw-2'>&amp;</span><span class='ident'>Builder</span>),
 {
-    <span class='kw'>let</span> <span class='ident'>builder</span> <span class='op'>=</span> <span class='ident'>Builder</span>::<span class='ident'>new</span>();
-    <span class='ident'>f</span>(<span class='kw-2'>&amp;</span><span class='ident'>builder</span>, <span class='ident'>state</span>);
-    <span class='ident'>Topology</span>::<span class='ident'>new</span>(<span class='ident'>builder</span>).<span class='ident'>run</span>()
+    <span class='kw'>let</span> <span class='ident'>builder</span> <span class='op'>=</span> <span class='ident'>Builder</span>::<span class='ident'>new</span>(<span class='ident'>config</span>);
+    <span class='ident'>f</span>(<span class='kw-2'>&amp;</span><span class='ident'>builder</span>);
+    <span class='ident'>Topology</span>::<span class='ident'>new</span>(<span class='ident'>builder</span>.<span class='ident'>inputs</span>.<span class='ident'>into_inner</span>(), <span class='ident'>builder</span>.<span class='ident'>runners</span>.<span class='ident'>into_inner</span>()).<span class='ident'>run</span>()
 }
 
 <span class='attribute'>#[<span class='ident'>cfg</span>(<span class='ident'>test</span>)]</span> 
 <span class='kw'>mod</span> <span class='ident'>test</span> {
     <span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>env_logger</span>;
 
+    <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>default</span>::<span class='ident'>Default</span>;
     <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>sync</span>::<span class='ident'>mpsc</span>::<span class='op'>*</span>;
+    <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>thread</span>;
+
+    <span class='kw'>use</span> <span class='ident'>rand</span>;
 
     <span class='kw'>use</span> <span class='ident'>super</span>::<span class='op'>*</span>;
 
     <span class='attribute'>#[<span class='ident'>test</span>]</span>
-    <span class='kw'>fn</span> <span class='ident'>integration</span>() {
-        <span class='ident'>env_logger</span>::<span class='ident'>init</span>().<span class='ident'>unwrap</span>();
+    <span class='kw'>fn</span> <span class='ident'>lift_value</span>() {
+        <span class='kw'>let</span> (<span class='ident'>out_tx</span>, <span class='ident'>out_rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
 
-        <span class='kw'>let</span> (<span class='ident'>out_tx</span>, <span class='ident'>out_rx</span>) <span class='op'>=</span> <span class='ident'>sync_channel</span>(<span class='number'>0</span>);
-
-        <span class='ident'>spawn_topology</span>(<span class='ident'>out_tx</span>, <span class='op'>|</span><span class='ident'>t</span>, <span class='ident'>out_tx</span><span class='op'>|</span> {
-
-            <span class='kw'>let</span> <span class='ident'>input</span> <span class='op'>=</span> <span class='ident'>t</span>.<span class='ident'>add</span>(<span class='ident'>t</span>.<span class='ident'>value</span>(<span class='number'>1</span>));
-
-            <span class='ident'>t</span>.<span class='ident'>add</span>(<span class='ident'>input</span>.<span class='ident'>clone</span>()
-                  .<span class='ident'>lift</span>(<span class='op'>|</span><span class='ident'>i</span><span class='op'>|</span> <span class='op'>-&gt;</span> <span class='ident'>usize</span> { <span class='ident'>i</span> })
-                  .<span class='ident'>lift2</span>(<span class='ident'>input</span>, <span class='op'>|</span><span class='ident'>i</span>, <span class='ident'>j</span><span class='op'>|</span> <span class='op'>-&gt;</span> <span class='ident'>usize</span> {
-                      <span class='kw'>match</span> (<span class='ident'>i</span>, <span class='ident'>j</span>) {
-                          (<span class='prelude-val'>Some</span>(<span class='ident'>a</span>), <span class='prelude-val'>Some</span>(<span class='ident'>b</span>)) <span class='op'>=&gt;</span> <span class='ident'>a</span> <span class='op'>+</span> <span class='ident'>b</span>,
-                          _ <span class='op'>=&gt;</span> <span class='number'>0</span>,
-                      } 
-                  })
-                  .<span class='ident'>fold</span>(<span class='ident'>out_tx</span>, <span class='op'>|</span><span class='ident'>tx</span>, <span class='ident'>a</span><span class='op'>|</span> {
-                      <span class='kw'>match</span> <span class='ident'>tx</span>.<span class='ident'>send</span>(<span class='ident'>a</span>) {
-                          <span class='prelude-val'>Err</span>(<span class='ident'>e</span>) <span class='op'>=&gt;</span> { <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;Error sending {}&quot;</span>, <span class='ident'>e</span>); },
-                          _ <span class='op'>=&gt;</span> {},
-                      };
-                  })
-                 );
+        <span class='ident'>spawn_topology</span>(<span class='ident'>Default</span>::<span class='ident'>default</span>(), <span class='kw'>move</span> <span class='op'>|</span><span class='ident'>t</span><span class='op'>|</span> {
+            <span class='ident'>t</span>.<span class='ident'>value</span>(<span class='number'>0</span>)
+                .<span class='ident'>lift</span>(<span class='kw'>move</span> <span class='op'>|</span><span class='ident'>i</span><span class='op'>|</span> { <span class='ident'>out_tx</span>.<span class='ident'>send</span>(<span class='ident'>i</span> <span class='op'>|</span> (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>1</span>)).<span class='ident'>unwrap</span>(); })
+                .<span class='ident'>add_to</span>(<span class='ident'>t</span>);
         });
 
-        <span class='kw'>let</span> <span class='ident'>out</span> <span class='op'>=</span> <span class='kw'>match</span> <span class='ident'>out_rx</span>.<span class='ident'>recv</span>() {
-            <span class='prelude-val'>Err</span>(<span class='ident'>e</span>) <span class='op'>=&gt;</span> <span class='macro'>panic</span><span class='macro'>!</span>(<span class='string'>&quot;Failed to receive: {}&quot;</span>, <span class='ident'>e</span>),
-            <span class='prelude-val'>Ok</span>(<span class='ident'>v</span>) <span class='op'>=&gt;</span> <span class='ident'>v</span>,
-        };
+        <span class='comment'>// Initial value</span>
+        <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), <span class='number'>0b00000010</span>);
+    }
 
-        <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out</span>, <span class='number'>2</span>);
+    <span class='attribute'>#[<span class='ident'>test</span>]</span>
+    <span class='kw'>fn</span> <span class='ident'>fold_value</span>() {
+        <span class='kw'>let</span> (<span class='ident'>out_tx</span>, <span class='ident'>out_rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
+
+        <span class='ident'>spawn_topology</span>(<span class='ident'>Default</span>::<span class='ident'>default</span>(), <span class='kw'>move</span> <span class='op'>|</span><span class='ident'>t</span><span class='op'>|</span> {
+            <span class='ident'>t</span>.<span class='ident'>value</span>(<span class='number'>0</span>)
+                .<span class='ident'>fold</span>(<span class='ident'>out_tx</span>, <span class='op'>|</span><span class='ident'>tx</span>, <span class='ident'>i</span><span class='op'>|</span> { <span class='ident'>tx</span>.<span class='ident'>send</span>(<span class='ident'>i</span> <span class='op'>|</span> (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>1</span>)).<span class='ident'>unwrap</span>(); <span class='ident'>tx</span> })
+                .<span class='ident'>add_to</span>(<span class='ident'>t</span>);
+        });
+
+        <span class='comment'>// Initial value</span>
+        <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), <span class='number'>0b00000010</span>);
+    }
+
+    <span class='attribute'>#[<span class='ident'>test</span>]</span>
+    <span class='kw'>fn</span> <span class='ident'>lift2_channel_value</span>() {
+        <span class='kw'>let</span> (<span class='ident'>tx</span>, <span class='ident'>rx</span>) <span class='op'>=</span> <span class='ident'>sync_channel</span>(<span class='number'>0</span>);
+        <span class='kw'>let</span> (<span class='ident'>out_tx</span>, <span class='ident'>out_rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
+
+        <span class='ident'>spawn_topology</span>(<span class='ident'>Default</span>::<span class='ident'>default</span>(), <span class='kw'>move</span> <span class='op'>|</span><span class='ident'>t</span><span class='op'>|</span> {
+            <span class='ident'>t</span>.<span class='ident'>listen</span>(<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>0</span>, <span class='ident'>rx</span>)
+                .<span class='ident'>lift2</span>(<span class='ident'>t</span>.<span class='ident'>value</span>(<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>1</span>), <span class='kw'>move</span> <span class='op'>|</span><span class='ident'>i</span>,<span class='ident'>j</span><span class='op'>|</span> { <span class='ident'>out_tx</span>.<span class='ident'>send</span>(<span class='op'>*</span><span class='ident'>i</span> <span class='op'>|</span> <span class='op'>*</span><span class='ident'>j</span>).<span class='ident'>unwrap</span>() })
+                .<span class='ident'>add_to</span>(<span class='ident'>t</span>);
+        });
+
+        <span class='comment'>// Initial value</span>
+        <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>0</span>) <span class='op'>|</span> (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>1</span>));
+
+        <span class='ident'>tx</span>.<span class='ident'>send</span>(<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>2</span>).<span class='ident'>unwrap</span>();
+        <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>2</span>) <span class='op'>|</span> (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>1</span>));
+    }
+
+    <span class='attribute'>#[<span class='ident'>test</span>]</span>
+    <span class='kw'>fn</span> <span class='ident'>lift2_value_value</span>() {
+        <span class='kw'>let</span> (<span class='ident'>out_tx</span>, <span class='ident'>out_rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
+
+        <span class='ident'>spawn_topology</span>(<span class='ident'>Default</span>::<span class='ident'>default</span>(), <span class='kw'>move</span> <span class='op'>|</span><span class='ident'>t</span><span class='op'>|</span> {
+            <span class='ident'>t</span>.<span class='ident'>value</span>(<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>0</span>)
+                .<span class='ident'>lift2</span>(<span class='ident'>t</span>.<span class='ident'>value</span>(<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>1</span>), <span class='kw'>move</span> <span class='op'>|</span><span class='ident'>i</span>,<span class='ident'>j</span><span class='op'>|</span> { <span class='ident'>out_tx</span>.<span class='ident'>send</span>(<span class='op'>*</span><span class='ident'>i</span> <span class='op'>|</span> <span class='op'>*</span><span class='ident'>j</span>).<span class='ident'>unwrap</span>() })
+                .<span class='ident'>add_to</span>(<span class='ident'>t</span>);
+        });
+
+        <span class='comment'>// Initial value</span>
+        <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>0</span>) <span class='op'>|</span> (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>1</span>));
+    }
+
+    <span class='attribute'>#[<span class='ident'>test</span>]</span>
+    <span class='kw'>fn</span> <span class='ident'>async_sends</span>() {
+        <span class='kw'>let</span> (<span class='ident'>tx</span>, <span class='ident'>rx</span>) <span class='op'>=</span> <span class='ident'>sync_channel</span>(<span class='number'>0</span>);
+        <span class='kw'>let</span> (<span class='ident'>out_tx</span>, <span class='ident'>out_rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
+
+        <span class='ident'>spawn_topology</span>(<span class='ident'>Default</span>::<span class='ident'>default</span>(), <span class='kw'>move</span> <span class='op'>|</span><span class='ident'>t</span><span class='op'>|</span> {
+            <span class='ident'>t</span>.<span class='ident'>async</span>(
+                <span class='ident'>t</span>.<span class='ident'>listen</span>(<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>0</span>, <span class='ident'>rx</span>)
+                .<span class='ident'>lift</span>(<span class='kw'>move</span> <span class='op'>|</span><span class='ident'>i</span><span class='op'>|</span> { <span class='ident'>out_tx</span>.<span class='ident'>send</span>(<span class='ident'>i</span>).<span class='ident'>unwrap</span>(); })
+            );
+        });
+
+        <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>0</span>));
+
+        <span class='ident'>tx</span>.<span class='ident'>send</span>(<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>1</span>).<span class='ident'>unwrap</span>();
+        <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>1</span>)); <span class='comment'>// Should receive fast output first</span>
+    }
+
+    <span class='attribute'>#[<span class='ident'>test</span>]</span>
+    <span class='kw'>fn</span> <span class='ident'>async_sends_async</span>() {
+        <span class='kw'>let</span> (<span class='ident'>slow_tx</span>, <span class='ident'>slow_rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
+        <span class='kw'>let</span> (<span class='ident'>fast_tx</span>, <span class='ident'>fast_rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
+        <span class='kw'>let</span> (<span class='ident'>out_tx</span>, <span class='ident'>out_rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
+
+        <span class='ident'>spawn_topology</span>(<span class='ident'>Default</span>::<span class='ident'>default</span>(), <span class='kw'>move</span> <span class='op'>|</span><span class='ident'>t</span><span class='op'>|</span> {
+            <span class='kw'>let</span> <span class='ident'>slow</span> <span class='op'>=</span> <span class='ident'>t</span>.<span class='ident'>listen</span>(<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>0</span>, <span class='ident'>slow_rx</span>)
+                .<span class='ident'>lift</span>(<span class='op'>|</span><span class='ident'>i</span><span class='op'>|</span> <span class='op'>-&gt;</span> <span class='ident'>usize</span> { 
+                    <span class='kw'>if</span> <span class='ident'>i</span> <span class='op'>&gt;</span> <span class='number'>1</span> { <span class='comment'>// allow the initial value to be computed quickly</span>
+                        <span class='ident'>thread</span>::<span class='ident'>sleep_ms</span>(<span class='number'>100</span>);
+                    }
+
+                    <span class='ident'>i</span> 
+                }).<span class='ident'>async</span>(<span class='ident'>t</span>);
+
+            <span class='kw'>let</span> <span class='ident'>fast</span> <span class='op'>=</span> <span class='ident'>t</span>.<span class='ident'>listen</span>(<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>1</span>, <span class='ident'>fast_rx</span>);
+
+            <span class='ident'>slow</span>.<span class='ident'>lift2</span>(<span class='ident'>fast</span>, <span class='kw'>move</span> <span class='op'>|</span><span class='ident'>i</span>,<span class='ident'>j</span><span class='op'>|</span> { <span class='ident'>out_tx</span>.<span class='ident'>send</span>(<span class='op'>*</span><span class='ident'>i</span> <span class='op'>|</span> <span class='op'>*</span><span class='ident'>j</span>).<span class='ident'>unwrap</span>() })
+            .<span class='ident'>add_to</span>(<span class='ident'>t</span>);
+        });
+
+        <span class='comment'>// Initial value</span>
+        <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>0</span>) <span class='op'>|</span> (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>1</span>));
+
+        <span class='ident'>slow_tx</span>.<span class='ident'>send</span>(<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>2</span>).<span class='ident'>unwrap</span>();
+        <span class='ident'>fast_tx</span>.<span class='ident'>send</span>(<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>3</span>).<span class='ident'>unwrap</span>();
+
+        <span class='comment'>// Will receive the &#39;fast&#39; value first...</span>
+        <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>0</span>) <span class='op'>|</span> (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>3</span>));
+        <span class='comment'>// ...then the slow one</span>
+        <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>2</span>) <span class='op'>|</span> (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>3</span>));
+    }
+
+    <span class='attribute'>#[<span class='ident'>test</span>]</span>
+    <span class='kw'>fn</span> <span class='ident'>branch</span>() {
+        <span class='kw'>let</span> (<span class='ident'>tx</span>, <span class='ident'>rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
+        <span class='kw'>let</span> (<span class='ident'>out_tx1</span>, <span class='ident'>out_rx1</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
+        <span class='kw'>let</span> (<span class='ident'>out_tx2</span>, <span class='ident'>out_rx2</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
+
+        <span class='ident'>spawn_topology</span>(<span class='ident'>Default</span>::<span class='ident'>default</span>(), <span class='kw'>move</span> <span class='op'>|</span><span class='ident'>t</span><span class='op'>|</span> {
+            <span class='kw'>let</span> <span class='ident'>a</span> <span class='op'>=</span> <span class='ident'>t</span>.<span class='ident'>listen</span>(<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>0</span>, <span class='ident'>rx</span>);
+
+            <span class='ident'>t</span>.<span class='ident'>add</span>(<span class='ident'>a</span>.<span class='ident'>clone</span>().<span class='ident'>lift</span>(<span class='kw'>move</span> <span class='op'>|</span><span class='ident'>i</span><span class='op'>|</span> { <span class='ident'>out_tx1</span>.<span class='ident'>send</span>(<span class='ident'>i</span>).<span class='ident'>unwrap</span>(); }));
+            <span class='ident'>t</span>.<span class='ident'>add</span>(<span class='ident'>a</span>.<span class='ident'>clone</span>().<span class='ident'>lift</span>(<span class='kw'>move</span> <span class='op'>|</span><span class='ident'>i</span><span class='op'>|</span> { <span class='ident'>out_tx2</span>.<span class='ident'>send</span>(<span class='ident'>i</span>).<span class='ident'>unwrap</span>(); }));
+        });
+
+        <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx1</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>0</span>));
+        <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx2</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>0</span>));
+
+        <span class='ident'>tx</span>.<span class='ident'>send</span>(<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>1</span>).<span class='ident'>unwrap</span>();
+        <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx1</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>1</span>));
+        <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx2</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>1</span>));
+    }
+
+    <span class='attribute'>#[<span class='ident'>test</span>]</span>
+    <span class='kw'>fn</span> <span class='ident'>rand</span>() {
+        <span class='kw'>let</span>(<span class='ident'>tx</span>, <span class='ident'>rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
+        <span class='kw'>let</span>(<span class='ident'>out_tx</span>, <span class='ident'>out_rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
+
+        <span class='ident'>spawn_topology</span>(<span class='ident'>Default</span>::<span class='ident'>default</span>(), <span class='kw'>move</span> <span class='op'>|</span><span class='ident'>t</span><span class='op'>|</span> {
+            <span class='kw'>let</span> <span class='ident'>rng</span> <span class='op'>=</span> <span class='ident'>rand</span>::<span class='ident'>StdRng</span>::<span class='ident'>new</span>().<span class='ident'>unwrap</span>();
+            <span class='ident'>t</span>.<span class='ident'>add</span>(<span class='ident'>t</span>.<span class='ident'>listen</span>(<span class='number'>0</span>, <span class='ident'>rx</span>));
+            <span class='ident'>t</span>.<span class='ident'>add</span>(<span class='ident'>t</span>.<span class='ident'>ack_random</span>(<span class='ident'>rng</span>).<span class='ident'>lift</span>(<span class='kw'>move</span> <span class='op'>|</span><span class='ident'>i</span>: <span class='ident'>usize</span><span class='op'>|</span> { <span class='ident'>out_tx</span>.<span class='ident'>send</span>(<span class='ident'>i</span>).<span class='ident'>unwrap</span>() }));
+        });
+
+        <span class='comment'>// Just testing to make sure this doesn&#39;t explode somehow</span>
+        <span class='kw'>let</span> <span class='ident'>first</span> <span class='op'>=</span> <span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>();
+        <span class='ident'>tx</span>.<span class='ident'>send</span>(<span class='number'>0</span>).<span class='ident'>unwrap</span>();
+        <span class='kw'>let</span> <span class='ident'>second</span> <span class='op'>=</span> <span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>();
+        <span class='macro'>assert</span><span class='macro'>!</span>(<span class='ident'>first</span> <span class='op'>!=</span> <span class='ident'>second</span>);
+    }
+
+    <span class='attribute'>#[<span class='ident'>test</span>]</span>
+    <span class='kw'>fn</span> <span class='ident'>map</span>() {
+        <span class='kw'>let</span> (<span class='ident'>in_tx</span>, <span class='ident'>in_rx</span>) <span class='op'>=</span> <span class='ident'>sync_channel</span>(<span class='number'>0</span>);
+        <span class='kw'>let</span> (<span class='ident'>out_tx</span>, <span class='ident'>out_rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
+
+        <span class='ident'>spawn_topology</span>(<span class='ident'>Default</span>::<span class='ident'>default</span>(), <span class='kw'>move</span> <span class='op'>|</span><span class='ident'>t</span><span class='op'>|</span> {
+            <span class='ident'>t</span>.<span class='ident'>listen</span>(<span class='number'>0</span>, <span class='ident'>in_rx</span>)
+                .<span class='ident'>map</span>(<span class='kw'>move</span> <span class='op'>|</span><span class='ident'>i</span><span class='op'>|</span> { <span class='ident'>out_tx</span>.<span class='ident'>send</span>(<span class='ident'>i</span> <span class='op'>|</span> (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>1</span>)).<span class='ident'>unwrap</span>(); })
+                .<span class='ident'>add_to</span>(<span class='ident'>t</span>);
+        });
+
+        <span class='comment'>// Initial value</span>
+        <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), <span class='number'>0b00000010</span>);
+
+        <span class='comment'>// Lifted value</span>
+        <span class='ident'>in_tx</span>.<span class='ident'>send</span>(<span class='number'>1</span>).<span class='ident'>unwrap</span>();
+        <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), <span class='number'>0b00000011</span>);
     }
 }
 </pre>

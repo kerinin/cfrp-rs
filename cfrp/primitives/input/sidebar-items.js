@@ -1,1 +1,1 @@
-initSidebarItems({"trait":[["NoOp",""],["RunInput",""]]});
+initSidebarItems({"struct":[["AckInput",""],["ReceiverInput",""],["RngInput",""]],"trait":[["NoOp",""],["RunInput",""]]});

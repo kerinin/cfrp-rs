@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `SignalExt` trait in crate `cfrp`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, SignalExt">
+
+    <title>cfrp::SignalExt - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../main.css">
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <section class="sidebar">
+        
+        <p class='location'><a href='index.html'>cfrp</a></p><script>window.sidebarCurrent = {name: 'SignalExt', ty: 'trait', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </section>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press 'S' to search, '?' for more options..."
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content trait">
+<h1 class='fqn'><span class='in-band'>Trait <a href='index.html'>cfrp</a>::<wbr><a class='trait' href=''>SignalExt</a><wbr></span><span class='out-of-band'><span id='render-detail'>
+            <a id="collapse-all" href="#">[-]</a>&nbsp;<a id="expand-all" href="#">[+]</a>
+        </span><a id='src-6124' href='../src/cfrp/signal_ext.rs.html#9-292'>[src]</a></span></h1>
+<pre class='rust trait'>pub trait SignalExt&lt;A&gt;: <a class='trait' href='../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;A&gt; + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Sized.html' title='core::marker::Sized'>Sized</a> <span class='where'>where Self: 'static, A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span> {
+    fn <a href='#method.lift' class='fnname'>lift</a>&lt;F, B&gt;(self, f: F) -&gt; <a class='struct' href='../cfrp/primitives/lift/struct.LiftSignal.html' title='cfrp::primitives::lift::LiftSignal'>LiftSignal</a>&lt;F, A, B&gt; <span class='where'>where F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(A) -&gt; B, B: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span> { ... }
+    fn <a href='#method.lift2' class='fnname'>lift2</a>&lt;F, SB, B, C&gt;(self, right: SB, f: F) -&gt; <a class='struct' href='../cfrp/primitives/lift2/struct.Lift2Signal.html' title='cfrp::primitives::lift2::Lift2Signal'>Lift2Signal</a>&lt;F, A, B, C&gt; <span class='where'>where SB: 'static + <a class='trait' href='../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;B&gt;, F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(<a class='enum' href='../cfrp/enum.Value.html' title='cfrp::Value'>Value</a>&lt;A&gt;, <a class='enum' href='../cfrp/enum.Value.html' title='cfrp::Value'>Value</a>&lt;B&gt;) -&gt; C, B: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>, C: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span> { ... }
+    fn <a href='#method.fold' class='fnname'>fold</a>&lt;F, B&gt;(self, initial: B, f: F) -&gt; <a class='struct' href='../cfrp/primitives/fold/struct.FoldSignal.html' title='cfrp::primitives::fold::FoldSignal'>FoldSignal</a>&lt;F, A, B&gt; <span class='where'>where F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(B, A) -&gt; B, B: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span> { ... }
+    fn <a href='#method.add_to' class='fnname'>add_to</a>(self, builder: &amp;<a class='struct' href='../cfrp/struct.Builder.html' title='cfrp::Builder'>Builder</a>) -&gt; <a class='struct' href='../cfrp/primitives/fork/struct.Branch.html' title='cfrp::primitives::fork::Branch'>Branch</a>&lt;A&gt; { ... }
+    fn <a href='#method.async' class='fnname'>async</a>(self, builder: &amp;<a class='struct' href='../cfrp/struct.Builder.html' title='cfrp::Builder'>Builder</a>) -&gt; <a class='struct' href='../cfrp/primitives/fork/struct.Branch.html' title='cfrp::primitives::fork::Branch'>Branch</a>&lt;A&gt; { ... }
+    fn <a href='#method.map' class='fnname'>map</a>&lt;F, B&gt;(self, f: F) -&gt; <a class='struct' href='../cfrp/primitives/lift/struct.LiftSignal.html' title='cfrp::primitives::lift::LiftSignal'>LiftSignal</a>&lt;F, A, B&gt; <span class='where'>where F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(A) -&gt; B, B: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span> { ... }
+    fn <a href='#method.zip' class='fnname'>zip</a>&lt;SB, B&gt;(self, right: SB) -&gt; <a class='struct' href='http://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='trait' href='../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(<a class='enum' href='../cfrp/enum.Value.html' title='cfrp::Value'>Value</a>&lt;A&gt;, <a class='enum' href='../cfrp/enum.Value.html' title='cfrp::Value'>Value</a>&lt;B&gt;)</a>&gt;&gt; <span class='where'>where SB: 'static + <a class='trait' href='../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;B&gt;, B: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span> { ... }
+    fn <a href='#method.enumerate' class='fnname'>enumerate</a>(self) -&gt; <a class='struct' href='http://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='trait' href='../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(<a href='http://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>, A)</a>&gt;&gt; { ... }
+    fn <a href='#method.filter' class='fnname'>filter</a>&lt;F&gt;(self, f: F) -&gt; <a class='struct' href='http://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='trait' href='../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;<a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;A&gt;&gt;&gt; <span class='where'>where F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(&amp;A) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></span> { ... }
+    fn <a href='#method.inspect' class='fnname'>inspect</a>&lt;F&gt;(self, f: F) -&gt; <a class='struct' href='http://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='trait' href='../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;A&gt;&gt; <span class='where'>where F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(&amp;A) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></span> { ... }
+}</pre><div class='docblock'><p>Methods for manipulating signals</p>
+</div>
+            <h2 id='provided-methods'>Provided Methods</h2>
+            <div class='methods'>
+        <h3 id='method.lift' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.lift' class='fnname'>lift</a>&lt;F, B&gt;(self, f: F) -&gt; <a class='struct' href='../cfrp/primitives/lift/struct.LiftSignal.html' title='cfrp::primitives::lift::LiftSignal'>LiftSignal</a>&lt;F, A, B&gt; <span class='where'>where F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(A) -&gt; B, B: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></h3><div class='docblock'><p>Transform in input signal into an output signal</p>
+
+<h1 id="example" class='section-header'><a
+                           href="#example">Example</a></h1><pre id='rust-example-rendered' class='rust '>
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>default</span>::<span class='ident'>Default</span>;
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>sync</span>::<span class='ident'>mpsc</span>::<span class='op'>*</span>;
+<span class='kw'>use</span> <span class='ident'>cfrp</span>::<span class='op'>*</span>;
+
+<span class='kw'>let</span> (<span class='ident'>in_tx</span>, <span class='ident'>in_rx</span>) <span class='op'>=</span> <span class='ident'>sync_channel</span>(<span class='number'>0</span>);
+<span class='kw'>let</span> (<span class='ident'>out_tx</span>, <span class='ident'>out_rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
+
+<span class='ident'>spawn_topology</span>(<span class='ident'>Default</span>::<span class='ident'>default</span>(), <span class='kw'>move</span> <span class='op'>|</span><span class='ident'>t</span><span class='op'>|</span> {
+    <span class='ident'>t</span>.<span class='ident'>listen</span>(<span class='number'>0</span>, <span class='ident'>in_rx</span>)
+        .<span class='ident'>lift</span>(<span class='kw'>move</span> <span class='op'>|</span><span class='ident'>i</span><span class='op'>|</span> { <span class='ident'>out_tx</span>.<span class='ident'>send</span>(<span class='ident'>i</span> <span class='op'>|</span> (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>1</span>)).<span class='ident'>unwrap</span>(); })
+        .<span class='ident'>add_to</span>(<span class='ident'>t</span>);
+});
+
+<span class='comment'>// Initial value</span>
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), <span class='number'>0b00000010</span>);
+
+<span class='comment'>// Lifted value</span>
+<span class='ident'>in_tx</span>.<span class='ident'>send</span>(<span class='number'>1</span>).<span class='ident'>unwrap</span>();
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), <span class='number'>0b00000011</span>);
+</pre>
+</div><h3 id='method.lift2' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.lift2' class='fnname'>lift2</a>&lt;F, SB, B, C&gt;(self, right: SB, f: F) -&gt; <a class='struct' href='../cfrp/primitives/lift2/struct.Lift2Signal.html' title='cfrp::primitives::lift2::Lift2Signal'>Lift2Signal</a>&lt;F, A, B, C&gt; <span class='where'>where SB: 'static + <a class='trait' href='../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;B&gt;, F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(<a class='enum' href='../cfrp/enum.Value.html' title='cfrp::Value'>Value</a>&lt;A&gt;, <a class='enum' href='../cfrp/enum.Value.html' title='cfrp::Value'>Value</a>&lt;B&gt;) -&gt; C, B: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>, C: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></h3><div class='docblock'><p>Combine two signals into an output signal</p>
+
+<h1 id="example" class='section-header'><a
+                           href="#example">Example</a></h1><pre id='rust-example-rendered' class='rust '>
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>default</span>::<span class='ident'>Default</span>;
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>sync</span>::<span class='ident'>mpsc</span>::<span class='op'>*</span>;
+<span class='kw'>use</span> <span class='ident'>cfrp</span>::<span class='op'>*</span>;
+
+<span class='kw'>let</span> (<span class='ident'>l_tx</span>, <span class='ident'>l_rx</span>) <span class='op'>=</span> <span class='ident'>sync_channel</span>(<span class='number'>0</span>);
+<span class='kw'>let</span> (<span class='ident'>r_tx</span>, <span class='ident'>r_rx</span>) <span class='op'>=</span> <span class='ident'>sync_channel</span>(<span class='number'>0</span>);
+<span class='kw'>let</span> (<span class='ident'>out_tx</span>, <span class='ident'>out_rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
+
+<span class='ident'>spawn_topology</span>(<span class='ident'>Default</span>::<span class='ident'>default</span>(), <span class='kw'>move</span> <span class='op'>|</span><span class='ident'>t</span><span class='op'>|</span> {
+    <span class='ident'>t</span>.<span class='ident'>listen</span>(<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>0</span>, <span class='ident'>l_rx</span>)
+        .<span class='ident'>lift2</span>(<span class='ident'>t</span>.<span class='ident'>listen</span>(<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>1</span>, <span class='ident'>r_rx</span>), <span class='kw'>move</span> <span class='op'>|</span><span class='ident'>i</span>,<span class='ident'>j</span><span class='op'>|</span> { <span class='ident'>out_tx</span>.<span class='ident'>send</span>(<span class='op'>*</span><span class='ident'>i</span> <span class='op'>|</span> <span class='op'>*</span><span class='ident'>j</span>).<span class='ident'>unwrap</span>() })
+        .<span class='ident'>add_to</span>(<span class='ident'>t</span>);
+});
+
+<span class='comment'>// Initial value</span>
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>0</span>) <span class='op'>|</span> (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>1</span>));
+
+<span class='ident'>l_tx</span>.<span class='ident'>send</span>(<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>2</span>).<span class='ident'>unwrap</span>();
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>2</span>) <span class='op'>|</span> (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>1</span>));
+
+<span class='ident'>r_tx</span>.<span class='ident'>send</span>(<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>3</span>).<span class='ident'>unwrap</span>();
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>2</span>) <span class='op'>|</span> (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>3</span>));
+</pre>
+</div><h3 id='method.fold' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.fold' class='fnname'>fold</a>&lt;F, B&gt;(self, initial: B, f: F) -&gt; <a class='struct' href='../cfrp/primitives/fold/struct.FoldSignal.html' title='cfrp::primitives::fold::FoldSignal'>FoldSignal</a>&lt;F, A, B&gt; <span class='where'>where F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(B, A) -&gt; B, B: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></h3><div class='docblock'><p>Merge data from a signal into an accumulator and return a signal with
+the accumulator&#39;s value</p>
+
+<h1 id="example" class='section-header'><a
+                           href="#example">Example</a></h1><pre id='rust-example-rendered' class='rust '>
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>default</span>::<span class='ident'>Default</span>;
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>sync</span>::<span class='ident'>mpsc</span>::<span class='op'>*</span>;
+<span class='kw'>use</span> <span class='ident'>cfrp</span>::<span class='op'>*</span>;
+
+<span class='kw'>let</span> (<span class='ident'>in_tx</span>, <span class='ident'>in_rx</span>) <span class='op'>=</span> <span class='ident'>sync_channel</span>(<span class='number'>0</span>);
+<span class='kw'>let</span> (<span class='ident'>out_tx</span>, <span class='ident'>out_rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
+
+<span class='ident'>spawn_topology</span>(<span class='ident'>Default</span>::<span class='ident'>default</span>(), <span class='kw'>move</span> <span class='op'>|</span><span class='ident'>t</span><span class='op'>|</span> {
+    <span class='ident'>t</span>.<span class='ident'>listen</span>(<span class='number'>0</span>, <span class='ident'>in_rx</span>)
+        .<span class='ident'>fold</span>(<span class='ident'>out_tx</span>, <span class='op'>|</span><span class='ident'>tx</span>, <span class='ident'>i</span><span class='op'>|</span> { <span class='ident'>tx</span>.<span class='ident'>send</span>(<span class='ident'>i</span> <span class='op'>|</span> (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>1</span>)).<span class='ident'>unwrap</span>(); <span class='ident'>tx</span> })
+        .<span class='ident'>add_to</span>(<span class='ident'>t</span>);
+});
+
+<span class='comment'>// Initial value</span>
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), <span class='number'>0b00000010</span>);
+
+<span class='comment'>// Lifted value</span>
+<span class='ident'>in_tx</span>.<span class='ident'>send</span>(<span class='number'>1</span>).<span class='ident'>unwrap</span>();
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), <span class='number'>0b00000011</span>);
+</pre>
+</div><h3 id='method.add_to' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.add_to' class='fnname'>add_to</a>(self, builder: &amp;<a class='struct' href='../cfrp/struct.Builder.html' title='cfrp::Builder'>Builder</a>) -&gt; <a class='struct' href='../cfrp/primitives/fork/struct.Branch.html' title='cfrp::primitives::fork::Branch'>Branch</a>&lt;A&gt;</code></h3><div class='docblock'><p>Sugar for <code>Builder::add</code></p>
+</div><h3 id='method.async' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.async' class='fnname'>async</a>(self, builder: &amp;<a class='struct' href='../cfrp/struct.Builder.html' title='cfrp::Builder'>Builder</a>) -&gt; <a class='struct' href='../cfrp/primitives/fork/struct.Branch.html' title='cfrp::primitives::fork::Branch'>Branch</a>&lt;A&gt;</code></h3><div class='docblock'><p>Sugar for <code>Builder::async</code></p>
+</div><h3 id='method.map' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.map' class='fnname'>map</a>&lt;F, B&gt;(self, f: F) -&gt; <a class='struct' href='../cfrp/primitives/lift/struct.LiftSignal.html' title='cfrp::primitives::lift::LiftSignal'>LiftSignal</a>&lt;F, A, B&gt; <span class='where'>where F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(A) -&gt; B, B: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></h3><div class='docblock'><p>Alias of <code>lift</code></p>
+</div><h3 id='method.zip' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.zip' class='fnname'>zip</a>&lt;SB, B&gt;(self, right: SB) -&gt; <a class='struct' href='http://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='trait' href='../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(<a class='enum' href='../cfrp/enum.Value.html' title='cfrp::Value'>Value</a>&lt;A&gt;, <a class='enum' href='../cfrp/enum.Value.html' title='cfrp::Value'>Value</a>&lt;B&gt;)</a>&gt;&gt; <span class='where'>where SB: 'static + <a class='trait' href='../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;B&gt;, B: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></h3><div class='docblock'><p>Takes two input signals and returns a signal containing 2-tuples
+of elements from the input signals.</p>
+
+<p>Roughly equivalent to <code>Iterator::zip</code>, however if one signal
+changes but the other doesn&#39;t, the most-recent value of the unchanged
+signal will be output.  In other words, this operation doesn&#39;t block
+on receiving changes from both inputs.</p>
+
+<h1 id="example" class='section-header'><a
+                           href="#example">Example</a></h1><pre id='rust-example-rendered' class='rust '>
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>default</span>::<span class='ident'>Default</span>;
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>sync</span>::<span class='ident'>mpsc</span>::<span class='op'>*</span>;
+<span class='kw'>use</span> <span class='ident'>cfrp</span>::<span class='op'>*</span>;
+
+<span class='kw'>let</span> (<span class='ident'>l_tx</span>, <span class='ident'>l_rx</span>): (<span class='ident'>SyncSender</span><span class='op'>&lt;</span><span class='ident'>usize</span><span class='op'>&gt;</span>, <span class='ident'>Receiver</span><span class='op'>&lt;</span><span class='ident'>usize</span><span class='op'>&gt;</span>) <span class='op'>=</span> <span class='ident'>sync_channel</span>(<span class='number'>0</span>);
+<span class='kw'>let</span> (<span class='ident'>r_tx</span>, <span class='ident'>r_rx</span>): (<span class='ident'>SyncSender</span><span class='op'>&lt;</span><span class='ident'>usize</span><span class='op'>&gt;</span>, <span class='ident'>Receiver</span><span class='op'>&lt;</span><span class='ident'>usize</span><span class='op'>&gt;</span>) <span class='op'>=</span> <span class='ident'>sync_channel</span>(<span class='number'>0</span>);
+<span class='kw'>let</span> (<span class='ident'>out_tx</span>, <span class='ident'>out_rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
+
+<span class='ident'>spawn_topology</span>(<span class='ident'>Default</span>::<span class='ident'>default</span>(), <span class='kw'>move</span> <span class='op'>|</span><span class='ident'>t</span><span class='op'>|</span> {
+    <span class='ident'>t</span>.<span class='ident'>listen</span>(<span class='number'>0</span>, <span class='ident'>l_rx</span>)
+        .<span class='ident'>zip</span>(<span class='ident'>t</span>.<span class='ident'>listen</span>(<span class='number'>0</span>, <span class='ident'>r_rx</span>))
+        .<span class='ident'>lift</span>(<span class='kw'>move</span> <span class='op'>|</span><span class='ident'>i</span><span class='op'>|</span> { <span class='ident'>out_tx</span>.<span class='ident'>send</span>(<span class='ident'>i</span>).<span class='ident'>unwrap</span>(); })
+        .<span class='ident'>add_to</span>(<span class='ident'>t</span>);
+});
+
+<span class='comment'>// Initial value</span>
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), (<span class='ident'>Value</span>::<span class='ident'>Unchanged</span>(<span class='number'>0</span>), <span class='ident'>Value</span>::<span class='ident'>Unchanged</span>(<span class='number'>0</span>)));
+
+<span class='ident'>l_tx</span>.<span class='ident'>send</span>(<span class='number'>1</span>).<span class='ident'>unwrap</span>();
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), (<span class='ident'>Value</span>::<span class='ident'>Changed</span>(<span class='number'>1</span>), <span class='ident'>Value</span>::<span class='ident'>Unchanged</span>(<span class='number'>0</span>)));
+
+<span class='ident'>r_tx</span>.<span class='ident'>send</span>(<span class='number'>1</span>).<span class='ident'>unwrap</span>();
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), (<span class='ident'>Value</span>::<span class='ident'>Unchanged</span>(<span class='number'>1</span>), <span class='ident'>Value</span>::<span class='ident'>Changed</span>(<span class='number'>1</span>)));
+</pre>
+</div><h3 id='method.enumerate' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.enumerate' class='fnname'>enumerate</a>(self) -&gt; <a class='struct' href='http://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='trait' href='../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(<a href='http://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>, A)</a>&gt;&gt;</code></h3><div class='docblock'><p>Same as <code>Iterator::enumerate</code>.</p>
+
+<p>The counter only increments when upstream data changes.  To track 
+the aggregate number of messages processed by a topology consider 
+<code>Builder::counter()</code></p>
+
+<h1 id="example" class='section-header'><a
+                           href="#example">Example</a></h1><pre id='rust-example-rendered' class='rust '>
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>default</span>::<span class='ident'>Default</span>;
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>sync</span>::<span class='ident'>mpsc</span>::<span class='op'>*</span>;
+<span class='kw'>use</span> <span class='ident'>cfrp</span>::<span class='op'>*</span>;
+
+<span class='kw'>let</span> (<span class='ident'>in_tx</span>, <span class='ident'>in_rx</span>) <span class='op'>=</span> <span class='ident'>sync_channel</span>(<span class='number'>0</span>);
+<span class='kw'>let</span> (<span class='ident'>out_tx</span>, <span class='ident'>out_rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
+
+<span class='ident'>spawn_topology</span>(<span class='ident'>Default</span>::<span class='ident'>default</span>(), <span class='kw'>move</span> <span class='op'>|</span><span class='ident'>t</span><span class='op'>|</span> {
+    <span class='ident'>t</span>.<span class='ident'>listen</span>(<span class='number'>0</span>, <span class='ident'>in_rx</span>)
+        .<span class='ident'>enumerate</span>()
+        .<span class='ident'>lift</span>(<span class='kw'>move</span> <span class='op'>|</span><span class='ident'>i</span><span class='op'>|</span> { <span class='ident'>out_tx</span>.<span class='ident'>send</span>(<span class='ident'>i</span>).<span class='ident'>unwrap</span>(); })
+        .<span class='ident'>add_to</span>(<span class='ident'>t</span>);
+});
+
+<span class='comment'>// Initial value</span>
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), (<span class='number'>1</span>, <span class='number'>0</span>));
+
+<span class='ident'>in_tx</span>.<span class='ident'>send</span>(<span class='number'>1</span>).<span class='ident'>unwrap</span>();
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), (<span class='number'>2</span>, <span class='number'>1</span>));
+</pre>
+</div><h3 id='method.filter' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.filter' class='fnname'>filter</a>&lt;F&gt;(self, f: F) -&gt; <a class='struct' href='http://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='trait' href='../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;<a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;A&gt;&gt;&gt; <span class='where'>where F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(&amp;A) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></span></code></h3><div class='docblock'><p>Filter an input stream by a predicate function <code>F</code>.</p>
+
+<p>In this case &#39;filtered&#39; is reflected by a value of <code>None</code></p>
+
+<h1 id="example" class='section-header'><a
+                           href="#example">Example</a></h1><pre id='rust-example-rendered' class='rust '>
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>default</span>::<span class='ident'>Default</span>;
+<span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>sync</span>::<span class='ident'>mpsc</span>::<span class='op'>*</span>;
+<span class='kw'>use</span> <span class='ident'>cfrp</span>::<span class='op'>*</span>;
+
+<span class='kw'>let</span> (<span class='ident'>in_tx</span>, <span class='ident'>in_rx</span>) <span class='op'>=</span> <span class='ident'>sync_channel</span>(<span class='number'>0</span>);
+<span class='kw'>let</span> (<span class='ident'>out_tx</span>, <span class='ident'>out_rx</span>) <span class='op'>=</span> <span class='ident'>channel</span>();
+
+<span class='ident'>spawn_topology</span>(<span class='ident'>Default</span>::<span class='ident'>default</span>(), <span class='kw'>move</span> <span class='op'>|</span><span class='ident'>t</span><span class='op'>|</span> {
+    <span class='ident'>t</span>.<span class='ident'>listen</span>(<span class='number'>0</span>, <span class='ident'>in_rx</span>)
+        .<span class='ident'>filter</span>(<span class='op'>|</span><span class='ident'>i</span><span class='op'>|</span> { <span class='ident'>i</span> <span class='op'>%</span> <span class='number'>2</span> <span class='op'>==</span> <span class='number'>0</span> })
+        .<span class='ident'>lift</span>(<span class='kw'>move</span> <span class='op'>|</span><span class='ident'>i</span><span class='op'>|</span> { <span class='ident'>out_tx</span>.<span class='ident'>send</span>(<span class='ident'>i</span>).<span class='ident'>unwrap</span>(); })
+        .<span class='ident'>add_to</span>(<span class='ident'>t</span>);
+});
+
+<span class='comment'>// Initial value</span>
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), <span class='prelude-val'>Some</span>(<span class='number'>0</span>));
+
+<span class='ident'>in_tx</span>.<span class='ident'>send</span>(<span class='number'>1</span>).<span class='ident'>unwrap</span>();
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), <span class='prelude-val'>None</span>);
+
+<span class='ident'>in_tx</span>.<span class='ident'>send</span>(<span class='number'>2</span>).<span class='ident'>unwrap</span>();
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), <span class='prelude-val'>Some</span>(<span class='number'>2</span>));
+</pre>
+</div><h3 id='method.inspect' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.inspect' class='fnname'>inspect</a>&lt;F&gt;(self, f: F) -&gt; <a class='struct' href='http://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='trait' href='../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;A&gt;&gt; <span class='where'>where F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(&amp;A) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></span></code></h3><div class='docblock'><p>Pass each value in a signal to <code>F</code> before sending it to an output
+signal.  </p>
+</div></div>
+        <h2 id='implementors'>Implementors</h2>
+        <ul class='item-list' id='implementors-list'>
+    <li><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;A&gt; <a class='trait' href='../cfrp/trait.SignalExt.html' title='cfrp::SignalExt'>SignalExt</a>&lt;A&gt; for <a class='struct' href='../cfrp/primitives/channel/struct.Channel.html' title='cfrp::primitives::channel::Channel'>Channel</a>&lt;A&gt; <span class='where'>where A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></li>
+<li><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;F, A, B&gt; <a class='trait' href='../cfrp/trait.SignalExt.html' title='cfrp::SignalExt'>SignalExt</a>&lt;B&gt; for <a class='struct' href='../cfrp/primitives/fold/struct.FoldSignal.html' title='cfrp::primitives::fold::FoldSignal'>FoldSignal</a>&lt;F, A, B&gt; <span class='where'>where F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(B, A) -&gt; B, A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>, B: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></li>
+<li><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;A&gt; <a class='trait' href='../cfrp/trait.SignalExt.html' title='cfrp::SignalExt'>SignalExt</a>&lt;A&gt; for <a class='struct' href='../cfrp/primitives/fork/struct.Branch.html' title='cfrp::primitives::fork::Branch'>Branch</a>&lt;A&gt; <span class='where'>where A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></li>
+<li><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;F, A, B&gt; <a class='trait' href='../cfrp/trait.SignalExt.html' title='cfrp::SignalExt'>SignalExt</a>&lt;B&gt; for <a class='struct' href='../cfrp/primitives/lift/struct.LiftSignal.html' title='cfrp::primitives::lift::LiftSignal'>LiftSignal</a>&lt;F, A, B&gt; <span class='where'>where F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(A) -&gt; B, A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>, B: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></li>
+<li><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;F, A, B, C&gt; <a class='trait' href='../cfrp/trait.SignalExt.html' title='cfrp::SignalExt'>SignalExt</a>&lt;C&gt; for <a class='struct' href='../cfrp/primitives/lift2/struct.Lift2Signal.html' title='cfrp::primitives::lift2::Lift2Signal'>Lift2Signal</a>&lt;F, A, B, C&gt; <span class='where'>where F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(<a class='enum' href='../cfrp/enum.Value.html' title='cfrp::Value'>Value</a>&lt;A&gt;, <a class='enum' href='../cfrp/enum.Value.html' title='cfrp::Value'>Value</a>&lt;B&gt;) -&gt; C, A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>, B: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>, C: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></li>
+<li><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;A&gt; <a class='trait' href='../cfrp/trait.SignalExt.html' title='cfrp::SignalExt'>SignalExt</a>&lt;A&gt; for <a class='struct' href='../cfrp/primitives/value/struct.Value.html' title='cfrp::primitives::value::Value'>Value</a>&lt;A&gt; <span class='where'>where A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></li>
+<li><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;A&gt; <a class='trait' href='../cfrp/trait.SignalExt.html' title='cfrp::SignalExt'>SignalExt</a>&lt;A&gt; for <a class='struct' href='http://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='trait' href='../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;A&gt;&gt; <span class='where'>where A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></li>
+</ul><script type="text/javascript" async
+                              src="../implementors/cfrp/trait.SignalExt.js">
+                      </script></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <div id="help" class="hidden">
+        <div class="shortcuts">
+            <h1>Keyboard shortcuts</h1>
+            <dl>
+                <dt>?</dt>
+                <dd>Show this help dialog</dd>
+                <dt>S</dt>
+                <dd>Focus the search field</dd>
+                <dt>&larrb;</dt>
+                <dd>Move up in search results</dd>
+                <dt>&rarrb;</dt>
+                <dd>Move down in search results</dd>
+                <dt>&#9166;</dt>
+                <dd>Go to active search result</dd>
+            </dl>
+        </div>
+        <div class="infos">
+            <h1>Search tricks</h1>
+            <p>
+                Prefix searches with a type followed by a colon (e.g.
+                <code>fn:</code>) to restrict the search to a given type.
+            </p>
+            <p>
+                Accepted types are: <code>fn</code>, <code>mod</code>,
+                <code>struct</code>, <code>enum</code>,
+                <code>trait</code>, <code>typedef</code> (or
+                <code>tdef</code>).
+            </p>
+        </div>
+    </div>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "cfrp";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../jquery.js"></script>
+    <script src="../main.js"></script>
+    
+    <script async src="../search-index.js"></script>
+</body>
+</html>

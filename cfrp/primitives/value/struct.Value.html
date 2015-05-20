@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Value` struct in crate `cfrp`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Value">
+
+    <title>cfrp::primitives::value::Value - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../../main.css">
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <section class="sidebar">
+        
+        <p class='location'><a href='../../index.html'>cfrp</a>::<wbr><a href='../index.html'>primitives</a>::<wbr><a href='index.html'>value</a></p><script>window.sidebarCurrent = {name: 'Value', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </section>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press 'S' to search, '?' for more options..."
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content struct">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../../index.html'>cfrp</a>::<wbr><a href='../index.html'>primitives</a>::<wbr><a href='index.html'>value</a>::<wbr><a class='struct' href=''>Value</a><wbr></span><span class='out-of-band'><span id='render-detail'>
+            <a id="collapse-all" href="#">[-]</a>&nbsp;<a id="expand-all" href="#">[+]</a>
+        </span><a id='src-5965' href='../../../src/cfrp/primitives/value.rs.html#4-9'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct Value&lt;A&gt; <span class='where'>where A: <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span> {
+    // some fields omitted
+}</pre><h2 id='methods'>Methods</h2><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;A&gt; <a class='struct' href='../../../cfrp/primitives/value/struct.Value.html' title='cfrp::primitives::value::Value'>Value</a>&lt;A&gt; <span class='where'>where A: <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></h3><div class='impl-items'><h4 id='method.new' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.new' class='fnname'>new</a>(config: <a class='struct' href='../../../cfrp/struct.Config.html' title='cfrp::Config'>Config</a>, v: A) -&gt; Self</code></h4>
+</div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;A&gt; <a class='trait' href='../../../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;A&gt; for <a class='struct' href='../../../cfrp/primitives/value/struct.Value.html' title='cfrp::primitives::value::Value'>Value</a>&lt;A&gt; <span class='where'>where A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></h3><div class='impl-items'><h4 id='method.config' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='../../../cfrp/trait.Signal.html#method.config' class='fnname'>config</a>(&amp;self) -&gt; <a class='struct' href='../../../cfrp/struct.Config.html' title='cfrp::Config'>Config</a></code></h4>
+<h4 id='method.initial' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='../../../cfrp/trait.Signal.html#method.initial' class='fnname'>initial</a>(&amp;self) -&gt; <a class='enum' href='../../../cfrp/enum.SignalType.html' title='cfrp::SignalType'>SignalType</a>&lt;A&gt;</code></h4>
+<h4 id='method.push_to' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='../../../cfrp/trait.Signal.html#method.push_to' class='fnname'>push_to</a>(self: <a class='struct' href='http://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;Self&gt;, _: <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a class='struct' href='http://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='trait' href='../../../cfrp/trait.Push.html' title='cfrp::Push'>Push</a>&lt;A&gt;&gt;&gt;)</code></h4>
+<h4 id='method.init' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='../../../cfrp/trait.Signal.html#method.init' class='fnname'>init</a>(&amp;mut self)</code></h4>
+</div><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;A&gt; <a class='trait' href='../../../cfrp/trait.SignalExt.html' title='cfrp::SignalExt'>SignalExt</a>&lt;A&gt; for <a class='struct' href='../../../cfrp/primitives/value/struct.Value.html' title='cfrp::primitives::value::Value'>Value</a>&lt;A&gt; <span class='where'>where A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></h3><div class='impl-items'><h4 id='method.lift' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='../../../cfrp/trait.SignalExt.html#method.lift' class='fnname'>lift</a>&lt;F, B&gt;(self, f: F) -&gt; <a class='struct' href='../../../cfrp/primitives/lift/struct.LiftSignal.html' title='cfrp::primitives::lift::LiftSignal'>LiftSignal</a>&lt;F, A, B&gt; <span class='where'>where F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(A) -&gt; B, B: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></h4>
+<h4 id='method.lift2' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='../../../cfrp/trait.SignalExt.html#method.lift2' class='fnname'>lift2</a>&lt;F, SB, B, C&gt;(self, right: SB, f: F) -&gt; <a class='struct' href='../../../cfrp/primitives/lift2/struct.Lift2Signal.html' title='cfrp::primitives::lift2::Lift2Signal'>Lift2Signal</a>&lt;F, A, B, C&gt; <span class='where'>where SB: 'static + <a class='trait' href='../../../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;B&gt;, F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(<a class='enum' href='../../../cfrp/enum.Value.html' title='cfrp::Value'>Value</a>&lt;A&gt;, <a class='enum' href='../../../cfrp/enum.Value.html' title='cfrp::Value'>Value</a>&lt;B&gt;) -&gt; C, B: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>, C: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></h4>
+<h4 id='method.fold' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='../../../cfrp/trait.SignalExt.html#method.fold' class='fnname'>fold</a>&lt;F, B&gt;(self, initial: B, f: F) -&gt; <a class='struct' href='../../../cfrp/primitives/fold/struct.FoldSignal.html' title='cfrp::primitives::fold::FoldSignal'>FoldSignal</a>&lt;F, A, B&gt; <span class='where'>where F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(B, A) -&gt; B, B: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></h4>
+<h4 id='method.add_to' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='../../../cfrp/trait.SignalExt.html#method.add_to' class='fnname'>add_to</a>(self, builder: &amp;<a class='struct' href='../../../cfrp/struct.Builder.html' title='cfrp::Builder'>Builder</a>) -&gt; <a class='struct' href='../../../cfrp/primitives/fork/struct.Branch.html' title='cfrp::primitives::fork::Branch'>Branch</a>&lt;A&gt;</code></h4>
+<h4 id='method.async' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='../../../cfrp/trait.SignalExt.html#method.async' class='fnname'>async</a>(self, builder: &amp;<a class='struct' href='../../../cfrp/struct.Builder.html' title='cfrp::Builder'>Builder</a>) -&gt; <a class='struct' href='../../../cfrp/primitives/fork/struct.Branch.html' title='cfrp::primitives::fork::Branch'>Branch</a>&lt;A&gt;</code></h4>
+<h4 id='method.map' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='../../../cfrp/trait.SignalExt.html#method.map' class='fnname'>map</a>&lt;F, B&gt;(self, f: F) -&gt; <a class='struct' href='../../../cfrp/primitives/lift/struct.LiftSignal.html' title='cfrp::primitives::lift::LiftSignal'>LiftSignal</a>&lt;F, A, B&gt; <span class='where'>where F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(A) -&gt; B, B: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></h4>
+<h4 id='method.zip' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='../../../cfrp/trait.SignalExt.html#method.zip' class='fnname'>zip</a>&lt;SB, B&gt;(self, right: SB) -&gt; <a class='struct' href='http://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='trait' href='../../../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(<a class='enum' href='../../../cfrp/enum.Value.html' title='cfrp::Value'>Value</a>&lt;A&gt;, <a class='enum' href='../../../cfrp/enum.Value.html' title='cfrp::Value'>Value</a>&lt;B&gt;)</a>&gt;&gt; <span class='where'>where SB: 'static + <a class='trait' href='../../../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;B&gt;, B: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></h4>
+<h4 id='method.enumerate' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='../../../cfrp/trait.SignalExt.html#method.enumerate' class='fnname'>enumerate</a>(self) -&gt; <a class='struct' href='http://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='trait' href='../../../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(<a href='http://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a>, A)</a>&gt;&gt;</code></h4>
+<h4 id='method.filter' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='../../../cfrp/trait.SignalExt.html#method.filter' class='fnname'>filter</a>&lt;F&gt;(self, f: F) -&gt; <a class='struct' href='http://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='trait' href='../../../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;<a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;A&gt;&gt;&gt; <span class='where'>where F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(&amp;A) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></span></code></h4>
+<h4 id='method.inspect' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='../../../cfrp/trait.SignalExt.html#method.inspect' class='fnname'>inspect</a>&lt;F&gt;(self, f: F) -&gt; <a class='struct' href='http://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='trait' href='../../../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;A&gt;&gt; <span class='where'>where F: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Fn.html' title='core::ops::Fn'>Fn</a>(&amp;A) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></span></code></h4>
+</div><h3 id='derived_implementations'>Derived Implementations </h3><h3 class='impl'><a class='stability Stable' title='Stable'></a><code>impl&lt;A: <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>&gt; <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a> for <a class='struct' href='../../../cfrp/primitives/value/struct.Value.html' title='cfrp::primitives::value::Value'>Value</a>&lt;A&gt; <span class='where'>where A: <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a>, A: <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></h3><div class='impl-items'><h4 id='method.clone' class='method'><a class='stability Stable' title='Stable'></a><code>fn <a href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone' class='fnname'>clone</a>(&amp;self) -&gt; <a class='struct' href='../../../cfrp/primitives/value/struct.Value.html' title='cfrp::primitives::value::Value'>Value</a>&lt;A&gt;</code></h4>
+<h4 id='method.clone_from' class='method'><a class='stability Stable' title='Stable'></a><code>fn <a href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html#method.clone_from' class='fnname'>clone_from</a>(&amp;mut self, source: &amp;Self)</code></h4>
+</div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <div id="help" class="hidden">
+        <div class="shortcuts">
+            <h1>Keyboard shortcuts</h1>
+            <dl>
+                <dt>?</dt>
+                <dd>Show this help dialog</dd>
+                <dt>S</dt>
+                <dd>Focus the search field</dd>
+                <dt>&larrb;</dt>
+                <dd>Move up in search results</dd>
+                <dt>&rarrb;</dt>
+                <dd>Move down in search results</dd>
+                <dt>&#9166;</dt>
+                <dd>Go to active search result</dd>
+            </dl>
+        </div>
+        <div class="infos">
+            <h1>Search tricks</h1>
+            <p>
+                Prefix searches with a type followed by a colon (e.g.
+                <code>fn:</code>) to restrict the search to a given type.
+            </p>
+            <p>
+                Accepted types are: <code>fn</code>, <code>mod</code>,
+                <code>struct</code>, <code>enum</code>,
+                <code>trait</code>, <code>typedef</code> (or
+                <code>tdef</code>).
+            </p>
+        </div>
+    </div>
+
+    
+
+    <script>
+        window.rootPath = "../../../";
+        window.currentCrate = "cfrp";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../../../jquery.js"></script>
+    <script src="../../../main.js"></script>
+    
+    <script async src="../../../search-index.js"></script>
+</body>
+</html>
