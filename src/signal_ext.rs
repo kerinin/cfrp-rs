@@ -60,7 +60,7 @@ pub trait SignalExt<A>: Signal<A> + Sized where
     ///
     /// spawn_topology(Default::default(), move |t| {
     ///     t.listen(1 << 0, l_rx)
-    ///         .lift2(t.listen(1 << 1, r_rx), move |i,j| { out_tx.send(i | j).unwrap() })
+    ///         .lift2(t.listen(1 << 1, r_rx), move |i,j| { out_tx.send(*i | *j).unwrap() })
     ///         .add_to(t);
     /// });
     ///
@@ -169,13 +169,13 @@ pub trait SignalExt<A>: Signal<A> + Sized where
     /// });
     ///
     /// // Initial value
-    /// assert_eq!(out_rx.recv().unwrap(), (0, 0));
+    /// assert_eq!(out_rx.recv().unwrap(), (Value::Unchanged(0), Value::Unchanged(0)));
     ///
     /// l_tx.send(1).unwrap();
-    /// assert_eq!(out_rx.recv().unwrap(), (1, 0));
+    /// assert_eq!(out_rx.recv().unwrap(), (Value::Changed(1), Value::Unchanged(0)));
     ///
     /// r_tx.send(1).unwrap();
-    /// assert_eq!(out_rx.recv().unwrap(), (1, 1));
+    /// assert_eq!(out_rx.recv().unwrap(), (Value::Unchanged(1), Value::Changed(1)));
     /// ```
     ///
     fn zip<SB, B>(self, right: SB) -> Box<Signal<(Value<A>, Value<B>)>> where

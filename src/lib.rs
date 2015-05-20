@@ -38,7 +38,7 @@
 //!     // We can combine signals too.  Since it's possible to receive input on one
 //!     // side but not the other, `lift2` always passes `Option<T>` to its
 //!     // function.  Like `lift`, this function is only called when needed
-//!     let combined = plus_one.lift2(plus_two, |i, j| { i + j });
+//!     let combined = plus_one.lift2(plus_two, |i, j| { *i + *j });
 //! 
 //!     // `fold` allows us to track state across events.  
 //!     let accumulated = combined.fold(0, |sum, i| { sum + i });
@@ -63,35 +63,13 @@ mod signal_ext;
 mod topology;
 mod builder;
 mod config;
+mod value;
 
 pub use signal_ext::SignalExt;
 pub use topology::{Topology, TopologyHandle};
 pub use builder::Builder;
 pub use config::Config;
-
-
-pub enum Value<T> {
-    Changed(T),
-    Unchanged(T),
-}
-
-impl<T> Value<T> {
-    pub fn unwrap(self) -> T {
-        match self {
-            Value::Changed(v) => v,
-            Value::Unchanged(v) => v,
-        }
-    }
-}
-
-impl<T> Clone for Value<T> where T: Clone {
-    fn clone(&self) -> Self {
-        match self {
-            &Value::Changed(ref v) => Value::Changed(v.clone()),
-            &Value::Unchanged(ref v) => Value::Unchanged(v.clone()),
-        }
-    }
-}
+pub use value::Value;
 
 /// Container for data as it flows across the topology
 #[derive(Clone)]
@@ -246,7 +224,7 @@ mod test {
 
         spawn_topology(Default::default(), move |t| {
             t.listen(1 << 0, rx)
-                .lift2(t.value(1 << 1), move |i,j| { out_tx.send(i | j).unwrap() })
+                .lift2(t.value(1 << 1), move |i,j| { out_tx.send(*i | *j).unwrap() })
                 .add_to(t);
         });
 
@@ -263,7 +241,7 @@ mod test {
 
         spawn_topology(Default::default(), move |t| {
             t.value(1 << 0)
-                .lift2(t.value(1 << 1), move |i,j| { out_tx.send(i | j).unwrap() })
+                .lift2(t.value(1 << 1), move |i,j| { out_tx.send(*i | *j).unwrap() })
                 .add_to(t);
         });
 
@@ -307,7 +285,7 @@ mod test {
 
             let fast = t.listen(1 << 1, fast_rx);
 
-            slow.lift2(fast, move |i,j| { out_tx.send(i | j).unwrap() })
+            slow.lift2(fast, move |i,j| { out_tx.send(*i | *j).unwrap() })
             .add_to(t);
         });
 

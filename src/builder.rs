@@ -95,7 +95,7 @@ impl Builder {
     /// let l1 = v.lift(|i| { i + 1 });
     ///
     /// // Computed any time `ch` receives data, `static` will always be `0`
-    /// let l2 = l1.lift2(ch, |st, dy| { st + dy });
+    /// let l2 = l1.lift2(ch, |st, dy| { *st + *dy });
     /// ```
     ///
     pub fn value<T>(&self, v: T) -> Value<T> where
@@ -307,7 +307,7 @@ impl Builder {
     ///
     ///     let fast = t.listen(1 << 1, fast_rx);
     ///
-    ///     slow.lift2(fast, move |i,j| { out_tx.send(i | j).unwrap() })
+    ///     slow.lift2(fast, move |i,j| { out_tx.send(*i | *j).unwrap() })
     ///     .add_to(t);
     /// });
     ///
