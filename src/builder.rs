@@ -104,7 +104,7 @@ impl Builder {
         Value::new(self.config.clone(), v)
     }
 
-    /// Returns a signal which generates the "current" time every at every `interval`
+    /// Returns a signal which emits the "current" time every at every `interval`
     ///
     /// The actual time between events may be longer than `interval` if
     /// writing to the topology blocks or the scheduling thread is pre-empted
@@ -142,10 +142,10 @@ impl Builder {
     }
 
     /// Creates a channel which pushes `Event::Changed(initial)` when any 
-    /// other receives changes
+    /// other channel receives changes
     ///
     /// Signals created with `listen` only cause nodes directly downstream of 
-    /// themselves to be recomputed. By contract, signals created by `ack_*` will
+    /// themselves to be recomputed. By contrast, signals created by `ack_*` will
     /// emit a value when any input signal's value changes.  
     ///
     /// # Example
@@ -183,7 +183,7 @@ impl Builder {
     /// Return a signal that increments each time the topology receives data
     ///
     /// Signals created with `listen` only cause nodes directly downstream of 
-    /// themselves to be recomputed. By contract, signals created by `ack_*` will
+    /// themselves to be recomputed. By contrast, signals created by `ack_*` will
     /// emit a value when any input signal's value changes.  
     ///
     pub fn ack_counter<A, B>(&self, initial: A, by: A) -> Branch<A> where
@@ -199,7 +199,7 @@ impl Builder {
     /// data
     ///
     /// Signals created with `listen` only cause nodes directly downstream of 
-    /// themselves to be recomputed. By contract, signals created by `ack_*` will
+    /// themselves to be recomputed. By contrast, signals created by `ack_*` will
     /// emit a value when any input signal's value changes.  
     ///
     pub fn ack_timestamp(&self) -> Branch<time::Tm>
@@ -214,12 +214,12 @@ impl Builder {
     /// receives data
     ///
     /// If randomness is needed, `ack_random` is probably a better way of generating it
-    /// than creating a Rng inside a handler becasue it exposes the generated 
+    /// than creating a Rng inside a handler because it exposes the generated 
     /// value as a 'fact' about the system's history rather than embedding it
     /// in a non-deterministic function.  
     ///
     /// Signals created with `listen` only cause nodes directly downstream of 
-    /// themselves to be recomputed. By contract, signals created by `ack_*` will
+    /// themselves to be recomputed. By contrast, signals created by `ack_*` will
     /// emit a value when any input signal's value changes.  
     ///
     pub fn ack_random<R, A>(&self, mut rng: R) -> Branch<A> where

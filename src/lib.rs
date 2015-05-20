@@ -13,44 +13,40 @@
 //!
 //! // create some channels for communicating with the topology
 //! let (in_tx, in_rx) = channel();
-//! //let (out_tx, out_rx) = channel();
 //! 
 //! // Topologies are statically defined, run-once structures.  Due to how
 //! // concurrency is handled, changes to the graph structure can cause
 //! // inconsistencies in the data processing
 //! // 
-//! // You can pass some state in (here we're passing `(in_rx, out_rx)`) if you need
-//! // to.
 //! spawn_topology(Default::default(), |t| {
 //! 
 //!     // Create a listener on `in_rx` with initial value `0`.  Messages 
 //!     // received on the channel will be sent to any nodes subscribed to `input`
 //!     let input = t.listen(0usize, in_rx).add_to(t);
 //! 
-//!     // Basic map operation.  Since this is a pure function, it will only be
-//!     // evaluated when the value of `input` changes
+//!     // Basic map operation.  Since this is expected to be a pure function, 
+//!     // it will only be evaluated when the value of `input` changes
 //!     let plus_one = input.lift(|i| { i + 1 }).add_to(t);
 //! 
-//!     // The return value of `add` & `add_to` implements `clone`, and can be used to
+//!     // The return value of `add` / `add_to` implements `clone`, and can be used to
 //!     // 'fan-out' data
 //!     let plus_two = plus_one.clone().lift(|i| { i + 2 });
 //! 
 //!     // We can combine signals too.  Since it's possible to receive input on one
-//!     // side but not the other, `lift2` always passes `Option<T>` to its
-//!     // function.  Like `lift`, this function is only called when needed
+//!     // side but not the other, `lift2` wraps data in a `Value<T>` which is 
+//!     // either `Value::Changed(T)` or `Value::Unchanged(T)`.  Like `lift`, 
+//!     // this function is only called when needed
 //!     let combined = plus_one.lift2(plus_two, |i, j| { *i + *j });
 //! 
 //!     // `fold` allows us to track state across events.  
 //!     let accumulated = combined.fold(0, |sum, i| { sum + i });
 //! 
-//!     // Make sure to add transformations to the topology - if it's not added it
-//!     // won't be run...
+//!     // Make sure to add transformations to the topology with `add` / `add_to`
+//!     // I it's not added it won't be run...
 //!     t.add(accumulated);
 //! });
 //!
 //! in_tx.send(1usize).unwrap();
-//! // let out: usize = out_rx.recv().unwrap();
-//! // assert_eq!(out, 2);
 //! ```
 //!
 #[macro_use]
@@ -155,8 +151,7 @@ pub trait Run: Send {
 /// Construct a new topology and run it
 ///
 /// `f` will be called with a `Builder`, which exposes methods for adding
-/// inputs & transformations to the topology and `state` which is provided as 
-/// a convenience for passing values through to builder's scope.
+/// inputs & transformations to the topology
 ///
 /// # Example
 ///

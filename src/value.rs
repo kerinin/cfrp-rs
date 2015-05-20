@@ -2,12 +2,17 @@ use std::ops::{Deref, DerefMut};
 use std::fmt;
 use std::cmp;
 
+/// Value<T> encodes the difference between changed & unchanged data, in
+/// cases where multiple inputs have been combined.
+///
 pub enum Value<T> {
     Changed(T),
     Unchanged(T),
 }
 
 impl<T> Value<T> {
+    /// Returns the contained value
+    ///
     pub fn into_inner(self) -> T {
         match self {
             Value::Changed(v) => v,
