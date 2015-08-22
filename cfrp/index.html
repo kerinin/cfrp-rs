@@ -34,16 +34,18 @@
             <div class="search-container">
                 <input class="search-input" name="search"
                        autocomplete="off"
-                       placeholder="Click or press 'S' to search, '?' for more options..."
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
                        type="search">
             </div>
         </form>
     </nav>
 
     <section id='main' class="content mod">
-<h1 class='fqn'><span class='in-band'>Crate <a class='mod' href=''>cfrp</a><wbr></span><span class='out-of-band'><a href='stability.html'>[stability]</a> <span id='render-detail'>
-            <a id="collapse-all" href="#">[-]</a>&nbsp;<a id="expand-all" href="#">[+]</a>
-        </span><a id='src-0' href='../src/cfrp/lib.rs.html#1-356'>[src]</a></span></h1>
+<h1 class='fqn'><span class='in-band'>Crate <a class='mod' href=''>cfrp</a></span><span class='out-of-band'><span id='render-detail'>
+            <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                [<span class='inner'>&#x2212;</span>]
+            </a>
+        </span><a id='src-0' class='srclink' href='../src/cfrp/lib.rs.html#1-356' title='goto source code'>[src]</a></span></h1>
 <div class='docblock'>
 <h1 id="concurrent-function-reactive-programming" class='section-header'><a
                            href="#concurrent-function-reactive-programming">Concurrent Function Reactive Programming</a></h1>
@@ -52,7 +54,7 @@ executing
 concurrent data flow processes.</p>
 
 <h1 id="examples" class='section-header'><a
-                           href="#examples">Examples</a></h1><pre id='rust-example-rendered' class='rust '>
+                           href="#examples">Examples</a></h1><pre class='rust rust-example-rendered'>
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>default</span>::<span class='op'>*</span>;
 <span class='kw'>use</span> <span class='ident'>std</span>::<span class='ident'>sync</span>::<span class='ident'>mpsc</span>::<span class='op'>*</span>;
 <span class='kw'>use</span> <span class='ident'>cfrp</span>::<span class='op'>*</span>;
@@ -92,104 +94,129 @@ concurrent data flow processes.</p>
     <span class='ident'>t</span>.<span class='ident'>add</span>(<span class='ident'>accumulated</span>);
 });
 
-<span class='ident'>in_tx</span>.<span class='ident'>send</span>(<span class='number'>1usize</span>).<span class='ident'>unwrap</span>();
-</pre>
+<span class='ident'>in_tx</span>.<span class='ident'>send</span>(<span class='number'>1usize</span>).<span class='ident'>unwrap</span>();</pre>
 </div><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
 <table>
-                    <tr>
-                        <td><a class='stability Unmarked' title='No stability level'></a><a class='mod' href='primitives/index.html'
+                    <tr class=' module-item'>
+                        <td><a class='mod' href='primitives/index.html'
                                title='cfrp::primitives'>primitives</a></td>
-                        <td class='docblock short'><p>Building blocks for data ingestion and transformation</p>
-</td>
+                        <td class='docblock short'>
+                             <p>Building blocks for data ingestion and transformation</p>
+
+                        </td>
                     </tr>
                 </table><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
 <table>
-                    <tr>
-                        <td><a class='stability Unmarked' title='No stability level'></a><a class='struct' href='struct.Builder.html'
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.Builder.html'
                                title='cfrp::Builder'>Builder</a></td>
-                        <td class='docblock short'><p><code>Builder</code> provides helpers for building topologies</p>
-</td>
+                        <td class='docblock short'>
+                             <p><code>Builder</code> provides helpers for building topologies</p>
+
+                        </td>
                     </tr>
                 
-                    <tr>
-                        <td><a class='stability Unmarked' title='No stability level'></a><a class='struct' href='struct.Config.html'
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.Config.html'
                                title='cfrp::Config'>Config</a></td>
-                        <td class='docblock short'><p>Topology Configuration</p>
-</td>
+                        <td class='docblock short'>
+                             <p>Topology Configuration</p>
+
+                        </td>
                     </tr>
                 
-                    <tr>
-                        <td><a class='stability Unmarked' title='No stability level'></a><a class='struct' href='struct.Topology.html'
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.Topology.html'
                                title='cfrp::Topology'>Topology</a></td>
-                        <td class='docblock short'><p><code>Topology&lt;T&gt;</code> describes a data flow and controls its execution</p>
-</td>
+                        <td class='docblock short'>
+                             <p><code>Topology&lt;T&gt;</code> describes a data flow and controls its execution</p>
+
+                        </td>
                     </tr>
                 
-                    <tr>
-                        <td><a class='stability Unmarked' title='No stability level'></a><a class='struct' href='struct.TopologyHandle.html'
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.TopologyHandle.html'
                                title='cfrp::TopologyHandle'>TopologyHandle</a></td>
-                        <td class='docblock short'><p>For explicitly terminating a running topology</p>
-</td>
+                        <td class='docblock short'>
+                             <p>For explicitly terminating a running topology</p>
+
+                        </td>
                     </tr>
                 </table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
 <table>
-                    <tr>
-                        <td><a class='stability Unmarked' title='No stability level'></a><a class='enum' href='enum.Event.html'
+                    <tr class=' module-item'>
+                        <td><a class='enum' href='enum.Event.html'
                                title='cfrp::Event'>Event</a></td>
-                        <td class='docblock short'><p>Container for data as it flows across the topology</p>
-</td>
+                        <td class='docblock short'>
+                             <p>Container for data as it flows across the topology</p>
+
+                        </td>
                     </tr>
                 
-                    <tr>
-                        <td><a class='stability Unmarked' title='No stability level'></a><a class='enum' href='enum.SignalType.html'
+                    <tr class=' module-item'>
+                        <td><a class='enum' href='enum.SignalType.html'
                                title='cfrp::SignalType'>SignalType</a></td>
-                        <td class='docblock short'><p>Tag to distinguish unchanging signals from dynamic signals</p>
-</td>
+                        <td class='docblock short'>
+                             <p>Tag to distinguish unchanging signals from dynamic signals</p>
+
+                        </td>
                     </tr>
                 
-                    <tr>
-                        <td><a class='stability Unmarked' title='No stability level'></a><a class='enum' href='enum.Value.html'
+                    <tr class=' module-item'>
+                        <td><a class='enum' href='enum.Value.html'
                                title='cfrp::Value'>Value</a></td>
-                        <td class='docblock short'><p>Value<T> encodes the difference between changed &amp; unchanged data, in
+                        <td class='docblock short'>
+                             <p>Value<T> encodes the difference between changed &amp; unchanged data, in
 cases where multiple inputs have been combined.</p>
-</td>
+
+                        </td>
                     </tr>
                 </table><h2 id='traits' class='section-header'><a href="#traits">Traits</a></h2>
 <table>
-                    <tr>
-                        <td><a class='stability Unmarked' title='No stability level'></a><a class='trait' href='trait.Push.html'
+                    <tr class=' module-item'>
+                        <td><a class='trait' href='trait.Push.html'
                                title='cfrp::Push'>Push</a></td>
-                        <td class='docblock short'><p>Types which can receive incoming data from other signals</p>
-</td>
+                        <td class='docblock short'>
+                             <p>Types which can receive incoming data from other signals</p>
+
+                        </td>
                     </tr>
                 
-                    <tr>
-                        <td><a class='stability Unmarked' title='No stability level'></a><a class='trait' href='trait.Run.html'
+                    <tr class=' module-item'>
+                        <td><a class='trait' href='trait.Run.html'
                                title='cfrp::Run'>Run</a></td>
-                        <td class='docblock short'><p>Types which can initiate a chain of transformations</p>
-</td>
+                        <td class='docblock short'>
+                             <p>Types which can initiate a chain of transformations</p>
+
+                        </td>
                     </tr>
                 
-                    <tr>
-                        <td><a class='stability Unmarked' title='No stability level'></a><a class='trait' href='trait.Signal.html'
+                    <tr class=' module-item'>
+                        <td><a class='trait' href='trait.Signal.html'
                                title='cfrp::Signal'>Signal</a></td>
-                        <td class='docblock short'><p>Types which can serve as a data source</p>
-</td>
+                        <td class='docblock short'>
+                             <p>Types which can serve as a data source</p>
+
+                        </td>
                     </tr>
                 
-                    <tr>
-                        <td><a class='stability Unmarked' title='No stability level'></a><a class='trait' href='trait.SignalExt.html'
+                    <tr class=' module-item'>
+                        <td><a class='trait' href='trait.SignalExt.html'
                                title='cfrp::SignalExt'>SignalExt</a></td>
-                        <td class='docblock short'><p>Methods for manipulating signals</p>
-</td>
+                        <td class='docblock short'>
+                             <p>Methods for manipulating signals</p>
+
+                        </td>
                     </tr>
                 </table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
 <table>
-                    <tr>
-                        <td><a class='stability Unmarked' title='No stability level'></a><a class='fn' href='fn.spawn_topology.html'
+                    <tr class=' module-item'>
+                        <td><a class='fn' href='fn.spawn_topology.html'
                                title='cfrp::spawn_topology'>spawn_topology</a></td>
-                        <td class='docblock short'><p>Construct a new topology and run it</p>
-</td>
+                        <td class='docblock short'>
+                             <p>Construct a new topology and run it</p>
+
+                        </td>
                     </tr>
                 </table></section>
     <section id='search' class="content hidden"></section>
@@ -197,33 +224,44 @@ cases where multiple inputs have been combined.</p>
     <section class="footer"></section>
 
     <div id="help" class="hidden">
-        <div class="shortcuts">
-            <h1>Keyboard shortcuts</h1>
-            <dl>
-                <dt>?</dt>
-                <dd>Show this help dialog</dd>
-                <dt>S</dt>
-                <dd>Focus the search field</dd>
-                <dt>&larrb;</dt>
-                <dd>Move up in search results</dd>
-                <dt>&rarrb;</dt>
-                <dd>Move down in search results</dd>
-                <dt>&#9166;</dt>
-                <dd>Go to active search result</dd>
-            </dl>
-        </div>
-        <div class="infos">
-            <h1>Search tricks</h1>
-            <p>
-                Prefix searches with a type followed by a colon (e.g.
-                <code>fn:</code>) to restrict the search to a given type.
-            </p>
-            <p>
-                Accepted types are: <code>fn</code>, <code>mod</code>,
-                <code>struct</code>, <code>enum</code>,
-                <code>trait</code>, <code>typedef</code> (or
-                <code>tdef</code>).
-            </p>
+        <div>
+            <div class="shortcuts">
+                <h1>Keyboard Shortcuts</h1>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h1>Search Tricks</h1>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>typedef</code> (or
+                    <code>tdef</code>).
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code>)
+                </p>
+            </div>
         </div>
     </div>
 

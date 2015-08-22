@@ -34,53 +34,66 @@
             <div class="search-container">
                 <input class="search-input" name="search"
                        autocomplete="off"
-                       placeholder="Click or press 'S' to search, '?' for more options..."
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
                        type="search">
             </div>
         </form>
     </nav>
 
     <section id='main' class="content struct">
-<h1 class='fqn'><span class='in-band'>Struct <a href='../../index.html'>cfrp</a>::<wbr><a href='../index.html'>primitives</a>::<wbr><a href='index.html'>async</a>::<wbr><a class='struct' href=''>Async</a><wbr></span><span class='out-of-band'><span id='render-detail'>
-            <a id="collapse-all" href="#">[-]</a>&nbsp;<a id="expand-all" href="#">[+]</a>
-        </span><a id='src-18' href='../../../src/cfrp/primitives/async.rs.html#5-8'>[src]</a></span></h1>
+<h1 class='fqn'><span class='in-band'>Struct <a href='../../index.html'>cfrp</a>::<wbr><a href='../index.html'>primitives</a>::<wbr><a href='index.html'>async</a>::<wbr><a class='struct' href=''>Async</a></span><span class='out-of-band'><span id='render-detail'>
+            <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                [<span class='inner'>&#x2212;</span>]
+            </a>
+        </span><a id='src-18' class='srclink' href='../../../src/cfrp/primitives/async.rs.html#5-8' title='goto source code'>[src]</a></span></h1>
 <pre class='rust struct'>pub struct Async&lt;A&gt; {
     // some fields omitted
-}</pre><h2 id='methods'>Methods</h2><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;A&gt; <a class='struct' href='../../../cfrp/primitives/async/struct.Async.html' title='cfrp::primitives::async::Async'>Async</a>&lt;A&gt;</code></h3><div class='impl-items'><h4 id='method.new' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.new' class='fnname'>new</a>(parent: <a class='struct' href='http://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='trait' href='../../../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;A&gt;&gt;, tx: <a class='struct' href='http://doc.rust-lang.org/nightly/std/sync/mpsc/struct.SyncSender.html' title='std::sync::mpsc::SyncSender'>SyncSender</a>&lt;A&gt;) -&gt; <a class='struct' href='../../../cfrp/primitives/async/struct.Async.html' title='cfrp::primitives::async::Async'>Async</a>&lt;A&gt;</code></h4>
-</div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;A&gt; <a class='trait' href='../../../cfrp/trait.Run.html' title='cfrp::Run'>Run</a> for <a class='struct' href='../../../cfrp/primitives/async/struct.Async.html' title='cfrp::primitives::async::Async'>Async</a>&lt;A&gt; <span class='where'>where A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></h3><div class='impl-items'><h4 id='method.run' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='../../../cfrp/trait.Run.html#method.run' class='fnname'>run</a>(self: <a class='struct' href='http://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;Self&gt;)</code></h4>
+}</pre><h2 id='methods'>Methods</h2><h3 class='impl'><code>impl&lt;A&gt; <a class='struct' href='../../../cfrp/primitives/async/struct.Async.html' title='cfrp::primitives::async::Async'>Async</a>&lt;A&gt;</code></h3><div class='impl-items'><h4 id='method.new' class='method'><code>fn <a href='#method.new' class='fnname'>new</a>(parent: <a class='struct' href='http://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='trait' href='../../../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;A&gt;&gt;, tx: <a class='struct' href='http://doc.rust-lang.org/nightly/std/sync/mpsc/struct.SyncSender.html' title='std::sync::mpsc::SyncSender'>SyncSender</a>&lt;A&gt;) -&gt; <a class='struct' href='../../../cfrp/primitives/async/struct.Async.html' title='cfrp::primitives::async::Async'>Async</a>&lt;A&gt;</code></h4>
+</div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><code>impl&lt;A&gt; <a class='trait' href='../../../cfrp/trait.Run.html' title='cfrp::Run'>Run</a> for <a class='struct' href='../../../cfrp/primitives/async/struct.Async.html' title='cfrp::primitives::async::Async'>Async</a>&lt;A&gt; <span class='where'>where A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a></span></code></h3><div class='impl-items'><h4 id='method.run' class='method'><code>fn <a href='../../../cfrp/trait.Run.html#method.run' class='fnname'>run</a>(self: <a class='struct' href='http://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;Self&gt;)</code></h4>
 </div></section>
     <section id='search' class="content hidden"></section>
 
     <section class="footer"></section>
 
     <div id="help" class="hidden">
-        <div class="shortcuts">
-            <h1>Keyboard shortcuts</h1>
-            <dl>
-                <dt>?</dt>
-                <dd>Show this help dialog</dd>
-                <dt>S</dt>
-                <dd>Focus the search field</dd>
-                <dt>&larrb;</dt>
-                <dd>Move up in search results</dd>
-                <dt>&rarrb;</dt>
-                <dd>Move down in search results</dd>
-                <dt>&#9166;</dt>
-                <dd>Go to active search result</dd>
-            </dl>
-        </div>
-        <div class="infos">
-            <h1>Search tricks</h1>
-            <p>
-                Prefix searches with a type followed by a colon (e.g.
-                <code>fn:</code>) to restrict the search to a given type.
-            </p>
-            <p>
-                Accepted types are: <code>fn</code>, <code>mod</code>,
-                <code>struct</code>, <code>enum</code>,
-                <code>trait</code>, <code>typedef</code> (or
-                <code>tdef</code>).
-            </p>
+        <div>
+            <div class="shortcuts">
+                <h1>Keyboard Shortcuts</h1>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h1>Search Tricks</h1>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>typedef</code> (or
+                    <code>tdef</code>).
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code>)
+                </p>
+            </div>
         </div>
     </div>
 
