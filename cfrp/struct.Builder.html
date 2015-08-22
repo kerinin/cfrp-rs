@@ -34,7 +34,7 @@
             <div class="search-container">
                 <input class="search-input" name="search"
                        autocomplete="off"
-                       placeholder="Click or press 'S' to search, '?' for more options..."
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
                        type="search">
             </div>
         </form>
@@ -45,7 +45,7 @@
             <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                 [<span class='inner'>&#x2212;</span>]
             </a>
-        </span><a id='src-6993' class='srclink' href='../src/cfrp/builder.rs.html#21-25' title='goto source code'>[src]</a></span></h1>
+        </span><a id='src-6983' class='srclink' href='../src/cfrp/builder.rs.html#21-25' title='goto source code'>[src]</a></span></h1>
 <pre class='rust struct'>pub struct Builder {
     pub inputs: <a class='struct' href='http://doc.rust-lang.org/nightly/core/cell/struct.RefCell.html' title='core::cell::RefCell'>RefCell</a>&lt;<a class='struct' href='http://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html' title='collections::vec::Vec'>Vec</a>&lt;<a class='struct' href='http://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='trait' href='../cfrp/primitives/input/trait.RunInput.html' title='cfrp::primitives::input::RunInput'>RunInput</a>&gt;&gt;&gt;,
     pub runners: <a class='struct' href='http://doc.rust-lang.org/nightly/core/cell/struct.RefCell.html' title='core::cell::RefCell'>RefCell</a>&lt;<a class='struct' href='http://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html' title='collections::vec::Vec'>Vec</a>&lt;<a class='struct' href='http://doc.rust-lang.org/nightly/alloc/boxed/struct.Box.html' title='alloc::boxed::Box'>Box</a>&lt;<a class='trait' href='../cfrp/trait.Run.html' title='cfrp::Run'>Run</a>&gt;&gt;&gt;,
@@ -77,8 +77,7 @@ its own thread</p>
 <span class='comment'>//`initial`.  This is necessary because the topology must maintain </span>
 <span class='comment'>// consistency between threads, so any message sent to any input is </span>
 <span class='comment'>// propagated to all other inputs as &quot;no-change&quot; messages.</span>
-<span class='kw'>let</span> <span class='ident'>signal</span> <span class='op'>=</span> <span class='ident'>b</span>.<span class='ident'>listen</span>(<span class='number'>0</span>, <span class='ident'>rx</span>);
-</pre>
+<span class='kw'>let</span> <span class='ident'>signal</span> <span class='op'>=</span> <span class='ident'>b</span>.<span class='ident'>listen</span>(<span class='number'>0</span>, <span class='ident'>rx</span>);</pre>
 </div><h4 id='method.value' class='method'><code>fn <a href='#method.value' class='fnname'>value</a>&lt;T&gt;(&amp;self, v: T) -&gt; <a class='struct' href='../cfrp/primitives/value/struct.Value.html' title='cfrp::primitives::value::Value'>Value</a>&lt;T&gt; <span class='where'>where T: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a></span></code></h4>
 <div class='docblock'><p>Creats a channel with constant value <code>v</code></p>
 
@@ -103,8 +102,7 @@ change values.</p>
 <span class='kw'>let</span> <span class='ident'>l1</span> <span class='op'>=</span> <span class='ident'>v</span>.<span class='ident'>lift</span>(<span class='op'>|</span><span class='ident'>i</span><span class='op'>|</span> { <span class='ident'>i</span> <span class='op'>+</span> <span class='number'>1</span> });
 
 <span class='comment'>// Computed any time `ch` receives data, `static` will always be `0`</span>
-<span class='kw'>let</span> <span class='ident'>l2</span> <span class='op'>=</span> <span class='ident'>l1</span>.<span class='ident'>lift2</span>(<span class='ident'>ch</span>, <span class='op'>|</span><span class='ident'>st</span>, <span class='ident'>dy</span><span class='op'>|</span> { <span class='op'>*</span><span class='ident'>st</span> <span class='op'>+</span> <span class='op'>*</span><span class='ident'>dy</span> });
-</pre>
+<span class='kw'>let</span> <span class='ident'>l2</span> <span class='op'>=</span> <span class='ident'>l1</span>.<span class='ident'>lift2</span>(<span class='ident'>ch</span>, <span class='op'>|</span><span class='ident'>st</span>, <span class='ident'>dy</span><span class='op'>|</span> { <span class='op'>*</span><span class='ident'>st</span> <span class='op'>+</span> <span class='op'>*</span><span class='ident'>dy</span> });</pre>
 </div><h4 id='method.every' class='method'><code>fn <a href='#method.every' class='fnname'>every</a>(&amp;self, interval: <a class='struct' href='../time/duration/struct.Duration.html' title='time::duration::Duration'>Duration</a>) -&gt; <a class='struct' href='../cfrp/primitives/fork/struct.Branch.html' title='cfrp::primitives::fork::Branch'>Branch</a>&lt;<a class='struct' href='../time/struct.Tm.html' title='time::Tm'>Tm</a>&gt;</code></h4>
 <div class='docblock'><p>Returns a signal which emits the &quot;current&quot; time every at every <code>interval</code></p>
 
@@ -137,8 +135,7 @@ emit a value when any input signal&#39;s value changes.  </p>
 <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), <span class='number'>1</span>);
 
 <span class='ident'>tx</span>.<span class='ident'>send</span>(<span class='number'>1</span>).<span class='ident'>unwrap</span>();
-<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), <span class='number'>1</span>);
-</pre>
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), <span class='number'>1</span>);</pre>
 </div><h4 id='method.ack_counter' class='method'><code>fn <a href='#method.ack_counter' class='fnname'>ack_counter</a>&lt;A, B&gt;(&amp;self, initial: A, by: A) -&gt; <a class='struct' href='../cfrp/primitives/fork/struct.Branch.html' title='cfrp::primitives::fork::Branch'>Branch</a>&lt;A&gt; <span class='where'>where A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Add.html' title='core::ops::Add'>Add</a>&lt;Output=A&gt;</span></code></h4>
 <div class='docblock'><p>Return a signal that increments each time the topology receives data</p>
 
@@ -189,8 +186,7 @@ used with method-chaining syntax</p>
 
 <span class='ident'>fork</span>
     .<span class='ident'>lift</span>(<span class='op'>|</span><span class='ident'>i</span><span class='op'>|</span> { <span class='op'>-</span><span class='ident'>i</span> })
-    .<span class='ident'>add_to</span>(<span class='kw-2'>&amp;</span><span class='ident'>b</span>);
-</pre>
+    .<span class='ident'>add_to</span>(<span class='kw-2'>&amp;</span><span class='ident'>b</span>);</pre>
 </div><h4 id='method.async' class='method'><code>fn <a href='#method.async' class='fnname'>async</a>&lt;SA, A&gt;(&amp;self, root: SA) -&gt; <a class='struct' href='../cfrp/primitives/fork/struct.Branch.html' title='cfrp::primitives::fork::Branch'>Branch</a>&lt;A&gt; <span class='where'>where SA: 'static + <a class='trait' href='../cfrp/trait.Signal.html' title='cfrp::Signal'>Signal</a>&lt;A&gt;, A: 'static + <a class='trait' href='http://doc.rust-lang.org/nightly/core/clone/trait.Clone.html' title='core::clone::Clone'>Clone</a> + <a class='trait' href='http://doc.rust-lang.org/nightly/core/marker/trait.Send.html' title='core::marker::Send'>Send</a></span></code></h4>
 <div class='docblock'><p>Combination of adding a signal and a channel</p>
 
@@ -232,45 +228,51 @@ process, and the result can be handled when it&#39;s available.</p>
 <span class='comment'>// Will receive the &#39;fast&#39; value first...</span>
 <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>0</span>) <span class='op'>|</span> (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>3</span>));
 <span class='comment'>// ...then the slow one</span>
-<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>2</span>) <span class='op'>|</span> (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>3</span>));
-</pre>
+<span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>out_rx</span>.<span class='ident'>recv</span>().<span class='ident'>unwrap</span>(), (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>2</span>) <span class='op'>|</span> (<span class='number'>1</span> <span class='op'>&lt;&lt;</span> <span class='number'>3</span>));</pre>
 </div></div></section>
     <section id='search' class="content hidden"></section>
 
     <section class="footer"></section>
 
     <div id="help" class="hidden">
-        <div class="shortcuts">
-            <h1>Keyboard shortcuts</h1>
-            <dl>
-                <dt>?</dt>
-                <dd>Show this help dialog</dd>
-                <dt>S</dt>
-                <dd>Focus the search field</dd>
-                <dt>&larrb;</dt>
-                <dd>Move up in search results</dd>
-                <dt>&rarrb;</dt>
-                <dd>Move down in search results</dd>
-                <dt>&#9166;</dt>
-                <dd>Go to active search result</dd>
-            </dl>
-        </div>
-        <div class="infos">
-            <h1>Search tricks</h1>
-            <p>
-                Prefix searches with a type followed by a colon (e.g.
-                <code>fn:</code>) to restrict the search to a given type.
-            </p>
-            <p>
-                Accepted types are: <code>fn</code>, <code>mod</code>,
-                <code>struct</code>, <code>enum</code>,
-                <code>trait</code>, <code>typedef</code> (or
-                <code>tdef</code>).
-            </p>
-            <p>
-                Search functions by type signature (e.g.
-                <code>vec -> usize</code>)
-            </p>
+        <div>
+            <div class="shortcuts">
+                <h1>Keyboard Shortcuts</h1>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h1>Search Tricks</h1>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>typedef</code> (or
+                    <code>tdef</code>).
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code>)
+                </p>
+            </div>
         </div>
     </div>
 
