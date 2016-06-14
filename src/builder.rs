@@ -5,9 +5,9 @@ use std::sync::*;
 use std::sync::mpsc::*;
 use std::marker::*;
 use std::ops::Add;
+use std::time::{Duration, Instant};
 
 use rand;
-use time;
 
 use super::{Signal, SignalExt, Run, Config};
 use primitives::input::{RunInput, ReceiverInput, AckInput, RngInput};
@@ -111,10 +111,10 @@ impl Builder {
     /// by other threads, however a signal with every interval's time value will
     /// eventually be sent.
     /// 
-    pub fn every(&self, interval: time::Duration) -> Branch<time::Tm>
+    pub fn every(&self, interval: Duration) -> Branch<Instant>
     {
         let (tx, rx) = sync_channel(0);
-        let initial = time::now();
+        let initial = Instant::now();
 
         let mut last_tick = initial.clone();
         thread::spawn(move || {
@@ -130,11 +130,11 @@ impl Builder {
                             Err(_) => return,
                         }
                     })
-                    .take_while(|tm| { *tm < time::now() })
+                    .take_while(|tm| { *tm < Instant::now() })
                     .last();
 
-                let sleep_duration = time::now() - tm.unwrap();
-                thread::sleep_ms(sleep_duration.num_milliseconds() as u32);
+                let sleep_duration = Instant::now() - tm.unwrap();
+                thread::sleep(sleep_duration);
             }
         });
 
@@ -202,11 +202,11 @@ impl Builder {
     /// themselves to be recomputed. By contrast, signals created by `ack_*` will
     /// emit a value when any input signal's value changes.  
     ///
-    pub fn ack_timestamp(&self) -> Branch<time::Tm>
+    pub fn ack_timestamp(&self) -> Branch<Instant>
     {
         self.add(
             self.ack_value(())
-            .lift(|_| -> time::Tm { time::now() })
+            .lift(|_| Instant::now())
         )
     }
 
