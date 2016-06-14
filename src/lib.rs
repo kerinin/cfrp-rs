@@ -51,7 +51,6 @@
 //!
 #[macro_use]
 extern crate log;
-extern crate time;
 extern crate rand;
 
 pub mod primitives;
@@ -179,6 +178,7 @@ mod test {
     use std::default::Default;
     use std::sync::mpsc::*;
     use std::thread;
+    use std::time::Duration;
 
     use rand;
 
@@ -272,7 +272,7 @@ mod test {
             let slow = t.listen(1 << 0, slow_rx)
                 .lift(|i| -> usize { 
                     if i > 1 { // allow the initial value to be computed quickly
-                        thread::sleep_ms(100);
+                        thread::sleep(Duration::from_millis(100));
                     }
 
                     i 
